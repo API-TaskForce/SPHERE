@@ -1,0 +1,19 @@
+associatedSaaS: Azure AI Search
+url: "https://azure.microsoft.com/en-us/pricing/details/search/"
+planReference: FREE
+type: Partial SaaS
+capacity:
+  - value: 50 MB storage
+    autoRecharge: fixed
+    extraCharge: None (El servicio se detiene al alcanzar el límite)
+  - value: 3 indexes per service
+    autoRecharge: fixed
+  - value: 1000 documents per index
+    autoRecharge: fixed
+maxPower:
+  value: Shared Infrastructure
+  reference: "Infraestructura compartida sin garantía de QPS. Latencia variable."
+coolingPeriod: "Immediate (El servicio devuelve error 403 al exceder almacenamiento o 429 bajo congestión de red compartida)"
+segmentation:
+  - Subscription Level: Límite de 1 recurso de nivel Free por suscripción de Azure.
+  - Scale-out: No permite escalado (fijo a 0 Search Units dedicadas).

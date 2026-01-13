@@ -183,7 +183,10 @@ export default function PricingListCard({
           height={45}
           pl="10px"
           onClick={() =>
-            router.push(`/pricings/${owner}/${name}?collectionName=${dataEntry.collectionName}`)
+            // If pricing is a local sample (owner starts with 'azure-samples' or 'sample'), route to samples viewer
+            owner && (owner as string).toString().startsWith('azure-samples')
+              ? router.push(`/pricings/samples/${name}`)
+              : router.push(`/pricings/${owner}/${name}?collectionName=${dataEntry.collectionName}`)
           }
           sx={{
             transition: 'color 0.3s',

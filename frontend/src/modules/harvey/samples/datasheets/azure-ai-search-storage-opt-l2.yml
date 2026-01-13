@@ -1,0 +1,16 @@
+associatedSaaS: Azure AI Search
+url: "https://azure.microsoft.com/en-us/pricing/details/search/"
+planReference: STORAGE_OPTIMIZED_L2
+type: Partial SaaS
+capacity:
+  - value: 4 TB per partition
+    autoRecharge: monthly
+    extraCharge: SCALE_BY_UNIT (Up to 48 TB per service)
+  - value: 10 indexes per service
+    autoRecharge: fixed
+maxPower:
+  value: Up to 36 search units (SU) per service
+  reference: "Scale-out: Max 12 partitions / Max 12 replicas. Prioriza ancho de banda de E/S."
+coolingPeriod: "Dynamic (Diseñado para índices de actualización lenta y gran volumen)"
+segmentation:
+  - Storage-First Architecture: Mayor densidad de datos por unidad de cómputo que el tier Standard.

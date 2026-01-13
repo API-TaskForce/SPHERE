@@ -22,6 +22,7 @@ import MyPricingsPage from '../modules/profile/pages/pricings';
 import CreateCollectionPage from '../modules/profile/pages/create-collection';
 import CollectionsListPage from '../modules/pricing/pages/collections-list';
 import PricingAssistantPage from '../modules/harvey/pages/pricing-assistant';
+import SamplePricingPage from '../modules/pricing/pages/sample';
 
 
 export default function Router() {
@@ -49,6 +50,7 @@ export default function Router() {
         { element: <CreateCollectionPage />, path: "/pricings/collections/new" },
         { element: <CollectionCardPage />, path: "/pricings/collections/:ownerId/:collectionName" },
         { element: <MyPricingsPage />, path: "/me/pricings" },
+        { element: <SamplePricingPage />, path: "/pricings/samples/:name" },
         { element: <PricingAssistantPage />, path: "/harvey"}
       ],
         },

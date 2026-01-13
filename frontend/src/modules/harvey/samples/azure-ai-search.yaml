@@ -1,0 +1,278 @@
+saasName: Azure AI Search
+syntaxVersion: '3.0'
+version: '2026'
+url: 'https://azure.microsoft.com/pricing/details/search/'
+createdAt: '2026-01-12'
+currency: 'USD'
+tags:
+  - Search Engine
+  - Vector Database
+  - RAG Infrastructure
+  - AI Enrichment
+
+features:
+  vectorSearch:
+    tag: Search Engine
+    description: Support for high-dimensional vector embeddings and ANN search.
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  semanticRanker:
+    tag: AI Enrichment
+    description: L2 re-ranking using deep learning for relevance.
+    valueType: BOOLEAN
+    defaultValue: false
+    type: DOMAIN
+  semanticSearchAddOn:
+    tag: Search Engine
+    description: Search addon price per 1M tokens
+    valueType: NUMERIC
+    defaultValue: 0.022
+    unit: 1M Tokens
+    type: DOMAIN
+  agenticRetrieval:
+    tag: AI Enrichment
+    description: Agentic retrieval for conversation history and BYOM integration.
+    valueType: BOOLEAN
+    defaultValue: false
+    type: DOMAIN
+  customEntityLookup:
+    tag: Search Engine
+    description: Detect user-defined entities in text records.
+    valueType: BOOLEAN
+    defaultValue: false
+    type: DOMAIN
+  imageExtraction:
+    tag: Search Engine
+    description: Extract images and perform document cracking.
+    valueType: BOOLEAN
+    defaultValue: false
+    type: DOMAIN
+
+usageLimits:
+  maxIndexes:
+    description: Maximum number of logical indexes per service.
+    valueType: NUMERIC
+    defaultValue: 3
+    type: NON_RENEWABLE
+    linkedFeatures:
+      - vectorSearch
+  maxStorage:
+    description: Total storage capacity per service.
+    valueType: NUMERIC
+    defaultValue: 0.05
+    unit: GB
+    type: NON_RENEWABLE
+  maxStoragePerPartition:
+    description: Storage per partition.
+    valueType: NUMERIC
+    defaultValue: 512
+    unit: GB
+    type: NON_RENEWABLE
+  maxPartitions:
+    description: Maximum number of partitions.
+    valueType: NUMERIC
+    defaultValue: 3
+    type: NON_RENEWABLE
+  maxReplicas:
+    description: Maximum number of replicas.
+    valueType: NUMERIC
+    defaultValue: 3
+    type: NON_RENEWABLE
+  scaleOutLimit:
+    description: Scale out limit measured in Search Units (SU).
+    valueType: NUMERIC
+    defaultValue: 36
+    unit: SU
+    type: NON_RENEWABLE
+
+plans:
+  FREE:
+    description: Free plan
+    price: 0.00
+    unit: month
+    features:
+      vectorSearch:
+        value: true
+      semanticRanker:
+        value: false
+      semanticSearchAddOn:
+        value: 0.0
+    usageLimits:
+      maxStorage:
+        value: 0.05
+        unit: GB
+      maxIndexes:
+        value: 3
+
+  BASIC:
+    description: Basic Plan
+    price: 73.73
+    unit: 'Search Unit (SU)/month'
+    features:
+      vectorSearch:
+        value: true
+      semanticRanker:
+        value: false
+      semanticSearchAddOn:
+        value: 0.0
+    usageLimits:
+      maxStorage:
+        value: 15
+        unit: GB
+      maxIndexes:
+        value: 15
+      maxPartitions:
+        value: 3
+      maxReplicas:
+        value: 3
+
+  STANDARD_S1:
+    description: Standard S1
+    price: 245.28
+    unit: 'Search Unit (SU)/month'
+    features:
+      vectorSearch:
+        value: true
+      semanticRanker:
+        value: true
+      semanticSearchAddOn:
+        value: 0.022
+    usageLimits:
+      maxStorage:
+        value: 160
+        unit: GB
+      maxIndexes:
+        value: 50
+      maxPartitions:
+        value: 12
+      maxReplicas:
+        value: 12
+
+  STANDARD_S2:
+    price: 981.12
+    unit: 'Search Unit (SU)/month'
+    description: 'Designed for large-scale production workloads'
+    features:
+      vectorSearch:
+        value: true
+      semanticRanker:
+        value: true
+      semanticSearchAddOn:
+        value: 0.022
+    usageLimits:
+      maxStoragePerPartition:
+        value: 512
+        unit: GB
+      maxIndexes:
+        value: 200
+      scaleOutLimit:
+        value: 36
+        unit: SU
+
+  STANDARD_S3:
+    price: 1962.24
+    unit: 'Search Unit (SU)/month'
+    description: 'Highest performance tier for massive index counts'
+    features:
+      vectorSearch:
+        value: true
+      semanticRanker:
+        value: true
+      semanticSearchAddOn:
+        value: 0.022
+    usageLimits:
+      maxStoragePerPartition:
+        value: 1024
+        unit: GB
+      maxIndexes:
+        value: 200
+      scaleOutLimit:
+        value: 36
+        unit: SU
+
+  STORAGE_OPTIMIZED_L1:
+    price: 2802.47
+    unit: 'Search Unit (SU)/month'
+    features:
+      vectorSearch:
+        value: true
+      semanticRanker:
+        value: true
+      semanticSearchAddOn:
+        value: 0.022
+    usageLimits:
+      maxStorage:
+        value: 2
+        unit: TB
+      maxIndexes:
+        value: 10
+
+  STORAGE_OPTIMIZED_L2:
+    price: 5604.21
+    unit: 'Search Unit (SU)/month'
+    description: 'Maximum storage capacity for disk-bound datasets'
+    features:
+      vectorSearch:
+        value: true
+      semanticRanker:
+        value: true
+      semanticSearchAddOn:
+        value: 0.022
+    usageLimits:
+      maxStoragePerPartition:
+        value: 4096
+        unit: GB
+      maxIndexes:
+        value: 10
+      scaleOutLimit:
+        value: 36
+        unit: SU
+
+addOns:
+  semanticRankerAddOn:
+    description: 'Improve search relevance'
+    price: 1.00
+    unit: '1000 requests (after first 1000 free)'
+    freeTier: 'First 1,000 requests/month'
+    overage: '$1.00 per 1,000 requests'
+    features:
+      semanticRanker:
+        value: true
+
+  agenticRetrievalAddOn:
+    description: 'Conversation history and BYOM integration'
+    price: 0.022
+    unit: '1M tokens (after first 50M free)'
+    freeTier: 'First 50M tokens/month'
+    overage: '$0.022 per 1M additional tokens'
+    features:
+      agenticRetrieval:
+        value: true
+      semanticSearchAddOn:
+        value: 0.022
+
+  customEntityLookup:
+    description: 'Detect user-defined words'
+    price: 1.00
+    unit: '1000 records'
+    tiers:
+      '0-1M': 1.00
+      '1M-3M': 0.75
+      '3M-10M': 0.30
+      '10M+': 0.25
+    features:
+      customEntityLookup:
+        value: true
+
+  imageExtraction:
+    description: 'Document Cracking: Image Extraction'
+    price: 1.00
+    unit: '1000 images'
+    tiers:
+      '0-1M': 1.00
+      '1M-5M': 0.80
+      '5M+': 0.65
+    features:
+      imageExtraction:
+        value: true

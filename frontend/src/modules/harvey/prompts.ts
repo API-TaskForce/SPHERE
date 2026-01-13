@@ -1,5 +1,6 @@
 import overleaf2023 from './samples/overleaf-2023.yaml?raw';
 import twoPlansEqual from './samples/two-plans-equal.yaml?raw';
+import azureAiSearch from './samples/azure-ai-search.yaml?raw';
 import type { PromptPreset } from './types/types';
 
 export const PROMPT_PRESETS: PromptPreset[] = [
@@ -44,6 +45,20 @@ export const PROMPT_PRESETS: PromptPreset[] = [
         kind: 'yaml',
         label: 'two-plans-equal.yaml',
         value: twoPlansEqual,
+        origin: 'preset'
+      }
+    ]
+  },
+  {
+    id: 'azure-ai-search',
+    label: 'Azure AI Search Pricing (sample)',
+    description: 'Azure AI Search pricing sample for testing and analysis.',
+    question: 'From the Azure AI Search pricing, list the plans and their storage limits and provide a short summary of add-ons and extra charges.',
+    context: [
+      {
+        kind: 'yaml',
+        label: 'azure-ai-search.yaml',
+        value: azureAiSearch,
         origin: 'preset'
       }
     ]

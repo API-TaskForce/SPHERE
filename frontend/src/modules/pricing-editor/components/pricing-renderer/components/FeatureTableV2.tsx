@@ -15,9 +15,10 @@ interface FeatureTableV2Props {
   usageLimits: Record<string, UsageLimit> | undefined;
   addOns: Record<string, AddOn> | undefined;
   currency?: string | undefined;
+  onPlanClick?: (planKey: string) => void;
 }
 
-export function FeatureTableV2({ plans, features, usageLimits, addOns, currency }: Readonly<FeatureTableV2Props>) {
+export function FeatureTableV2({ plans, features, usageLimits, addOns, currency, onPlanClick }: Readonly<FeatureTableV2Props>) {
   const planKeys = Object.keys(plans);
   const featureKeys = Object.keys(features);
   const addOnKeys = Object.keys(addOns ?? {});
@@ -365,7 +366,19 @@ export function FeatureTableV2({ plans, features, usageLimits, addOns, currency 
           <TableRow>
             <TableCell sx={{ fontWeight: 700 }}></TableCell>
             {planKeys.map((planKey, idx) => (
-              <TableCell key={planKey} align='center' sx={{ background: getPlanGradient(idx), color: '#fff', fontWeight: "bolder", minWidth: 160, fontSize: 18 }}>
+              <TableCell
+                key={planKey}
+                align='center'
+                onClick={() => onPlanClick ? onPlanClick(planKey) : null}
+                sx={{
+                  background: getPlanGradient(idx),
+                  color: '#fff',
+                  fontWeight: "bolder",
+                  minWidth: 160,
+                  fontSize: 18,
+                  cursor: onPlanClick ? 'pointer' : 'default',
+                }}
+              >
                 <Typography sx={{ fontWeight: 700, fontSize: 24 }}>{plans[planKey].name ?? camelToTitle(planKey)}</Typography>
                 <Typography sx={{ fontWeight: 800, fontSize: 20 }}>{plans[planKey].price === 0 ? 'FREE' : <>{formatMoneyDisplay(plans[planKey].price)}{typeof plans[planKey].price === 'number' ? (currency ?? '') : ''}</>}</Typography>
                 {typeof plans[planKey].unit === 'string' && (
@@ -391,7 +404,19 @@ export function FeatureTableV2({ plans, features, usageLimits, addOns, currency 
                 <TableRow>
                   <TableCell sx={{ fontWeight: 700 }}></TableCell>
                   {planKeys.map((planKey, idx) => (
-                    <TableCell key={planKey} align='center' sx={{ background: getPlanGradient(idx), color: '#fff', fontWeight: "bolder", minWidth: 160, fontSize: 18 }}>
+                    <TableCell
+                      key={planKey}
+                      align='center'
+                      onClick={() => onPlanClick ? onPlanClick(planKey) : null}
+                      sx={{
+                        background: getPlanGradient(idx),
+                        color: '#fff',
+                        fontWeight: "bolder",
+                        minWidth: 160,
+                        fontSize: 18,
+                        cursor: onPlanClick ? 'pointer' : 'default',
+                      }}
+                    >
                       <Typography sx={{ fontWeight: 700, fontSize: 24 }}>{plans[planKey].name ?? camelToTitle(planKey)}</Typography>
                       <Typography sx={{ fontWeight: 800, fontSize: 20 }}>{plans[planKey].price === 0 ? 'FREE' : <>{formatMoneyDisplay(plans[planKey].price)}{typeof plans[planKey].price === 'number' ? (currency ?? '') : ''}</>}</Typography>
                       {typeof plans[planKey].unit === 'string' && (

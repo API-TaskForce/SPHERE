@@ -1,0 +1,16 @@
+associatedSaaS: Azure AI Search
+url: "https://azure.microsoft.com/en-us/pricing/details/search/"
+planReference: BASIC
+type: Partial SaaS
+capacity:
+  - value: 15 GB per partition (Max 45 GB per service)
+    autoRecharge: monthly
+    extraCharge: SCALE_BY_UNIT
+  - value: 15 indexes per service
+    autoRecharge: fixed
+maxPower:
+  value: Up to 9 units per service
+  reference: "Scale-out: Max 3 partitions / Max 3 replicas"
+coolingPeriod: "TBD (Dynamic Throttling)"
+segmentation:
+  - Service Level: Dedicated capacity per SU.

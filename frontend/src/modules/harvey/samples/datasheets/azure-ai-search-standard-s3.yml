@@ -1,0 +1,16 @@
+associatedSaaS: Azure AI Search
+url: "https://azure.microsoft.com/en-us/pricing/details/search/"
+planReference: STANDARD_S3
+type: Partial SaaS
+capacity:
+  - value: 1 TB per partition
+    autoRecharge: monthly
+    extraCharge: SCALE_BY_UNIT (Up to 12 TB per service)
+  - value: 200 indexes (Standard) o 1000/partición (Modo High Density)
+    autoRecharge: fixed
+maxPower:
+  value: Up to 36 search units (SU) per service
+  reference: "Scale-out: Max 12 partitions / Max 12 replicas. S3 HD limitado a 3 particiones."
+coolingPeriod: "Dynamic (Optimizado para latencias críticas en datasets masivos)"
+segmentation:
+  - High Density Support: S3 HD diseñado para multi-tenancy con miles de índices pequeños.

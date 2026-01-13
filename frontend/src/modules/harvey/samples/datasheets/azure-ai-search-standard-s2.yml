@@ -1,0 +1,16 @@
+associatedSaaS: Azure AI Search
+url: "https://azure.microsoft.com/en-us/pricing/details/search/"
+planReference: STANDARD_S2
+type: Partial SaaS
+capacity:
+  - value: 512 GB per partition
+    autoRecharge: monthly
+    extraCharge: SCALE_BY_UNIT (Up to 6 TB per service)
+  - value: 200 indexes per service
+    autoRecharge: fixed
+maxPower:
+  value: Up to 36 search units (SU) per service
+  reference: "Scale-out: Max 12 partitions / Max 12 replicas. Billing = P x R."
+coolingPeriod: "Dynamic (Se recomienda implementar Back-off exponencial ante errores 429/503)"
+segmentation:
+  - Service Level (Dedicated): Infraestructura dedicada. SLA del 99.9% requiere 2+ réplicas.

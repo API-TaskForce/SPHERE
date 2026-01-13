@@ -1,0 +1,16 @@
+associatedSaaS: Azure AI Search
+url: "https://azure.microsoft.com/en-us/pricing/details/search/"
+planReference: STORAGE_OPTIMIZED_L1
+type: Partial SaaS
+capacity:
+  - value: 2 TB per partition (Max 24 TB per service)
+    autoRecharge: monthly
+    extraCharge: SCALE_BY_UNIT
+  - value: 10 indexes per service
+    autoRecharge: fixed
+maxPower:
+  value: Up to 36 units per service
+  reference: "Scale-out: Max 12 partitions / Max 12 replicas"
+coolingPeriod: "TBD (Optimized for large disk-bound datasets)"
+segmentation:
+  - Service Level: Best for large-scale storage with lower query frequency.

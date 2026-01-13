@@ -1,6 +1,7 @@
 import { Box, styled } from '@mui/material';
 import { Helmet } from 'react-helmet';
 import { useEffect, useState } from 'react';
+import { getAzureAiSearchPricing } from '../../mock/azureAiSearchPricing';
 import PricingListCard from '../../components/pricing-list-card';
 import { usePricingsApi } from '../../api/pricingsApi';
 import SearchBar from '../../components/search-bar';
@@ -66,7 +67,50 @@ export default function PricingListPage() {
 
     getPricings({ ...filters, limit, offset })
       .then(data => {
-        setPricingsList(data.pricings || []);
+        // Build pricings list from API
+        let fetchedPricings = data.pricings || [];
+
+        // Try to inject local sample pricing (Azure AI Search)
+        try {
+          const samplePricing = getAzureAiSearchPricing();
+
+          if (samplePricing) {
+            const plans = samplePricing.plans ? Object.keys(samplePricing.plans) : [];
+            const planPrices = plans
+              .map((p: string) => samplePricing.plans[p]?.price ?? 0)
+              .filter((v: number) => Number.isFinite(v));
+
+            const minPrice = planPrices.length ? Math.min(...planPrices) : 0;
+            const maxPrice = planPrices.length ? Math.max(...planPrices) : 0;
+
+            const sampleEntry: PricingEntry = {
+              name: samplePricing.saasName || 'Azure AI Search',
+              owner: 'azure-samples',
+              version: samplePricing.version || '2026',
+              collectionName: '',
+              extractionDate: samplePricing.createdAt || new Date().toISOString(),
+              currency: samplePricing.currency || 'USD',
+              analytics: {
+                configurationSpaceSize: plans.length,
+                minSubscriptionPrice: minPrice,
+                maxSubscriptionPrice: maxPrice,
+              },
+            };
+
+            // prepend sample to fetched pricings if not already present
+            const exists = fetchedPricings.some(
+              (p: PricingEntry) => p.name === sampleEntry.name && p.owner === sampleEntry.owner
+            );
+            if (!exists) fetchedPricings = [sampleEntry, ...fetchedPricings];
+          }
+        } catch (err) {
+          // ignore if sample not available
+          // eslint-disable-next-line no-console
+          console.warn('Could not inject sample pricing:', err);
+        }
+
+        setPricingsList(fetchedPricings);
+
         if (typeof data.total === 'number') {
           setTotalCount(data.total);
         } else if (Array.isArray(data.pricings)) {

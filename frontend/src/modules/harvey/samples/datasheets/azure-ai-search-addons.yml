@@ -1,0 +1,10 @@
+addOnsTechnicalDetails:
+  semanticRanker:
+    freeLimit: 1000 requests/month
+    overage: 1.00 USD per 1000 requests
+  agenticRetrieval:
+    freeLimit: 50M tokens/month
+    overage: 0.022 USD per 1M tokens
+  aiEnrichment:
+    imageExtraction: 1.00 USD per 1000 images (Tiered pricing applies)
+    customEntityLookup: 1.00 USD per 1000 text records
