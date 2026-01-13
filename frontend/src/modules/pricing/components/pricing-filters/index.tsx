@@ -41,6 +41,7 @@ export default function PricingFilters({
   ]);
   const [owners, setOwners] = useState<Record<string, number>>({});
   const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
+  const [typeFilter, setTypeFilter] = useState<string>('');
 
   const handleOwnerChange = (owner: string) => {
     setSelectedOwners(prev =>
@@ -56,6 +57,7 @@ export default function PricingFilters({
       minPriceRange,
       maxPriceRange,
       selectedOwners,
+      typeFilter,
     };
 
     setFilterValues(filterValues);
@@ -68,7 +70,9 @@ export default function PricingFilters({
       subscriptionRange: [0, Number.MAX_SAFE_INTEGER],
       minPriceRange: [0, Number.MAX_SAFE_INTEGER],
       maxPriceRange: [0, Number.MAX_SAFE_INTEGER],
+      typeFilter: '',
     });
+    setTypeFilter('');
   };
 
   useEffect(() => {
@@ -176,8 +180,38 @@ export default function PricingFilters({
         />
       )}
 
+      {/* Filter: Type */}
+      <FormControl fullWidth sx={{ mb: 3 }}>
+        <InputLabel
+          id="type-select-label"
+          sx={{
+            backgroundColor: `${palette().background.neutral}`,
+            padding: '0 5px',
+          }}
+        >
+          Type
+        </InputLabel>
+        <Select
+          labelId="type-select-label"
+          value={typeFilter}
+          onChange={e => {
+            const val = e.target.value;
+            setTypeFilter(val);
+            // If API selected, auto-select 'samples' owner if logic requires, 
+            // but user asked for "API shows only the 2 examples". 
+            // The examples have owner='samples'. 
+            // I will enforce this in the handleFilter or parent. 
+            // Actually, better to just let the parent handle 'type' filter.
+          }}
+        >
+          <MenuItem value="">All</MenuItem>
+          <MenuItem value="SaaS">SaaS</MenuItem>
+          <MenuItem value="API">API</MenuItem>
+        </Select>
+      </FormControl>
+
       {/* Filter: Owners */}
-      {textFilterValue !== '' && (
+      {textFilterValue !== '' && typeFilter !== 'API' && (
         <Box sx={{ width: '100%', padding: '16px', maxWidth: '500px', margin: 'auto' }}>
           <Typography variant="h6" gutterBottom>
             Owner

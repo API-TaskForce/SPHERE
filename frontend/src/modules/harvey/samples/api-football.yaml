@@ -1,0 +1,119 @@
+saasName: API-Football
+syntaxVersion: "3.0"
+version: "2026"
+url: "https://rapidapi.com/api-sports/api/api-football/pricing"
+createdAt: "2026-01-12"
+currency: "USD"
+features:
+  requests:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  leagues:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  fixtures:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  preMatchOdds:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  standings:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  countriesAndSeasons:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  teams:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  lineups:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  statisticsAndPredictions:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  events:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  players: #Players, TopScorers, Transfers, Coachs como se escribe esta feature?
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  rate:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+  bandwidthPlatformFee:
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+
+
+usageLimits:
+  maxRequestsPerDay:
+    description: Number of API requests allowed per day
+    valueType: NUMERIC
+    defaultValue: 100
+    unit: request
+    type: RENEWABLE
+    period:
+      value: 1
+      unit: DAY
+    linkedFeatures:
+    - requests
+  rateLimit:
+    description: Number of API requests allowed per hour
+    valueType: NUMERIC
+    defaultValue: 1000
+    unit: request
+    type: RENEWABLE
+    period:
+      value: 1
+      unit: HOUR
+    linkedFeatures:
+    - rate
+  maxBandwidth:
+    description: amount MB allowed per month
+    valueType: NUMERIC
+    defaultValue: 10240
+    unit: MB
+    type: RENEWABLE
+    period:
+      value: 1
+      unit: MONTH
+    linkedFeatures:
+    - bandwidthPlatformFee
+
+plans:
+  BASIC:
+    price: 0.00
+    unit: user/month
+    features: null
+    usageLimits:
+      maxRequestsPerDay:
+        value: 100
+      rateLimit:
+        value: 1000
+      maxBandwidth:
+        value: 10240
+
+addOns:
+  extraBandwidth:
+    description: extra bandwidth for Bandwidth Platform Fee
+    price: 0.001
+    unit: MB
+    availableFor:
+      - BASIC
+    usageLimits:
+      maxBandwidth:
+        value: 1

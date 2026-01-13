@@ -28,7 +28,7 @@ export default function PricingListCard({
   owner,
   dataEntry,
   showOptions = false,
-  setPricingToAdd = () => {},
+  setPricingToAdd = () => { },
   setAddToCollectionModalOpen,
 }: {
   name: string;
@@ -184,7 +184,7 @@ export default function PricingListCard({
           pl="10px"
           onClick={() =>
             // If pricing is a local sample (owner starts with 'azure-samples' or 'sample'), route to samples viewer
-            owner && (owner as string).toString().startsWith('azure-samples')
+            owner && (owner.toString().startsWith('azure-samples') || owner === 'samples')
               ? router.push(`/pricings/samples/${name}`)
               : router.push(`/pricings/${owner}/${name}?collectionName=${dataEntry.collectionName}`)
           }

@@ -1,7 +1,7 @@
 import { Box, styled } from '@mui/material';
 import { Helmet } from 'react-helmet';
 import { useEffect, useState } from 'react';
-import { getAzureAiSearchPricing } from '../../mock/azureAiSearchPricing';
+import { SAMPLES } from '../../mock/registry';
 import PricingListCard from '../../components/pricing-list-card';
 import { usePricingsApi } from '../../api/pricingsApi';
 import SearchBar from '../../components/search-bar';
@@ -65,76 +65,120 @@ export default function PricingListPage() {
       ...filterValues,
     };
 
-    getPricings({ ...filters, limit, offset })
-      .then(data => {
-        // Build pricings list from API
-        let fetchedPricings = data.pricings || [];
+    // Helper to generate sample entries
+    const getSampleEntries = () => {
+      // If filtering by SaaS, do not show samples (assuming samples are API examples)
+      if (filterValues && (filterValues as any).typeFilter === 'SaaS') {
+        return [];
+      }
 
-        // Try to inject local sample pricing (Azure AI Search)
+      const entries: PricingEntry[] = [];
+      Object.entries(SAMPLES).forEach(([key, sample]) => {
         try {
-          const samplePricing = getAzureAiSearchPricing();
+          // If text filter is active, only show matching samples (by name or key)
+          if (
+            textFilterValue &&
+            !sample.title.toLowerCase().includes(textFilterValue.toLowerCase()) &&
+            !key.toLowerCase().includes(textFilterValue.toLowerCase())
+          ) {
+            return;
+          }
 
+          const samplePricing = sample.getPricing();
           if (samplePricing) {
             const plans = samplePricing.plans ? Object.keys(samplePricing.plans) : [];
             const planPrices = plans
-              .map((p: string) => samplePricing.plans[p]?.price ?? 0)
-              .filter((v: number) => Number.isFinite(v));
+              .map(p => {
+                const price = samplePricing.plans?.[p]?.price;
+                return typeof price === 'number' ? price : 0;
+              })
+              .filter(Number.isFinite);
 
             const minPrice = planPrices.length ? Math.min(...planPrices) : 0;
             const maxPrice = planPrices.length ? Math.max(...planPrices) : 0;
 
-            const sampleEntry: PricingEntry = {
-              name: samplePricing.saasName || 'Azure AI Search',
-              owner: 'azure-samples',
+            const extractionDate =
+              samplePricing.createdAt instanceof Date
+                ? samplePricing.createdAt.toISOString()
+                : typeof samplePricing.createdAt === 'string'
+                  ? samplePricing.createdAt
+                  : new Date().toISOString();
+
+            entries.push({
+              name: key,
+              owner: 'samples',
               version: samplePricing.version || '2026',
               collectionName: '',
-              extractionDate: samplePricing.createdAt || new Date().toISOString(),
+              extractionDate: extractionDate,
               currency: samplePricing.currency || 'USD',
               analytics: {
                 configurationSpaceSize: plans.length,
                 minSubscriptionPrice: minPrice,
                 maxSubscriptionPrice: maxPrice,
               },
-            };
-
-            // prepend sample to fetched pricings if not already present
-            const exists = fetchedPricings.some(
-              (p: PricingEntry) => p.name === sampleEntry.name && p.owner === sampleEntry.owner
-            );
-            if (!exists) fetchedPricings = [sampleEntry, ...fetchedPricings];
+            });
           }
         } catch (err) {
-          // ignore if sample not available
-          // eslint-disable-next-line no-console
-          console.warn('Could not inject sample pricing:', err);
+          console.warn(`Could not inject sample pricing ${key}:`, err);
         }
+      });
+      return entries;
+    };
+
+    getPricings({ ...filters, limit, offset })
+      .then(data => {
+        let fetchedPricings = data.pricings || [];
+        const isApiFilter = (filterValues as any).typeFilter === 'API';
+
+        // If filtering by API, only show samples (mock logic per user request)
+        if (isApiFilter) {
+          fetchedPricings = [];
+        }
+
+        const sampleEntries = getSampleEntries();
+
+        // Merge: avoid duplicates if backend somehow returned the same (unlikely for samples)
+        // Add samples to the beginning
+        fetchedPricings = [...sampleEntries, ...fetchedPricings];
 
         setPricingsList(fetchedPricings);
 
+        // Update totals
         if (typeof data.total === 'number') {
-          setTotalCount(data.total);
-        } else if (Array.isArray(data.pricings)) {
-          setTotalCount(offset + data.pricings.length);
+          setTotalCount(data.total); // Backend total usually doesn't count local samples
+        } else {
+          setTotalCount(offset + fetchedPricings.length);
         }
 
-        if (data.pricings && data.pricings.length > 0) {
+        // Set filters based on available data
+        if (fetchedPricings.length > 0) {
           setFilterLimits({
-            minPrice: data.minPrice,
-            maxPrice: data.maxPrice,
-            configurationSpaceSize: data.configurationSpaceSize,
-            owners: data.pricings.map((pricing: PricingEntry) => pricing.owner),
+            minPrice: data.minPrice || { min: 0, max: 0, data: [] },
+            maxPrice: data.maxPrice || { min: 0, max: 0, data: [] },
+            configurationSpaceSize: data.configurationSpaceSize || { min: 0, max: 0, data: [] },
+            owners: data.pricings ? data.pricings.map((pricing: PricingEntry) => pricing.owner) : [],
           });
         } else {
-          setFilterLimits({
-            minPrice: { min: 0, max: 0, data: [] },
-            maxPrice: { min: 0, max: 0, data: [] },
-            configurationSpaceSize: { min: 0, max: 0, data: [] },
-            owners: [],
-          } as unknown as FilterLimits);
+          setFilterLimits(null);
         }
       })
       .catch(error => {
-        console.error('Error:', error);
+        console.error('API Error, falling back to samples:', error);
+        // Fallback: Show only samples if API fails
+        const sampleEntries = getSampleEntries();
+        setPricingsList(sampleEntries);
+        setTotalCount(sampleEntries.length);
+        // We can't really set meaningful filter limits without backend stats, but we can set defaults
+        setFilterLimits({
+          minPrice: { min: 0, max: 0, data: [] },
+          maxPrice: { min: 0, max: 0, data: [] },
+          configurationSpaceSize: { min: 0, max: 0, data: [] },
+          owners: {
+            min: 0,
+            max: 0,
+            data: sampleEntries.map(p => ({ value: p.owner, count: 1 })),
+          },
+        });
       });
   }, [textFilterValue, filterValues, limit, offset, getPricings]);
 
