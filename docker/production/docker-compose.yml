@@ -72,7 +72,7 @@ services:
       # AÑADE ESTO:
       - HTTP_PROXY=http://proxy.int.local:3128
       - HTTPS_PROXY=http://proxy.int.local:3128
-      - NO_PROXY=127.0.0.1,localhost,analysis-engine
+      - NO_PROXY=127.0.0.1,localhost,analysis-engine,mcp-server
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -99,7 +99,7 @@ services:
       # AÑADE ESTO:
       - HTTP_PROXY=http://proxy.int.local:3128
       - HTTPS_PROXY=http://proxy.int.local:3128
-      - NO_PROXY=127.0.0.1,localhost,analysis-engine,a-mint
+      - NO_PROXY=127.0.0.1,localhost,analysis-engine,a-mint,mcp-server
     ports:
       - "8085:8085"
     depends_on:
@@ -126,7 +126,7 @@ services:
       # AÑADE ESTO:
       - HTTP_PROXY=http://proxy.int.local:3128
       - HTTPS_PROXY=http://proxy.int.local:3128
-      - NO_PROXY=127.0.0.1,localhost,analysis-engine,a-mint
+      - NO_PROXY=127.0.0.1,localhost,analysis-engine,a-mint,mcp-server
     depends_on:
       - a-mint
       - analysis-engine
