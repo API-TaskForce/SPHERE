@@ -62,8 +62,6 @@ export default function PricingListCard({
   };
 
   const handleRemovePricing = () => {
-    console.log('Removing pricing:', name);
-    console.log('Removing pricing:', dataEntry);
     removePricingByName(name, dataEntry.collectionName)
       .then(() => {
         customAlert('Pricing removed');

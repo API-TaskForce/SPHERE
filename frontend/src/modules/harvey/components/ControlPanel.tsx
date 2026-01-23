@@ -1,8 +1,23 @@
-import { ChangeEvent, FormEvent } from 'react';
-import { Box, TextField, Button } from '@mui/material';
+import { ChangeEvent, FormEvent, useState } from 'react';
+import {
+  Box,
+  TextField,
+  Button,
+  Dialog,
+  Typography,
+  DialogTitle,
+  DialogActions,
+  DialogContent,
+  Stack,
+  Divider,
+  IconButton,
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
 import ContextManager from './ContextManager';
-import type { ContextItemInput, PricingContextItem } from '../types/types';
+import type { ContextInputType, PricingContextItem } from '../types/types';
+import SearchPricings from './SearchPricings';
+import { grey } from '@mui/material/colors';
 
 interface Props {
   question: string;
@@ -13,8 +28,9 @@ interface Props {
   onQuestionChange: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
   onFileSelect: (files: FileList | null) => void;
-  onContextAdd: (input: ContextItemInput) => void;
+  onContextAdd: (input: ContextInputType) => void;
   onContextRemove: (id: string) => void;
+  onSphereContextRemove: (sphereId: string) => void;
   onContextClear: () => void;
 }
 
@@ -29,14 +45,24 @@ function ControlPanel({
   onFileSelect,
   onContextAdd,
   onContextRemove,
-  onContextClear
+  onSphereContextRemove,
+  onContextClear,
 }: Props) {
+  const [showPricingModal, setPricingModal] = useState<boolean>(false);
+
   const handleQuestionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     onQuestionChange(event.target.value);
   };
 
+  const handleOpenModal = () => setPricingModal(true);
+  const handleCloseModal = () => setPricingModal(false);
+
   return (
-    <Box component="form" onSubmit={onSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3, p: 2 }}>
+    <Box
+      component="form"
+      onSubmit={onSubmit}
+      sx={{ display: 'flex', flexDirection: 'column', gap: 3, p: 2 }}
+    >
       <TextField
         label="Question"
         name="question"
@@ -57,34 +83,63 @@ function ControlPanel({
         onClear={onContextClear}
       />
 
-      <Box>
-        <Button
-          variant="outlined"
-          component="label"
-          fullWidth
-        >
-          Upload pricing YAML (optional)
-          <input
-            type="file"
-            accept=".yaml,.yml"
-            multiple
-            hidden
-            onChange={(event: ChangeEvent<HTMLInputElement>) => {
-              const files = event.target.files ?? null;
-              onFileSelect(files);
-              event.target.value = '';
-            }}
-          />
-        </Button>
-      </Box>
+      <Typography variant="h6" component="h2" sx={{ fontWeight: 600, mb: 2, color: grey[800] }}>
+        Add Pricing Context
+      </Typography>
+
+      <Stack direction="row" spacing={2} divider={<Divider orientation="vertical" flexItem />}>
+        <Box component="section">
+          <Button variant="outlined" component="label" fullWidth>
+            Select archives
+            <input
+              type="file"
+              accept=".yaml,.yml"
+              multiple
+              hidden
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const files = event.target.files ?? null;
+                onFileSelect(files);
+              }}
+            />
+          </Button>
+          <Typography variant="h6" component="h3" sx={{ fontWeight: 600, mb: 2, color: grey[800] }}>
+            Upload pricing YAML (optional)
+          </Typography>
+          <Typography variant="body1">
+            Uploaded YAMLs appear in the pricing context above so you can remove them at any time.
+          </Typography>
+        </Box>
+
+        <Box component="section">
+          <Button variant="outlined" onClick={handleOpenModal} fullWidth>
+            Search pricings
+          </Button>
+          <Typography variant="h6" component="h3" sx={{ fontWeight: 600, mb: 2, color: grey[800] }}>
+            Add SPHERE iPricing (optional)
+          </Typography>
+          <Typography variant="body1">
+            Add iPricings with our SPHERE integration (our iPricing repository).
+          </Typography>
+          <Typography variant="body1">
+            You can further customize the search if you type a pricing name in the search bar.
+          </Typography>
+
+          <Dialog maxWidth="lg" fullWidth open={showPricingModal} onClose={handleCloseModal}>
+            <DialogActions>
+              <IconButton aria-label="close" onClick={handleCloseModal}>
+                <CloseIcon />
+              </IconButton>
+            </DialogActions>
+            <DialogTitle>Search Pricings</DialogTitle>
+            <DialogContent>
+              <SearchPricings onContextAdd={onContextAdd} onContextRemove={onSphereContextRemove} />
+            </DialogContent>
+          </Dialog>
+        </Box>
+      </Stack>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={isSubmitDisabled}
-          size="large"
-        >
+        <Button type="submit" variant="contained" disabled={isSubmitDisabled} size="large">
           {isSubmitting ? 'Processing...' : 'Ask'}
         </Button>
       </Box>
