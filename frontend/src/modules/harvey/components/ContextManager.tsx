@@ -64,6 +64,9 @@ function ContextManager({ items, detectedUrls, onAdd, onRemove, onClear }: Props
             All pricings detected or added via URL will be modeled automatically; this process can
             take up to 30-60 minutes.
           </Alert>
+          <Alert severity="warning" sx={{ mt: 1 }}>
+            Due to temporary production limits, URL extraction might trigger a "LoadError". Please wait for the loading icon in the pricing context box to disappear; once complete, you can proceed to ask questions normally.
+          </Alert>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="body2" sx={{ color: grey[600] }}>
