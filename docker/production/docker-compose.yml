@@ -96,6 +96,10 @@ services:
       - UVICORN_HOST=0.0.0.0
       - UVICORN_PORT=8085
       - MCP_TRANSPORT=sse
+      # AÑADE ESTO:
+      - HTTP_PROXY=http://proxy.int.local:3128
+      - HTTPS_PROXY=http://proxy.int.local:3128
+      - NO_PROXY=127.0.0.1,localhost,analysis-engine,a-mint
     ports:
       - "8085:8085"
     depends_on:
