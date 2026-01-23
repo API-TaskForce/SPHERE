@@ -98,7 +98,6 @@ export default function EditorPage() {
         let parsedPricing: Pricing;
 
         if (syntaxVersion !== '3.0'){
-          console.log("ENTRA");
           const response = await fetch('/api/pricings', {
             method: 'PUT',
             headers: {
@@ -111,8 +110,6 @@ export default function EditorPage() {
         }else{
           parsedPricing = retrievePricingFromYaml(templatePricing);
         }
-        
-        console.log(parsedPricing);
         
         setPricing(parsedPricing);
         setEditorValue(templatePricing);
