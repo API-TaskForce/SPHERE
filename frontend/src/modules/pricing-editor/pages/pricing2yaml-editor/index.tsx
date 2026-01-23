@@ -93,9 +93,11 @@ export default function EditorPage() {
       }
 
       try {
-        let parsedPricing: Pricing = retrievePricingFromYaml(templatePricing);
-        console.log(parsedPricing);
-        if (parsedPricing.syntaxVersion !== '3.0'){
+        const regex = /^syntaxVersion:\s*['"]?([^'"\n\r]+)['"]?$/m;
+        const syntaxVersion = templatePricing.match(regex)?.[1];
+        let parsedPricing: Pricing;
+
+        if (syntaxVersion !== '3.0'){
           console.log("ENTRA");
           const response = await fetch('/api/pricings', {
             method: 'PUT',
@@ -106,7 +108,11 @@ export default function EditorPage() {
           })
 
           parsedPricing = await response.json();
+        }else{
+          parsedPricing = retrievePricingFromYaml(templatePricing);
         }
+        
+        console.log(parsedPricing);
         
         setPricing(parsedPricing);
         setEditorValue(templatePricing);
