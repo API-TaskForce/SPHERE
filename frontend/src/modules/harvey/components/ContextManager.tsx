@@ -1,41 +1,25 @@
 import { useMemo, useState } from 'react';
-import {
-  Box,
-  Typography,
-  List,
-  ListItem,
-  Chip,
-  Button,
-  TextField,
-  IconButton,
-  Paper,
-  Alert
-} from '@mui/material';
-import { grey, primary } from '../../core/theme/palette';
+import { Box, Typography, List, Chip, Button, TextField, Paper, Alert } from '@mui/material';
+import { grey } from '../../core/theme/palette';
 
-import type { ContextItemInput, PricingContextItem } from '../types/types';
+import type { ContextInputType, PricingContextItem, UrlContextItemInput } from '../types/types';
+import ContextManagerItem from './ContextManagerItem';
 
 interface Props {
   items: PricingContextItem[];
   detectedUrls: string[];
-  onAdd: (input: ContextItemInput) => void;
+  onAdd: (input: ContextInputType) => void;
   onRemove: (id: string) => void;
   onClear: () => void;
 }
-
-const ORIGIN_LABEL: Record<PricingContextItem['origin'], string> = {
-  user: 'Manual',
-  detected: 'Detected',
-  preset: 'Preset',
-  agent: 'Agent'
-};
 
 function ContextManager({ items, detectedUrls, onAdd, onRemove, onClear }: Props) {
   const [urlInput, setUrlInput] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const availableDetected = useMemo(
-    () => detectedUrls.filter((url) => !items.some((item) => item.kind === 'url' && item.value === url)),
+    () =>
+      detectedUrls.filter(url => !items.some(item => item.kind === 'url' && item.value === url)),
     [detectedUrls, items]
   );
 
@@ -48,7 +32,15 @@ function ContextManager({ items, detectedUrls, onAdd, onRemove, onClear }: Props
 
     try {
       const normalized = new URL(trimmed).href;
-      onAdd({ kind: 'url', label: normalized, value: normalized, origin: 'user' });
+      const urlItem: UrlContextItemInput = {
+        kind: 'url',
+        url: normalized,
+        label: normalized,
+        value: normalized,
+        origin: 'user',
+        transform: 'not-started',
+      };
+      onAdd(urlItem);
       setUrlInput('');
       setError(null);
     } catch {
@@ -58,27 +50,30 @@ function ContextManager({ items, detectedUrls, onAdd, onRemove, onClear }: Props
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+      <Box
+        sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}
+      >
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
             Pricing Context
           </Typography>
           <Typography variant="body2" sx={{ color: grey[600] }}>
             Add URLs or YAML exports to ground H.A.R.V.E.Y.'s answers.
           </Typography>
           <Alert severity="info" sx={{ mt: 1 }}>
-            All pricings detected or added via URL will be modeled automatically; this process can take up to 30–60 minutes.
+            All pricings detected or added via URL will be modeled automatically; this process can
+            take up to 30-60 minutes.
           </Alert>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="body2" sx={{ color: grey[600] }}>
             {items.length} selected
           </Typography>
-          {items.length > 0 ? (
+          {items.length > 0 && (
             <Button size="small" onClick={onClear} color="error">
               Clear all
             </Button>
-          ) : null}
+          )}
         </Box>
       </Box>
 
@@ -89,46 +84,33 @@ function ContextManager({ items, detectedUrls, onAdd, onRemove, onClear }: Props
           </Typography>
         ) : (
           <List sx={{ py: 0 }}>
-            {items.map((item) => (
-              <ListItem
-                key={item.id}
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  py: 1,
-                  px: 0,
-                  borderBottom: `1px solid ${grey[200]}`
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {item.label}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: grey[600] }}>
-                    {item.kind === 'url' ? 'URL' : 'YAML'} · {ORIGIN_LABEL[item.origin]}
-                  </Typography>
-                </Box>
-                <Button size="small" onClick={() => onRemove(item.id)} color="error">
-                  Remove
-                </Button>
-              </ListItem>
+            {items.map(item => (
+              <ContextManagerItem key={item.id} item={item} onRemove={onRemove} />
             ))}
           </List>
         )}
       </Box>
 
-      {availableDetected.length > 0 ? (
+      {availableDetected.length > 0 && (
         <Box sx={{ mb: 2 }}>
           <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
             Detected in question
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {availableDetected.map((url) => (
+            {availableDetected.map(url => (
               <Chip
                 key={url}
                 label={`Add ${url}`}
-                onClick={() => onAdd({ kind: 'url', label: url, value: url, origin: 'detected' })}
+                onClick={() =>
+                  onAdd({
+                    kind: 'url',
+                    url: url,
+                    label: url,
+                    value: url,
+                    transform: 'not-started',
+                    origin: 'detected',
+                  })
+                }
                 color="primary"
                 variant="outlined"
                 size="small"
@@ -136,7 +118,7 @@ function ContextManager({ items, detectedUrls, onAdd, onRemove, onClear }: Props
             ))}
           </Box>
         </Box>
-      ) : null}
+      )}
 
       <Box sx={{ display: 'flex', gap: 1 }}>
         <TextField
@@ -144,11 +126,11 @@ function ContextManager({ items, detectedUrls, onAdd, onRemove, onClear }: Props
           name="context-url"
           value={urlInput}
           placeholder="https://example.com/pricing"
-          onChange={(event) => {
+          onChange={event => {
             setUrlInput(event.target.value);
             setError(null);
           }}
-          onKeyDown={(event) => {
+          onKeyDown={event => {
             if (event.key === 'Enter') {
               event.preventDefault();
               handleAddUrl();
@@ -161,11 +143,11 @@ function ContextManager({ items, detectedUrls, onAdd, onRemove, onClear }: Props
           Add URL
         </Button>
       </Box>
-      {error ? (
+      {error && (
         <Alert severity="error" sx={{ mt: 1 }}>
           {error}
         </Alert>
-      ) : null}
+      )}
     </Paper>
   );
 }
