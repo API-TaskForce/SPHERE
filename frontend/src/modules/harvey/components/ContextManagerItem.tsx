@@ -55,7 +55,7 @@ function ContextManagerItem({ item, onRemove }: ContextManagerItemProps) {
       case 'user':
       case 'detected':
       case 'agent':
-        return formatSphereEditorLink(`https:/${HARVEY_API_BASE_URL}/static/${item.id}.yaml`);
+        return formatSphereEditorLink(`https:/${import.meta.env.VITE_SPHERE_URL}${HARVEY_API_BASE_URL}/static/${item.id}.yaml`);
       case 'sphere':
         return formatSphereEditorLink(item.yamlPath);
       default:
