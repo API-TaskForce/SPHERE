@@ -28,6 +28,10 @@ services:
     environment:
       - PORT=8000
       - LOG_LEVEL=INFO
+      # AÑADE ESTO:
+      - HTTP_PROXY=http://proxy.int.local:3128
+      - HTTPS_PROXY=http://proxy.int.local:3128
+      - NO_PROXY=127.0.0.1,localhost,analysis-engine,mcp-server,analysis-engine,choco-analysis-engine
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -49,7 +53,7 @@ services:
       # AÑADE ESTO:
       - HTTP_PROXY=http://proxy.int.local:3128
       - HTTPS_PROXY=http://proxy.int.local:3128
-      - NO_PROXY=127.0.0.1,localhost,analysis-engine,mcp-server,analysis-engine
+      - NO_PROXY=127.0.0.1,localhost,analysis-engine,mcp-server,analysis-engine,choco-analysis-engine
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -76,7 +80,7 @@ services:
       # AÑADE ESTO:
       - HTTP_PROXY=http://proxy.int.local:3128
       - HTTPS_PROXY=http://proxy.int.local:3128
-      - NO_PROXY=127.0.0.1,localhost,analysis-engine,mcp-server,analysis-engine
+      - NO_PROXY=127.0.0.1,localhost,analysis-engine,mcp-server,analysis-engine,choco-analysis-engine
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -103,7 +107,7 @@ services:
       # AÑADE ESTO:
       - HTTP_PROXY=http://proxy.int.local:3128
       - HTTPS_PROXY=http://proxy.int.local:3128
-      - NO_PROXY=127.0.0.1,localhost,analysis-engine,a-mint,mcp-server,analysis-engine
+      - NO_PROXY=127.0.0.1,localhost,analysis-engine,a-mint,mcp-server,analysis-engine,choco-analysis-engine
     ports:
       - "8085:8085"
     depends_on:
@@ -130,7 +134,7 @@ services:
       # AÑADE ESTO:
       - HTTP_PROXY=http://proxy.int.local:3128
       - HTTPS_PROXY=http://proxy.int.local:3128
-      - NO_PROXY=127.0.0.1,localhost,analysis-engine,a-mint,mcp-server,analysis-engine
+      - NO_PROXY=127.0.0.1,localhost,analysis-engine,a-mint,mcp-server,analysis-engine,choco-analysis-engine
     depends_on:
       - a-mint
       - analysis-engine
