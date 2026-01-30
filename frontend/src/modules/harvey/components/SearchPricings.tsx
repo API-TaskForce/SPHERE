@@ -1,5 +1,5 @@
 import { usePricings } from '../hooks/usePricings';
-import { Box, Skeleton, Pagination, TextField, Typography, Chip } from '@mui/material';
+import { Box, Skeleton, Pagination, TextField, Chip } from '@mui/material';
 import { useState } from 'react';
 import { SphereContextItemInput } from '../types/types';
 import PricingsList from './PricingList';
