@@ -74,7 +74,11 @@ function ControlPanel({
         placeholder="Which is the best available subscription for a team of five users?"
         fullWidth
       />
-
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Button type="submit" variant="contained" disabled={isSubmitDisabled} size="large">
+          {isSubmitting ? 'Processing...' : 'Ask'}
+        </Button>
+      </Box>
       <ContextManager
         items={contextItems}
         detectedUrls={detectedPricingUrls}
@@ -137,12 +141,6 @@ function ControlPanel({
           </Dialog>
         </Box>
       </Stack>
-
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Button type="submit" variant="contained" disabled={isSubmitDisabled} size="large">
-          {isSubmitting ? 'Processing...' : 'Ask'}
-        </Button>
-      </Box>
     </Box>
   );
 }
