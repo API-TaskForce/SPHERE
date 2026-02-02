@@ -110,23 +110,60 @@ export function formatUsageDisplay(limitValue: unknown, linkedLimit?: UsageLimit
 }
 
 /**
- * Format a monetary value following the rule: round UP to the nearest cent, show no decimals
- * if the value is whole, otherwise show 2 decimals.
+ * Format a monetary value with the following rules:
+ * - If the input is a numeric-looking string, return it unchanged (preserve YAML formatting).
+ * - If the value is a number and >= 0.01: round to nearest cent (standard rounding) and show
+ *   no decimals if whole, otherwise show 2 decimals.
+ * - If the value is a number and < 0.01: show the actual decimal precision (e.g. 0.001, 0.0005)
+ *   without forcing rounding up to cents.
  */
 export function formatMoneyDisplay(value: unknown): string {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    const centsCeil = Math.ceil(value * 100) / 100;
-    return Number.isInteger(centsCeil) ? String(centsCeil) : centsCeil.toFixed(2);
-  }
-  // if it's a string that represents a number, try parse
+  // Preserve numeric-looking strings verbatim to respect the original YAML representation
   if (typeof value === 'string') {
-    const n = Number(value);
-    if (!Number.isNaN(n) && Number.isFinite(n)) {
-      const centsCeil = Math.ceil(n * 100) / 100;
-      return Number.isInteger(centsCeil) ? String(centsCeil) : centsCeil.toFixed(2);
-    }
+    const s = value.trim();
+    if (/^-?\d+(?:\.\d+)?$/.test(s)) return s;
   }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    if (value === 0) return '0';
+
+    const abs = Math.abs(value);
+    // Standard mode: >= 0.01 -> round to nearest cent
+    if (abs >= 0.01) {
+      const rounded = Math.round(value * 10000) / 10000; // standard rounding to cents
+      return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(3);
+    }
+
+    // Small values: preserve actual precision without forcing to 2 decimals
+    // Avoid exponential notation for very small numbers
+    return _numberToDecimalString(value);
+  }
+
+  // fallback
   return String(value ?? '');
+}
+
+function _numberToDecimalString(n: number): string {
+  // Fast path: if toString is already non-exponential, return it
+  const s = n.toString();
+  if (!s.includes('e')) return s;
+
+  // Convert exponential to full decimal representation
+  const m = n.toExponential().match(/^([+-]?[\d\.]+)e([+-]?\d+)$/i);
+  if (!m) return s;
+  const significand = m[1].replace('.', '').replace('+', '').replace('-', '');
+  const sign = m[1].startsWith('-') ? '-' : '';
+  const exp = Number(m[2]);
+
+  if (exp >= 0) {
+    const decimals = (m[1].split('.')[1] || '').length;
+    const zerosToAdd = Math.max(0, exp - decimals);
+    return sign + significand + '0'.repeat(zerosToAdd);
+  }
+
+  // exp < 0 -> produce 0.<zeros><significand>
+  const zeros = Math.abs(exp) - 1;
+  return sign + '0.' + '0'.repeat(zeros) + significand;
 }
 
 function _safePrimitive(v: unknown): string {

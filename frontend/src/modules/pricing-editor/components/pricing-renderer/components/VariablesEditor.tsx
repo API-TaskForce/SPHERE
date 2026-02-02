@@ -175,9 +175,9 @@ export default function VariablesEditor({ open, onClose, variables, onApply }: P
                                       if (raw === '') return setLocal(s => ({ ...s, [k]: '' }));
                                       const n = Number(raw);
                                       if (Number.isNaN(n)) return;
-                                      setLocal(s => ({ ...s, [k]: decimalsAllowed[k] ? Number(n.toFixed(2)) : Math.round(n) }));
+                                      setLocal(s => ({ ...s, [k]: decimalsAllowed[k] ? n : Math.round(n) }));
                                     }}
-                                    inputProps={{ step: decimalsAllowed[k] ? 0.01 : 1 }}
+                                    inputProps={{ step: decimalsAllowed[k] ? 0.0001 : 1 }}
                                     sx={{ width: 120 }}
                                   />
                                 </Stack>
@@ -202,7 +202,7 @@ export default function VariablesEditor({ open, onClose, variables, onApply }: P
                                     const log = ((s - 50) / 100) * maxLog;
                                     const mult = Math.pow(10, log);
                                     const newVal = base * mult;
-                                    const fixed = decimalsAllowed[k] ? Number(newVal.toFixed(2)) : Math.round(newVal);
+                                    const fixed = decimalsAllowed[k] ? newVal : Math.round(newVal);
                                     setLocal(st => ({ ...st, [k]: fixed }));
                                   }}
                                 />
@@ -210,7 +210,7 @@ export default function VariablesEditor({ open, onClose, variables, onApply }: P
                                 <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
                                   <FormControlLabel
                                     control={<Switch checked={decimalsAllowed[k] === true} onChange={(e) => setDecimalsAllowed(s => ({ ...s, [k]: e.target.checked }))} />}
-                                    label={<Typography variant="caption">{decimalsAllowed[k] ? 'Allow 2 decimals' : 'Integers'}</Typography>}
+                                    label={<Typography variant="caption">{decimalsAllowed[k] ? 'Allow decimals' : 'Integers'}</Typography>}
                                   />
                                   <Typography variant="caption" color="text.secondary">Base: {String(original)}</Typography>
                                 </Stack>
