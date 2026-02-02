@@ -43,6 +43,7 @@ services:
   analysis-engine:
     image: aleexgf/pricing-analysis-engine:main
     container_name: pricing-analysis-engine
+    init: true
     ports:
       - "8002:3000"
     environment:
@@ -67,6 +68,7 @@ services:
   a-mint:
     image: aleexgf/a-mint:main
     container_name: a-mint
+    init: true
     ports:
       - "8001:8000"
     env_file: .env
