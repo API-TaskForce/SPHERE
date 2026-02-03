@@ -29,7 +29,7 @@ export default function AddOnElement({
       animate="visible"
       whileHover={{ scale: 1.02, boxShadow: '0 6px 18px rgba(0,0,0,0.12)' }}
       elevation={4}
-      sx={{ width: 280, height: 104, borderRadius: 2, m: 1, display: 'flex', alignItems: 'center' }}
+      sx={{ minWidth: 280, width: 'auto', minHeight: 104, borderRadius: 2, m: 1, display: 'flex', alignItems: 'center' }}
     >
       <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 1, width: '100%', boxSizing: 'border-box' }}>
         <Avatar sx={{ bgcolor: accent, width: 52, height: 52, fontWeight: 700 }} aria-hidden>

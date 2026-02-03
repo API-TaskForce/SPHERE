@@ -130,8 +130,13 @@ export function formatMoneyDisplay(value: unknown): string {
     const abs = Math.abs(value);
     // Standard mode: >= 0.01 -> round to nearest cent
     if (abs >= 0.01) {
-      const rounded = Math.round(value * 100) / 100; // standard rounding to cents
-      return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+      const rounded2 = Math.round(value * 100) / 100;
+      // If the value has more precision than 2 decimals (e.g. 2.9533), show full precision
+      if (Math.abs(value - rounded2) > 1e-9) {
+        return _numberToDecimalString(value);
+      }
+      // Otherwise keep standardized 2-decimal format (or integer)
+      return Number.isInteger(rounded2) ? String(rounded2) : rounded2.toFixed(2);
     }
 
     // Small values: preserve actual precision without forcing to 2 decimals
