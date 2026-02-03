@@ -85,7 +85,8 @@ class PricingController {
 
   async create(req: any, res: any) {
     try {
-      const pricing = await this.pricingService.create(req.file, req.user.username);
+      const isApiFlag = req.body.isApi === 'true' || req.body.isApi === true;
+      const pricing = await this.pricingService.create(req.file, req.user.username, undefined, isApiFlag);
       res.json(pricing);
     } catch (err: any) {
       try {

@@ -191,9 +191,18 @@ export default function PricingListCard({
             },
           }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1 }}>
-            {dataEntry.collectionName ? `${dataEntry.collectionName}/${name}` : name}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1 }}>
+              {dataEntry.collectionName ? `${dataEntry.collectionName}/${name}` : name}
+            </Typography>
+            {dataEntry.isApi && (
+              <Box component="span" sx={{ ml: 1 }}>
+                <Typography variant="caption" sx={{ border: '1px solid', borderRadius: 1, px: 1, py: 0.2, backgroundColor: '#e3f2fd', color: '#0b63c6', fontWeight: 'bold' }}>
+                  API
+                </Typography>
+              </Box>
+            )}
+          </Box>
         </Stack>
         <Box display="flex" justifyContent="space-evenly" alignItems="center" mt={2}>
           <Box>

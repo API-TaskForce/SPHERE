@@ -82,6 +82,7 @@ const computeFiltersDataAggregator = {
           version: 1,
           extractionDate: 1,
           currency: 1,
+          isApi: 1,
           analytics: {
             configurationSpaceSize: 1,
             minSubscriptionPrice: 1,

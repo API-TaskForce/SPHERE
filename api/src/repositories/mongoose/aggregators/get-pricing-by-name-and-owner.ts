@@ -50,6 +50,7 @@ export function getPricingByNameAndOwnerAggregator(
             extractionDate: '$extractionDate',
             url: '$url',
             yaml: '$yaml',
+            isApi: '$isApi',
             analytics: '$analytics',
             owner: {
               id: { $toString: '$owner._id' },

@@ -32,6 +32,7 @@ export type PricingEntry = {
     minSubscriptionPrice: number;
     maxSubscriptionPrice: number;
   };
+  isApi?: boolean;
 };
 
 export type FilterValues = {

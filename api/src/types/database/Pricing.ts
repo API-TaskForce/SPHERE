@@ -5,6 +5,7 @@ export interface Pricing {
   extractionDate: Date;
   url?: string;
   yaml: string;
+  isApi?: boolean;
   analytics?: PricingAnalytics;
 }
 

@@ -209,19 +209,26 @@ export default function CardPage() {
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Box display="flex" flexDirection="column">
               <Box display="flex" alignItems="center" gap={2} mb={2}>
-                <Typography variant="h5" letterSpacing={1}>
-                  {currentPricing?.collectionName && (
-                    <>
-                      <Box component="span" sx={{ color: 'text.secondary', mr: 0.25 }}>
-                        {currentPricing?.collectionName}
-                      </Box>
-                      <Box component="span" sx={{ color: 'text.secondary', mr: 0.25 }}>
-                        /
-                      </Box>
-                    </>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography variant="h5" letterSpacing={1}>
+                    {currentPricing?.collectionName && (
+                      <>
+                        <Box component="span" sx={{ color: 'text.secondary', mr: 0.25 }}>
+                          {currentPricing?.collectionName}
+                        </Box>
+                        <Box component="span" sx={{ color: 'text.secondary', mr: 0.25 }}>
+                          /
+                        </Box>
+                      </>
+                    )}
+                    {pricing?.saasName}
+                  </Typography>
+                  {currentPricing?.isApi && (
+                    <Typography variant="caption" sx={{ border: '1px solid', borderRadius: 1, px: 1, py: 0.2, backgroundColor: '#e3f2fd', color: '#0b63c6', fontWeight: 'bold' }}>
+                      API
+                    </Typography>
                   )}
-                  {pricing?.saasName}
-                </Typography>
+                </Box>
                 <Button
                   variant="outlined"
                   size="small"
