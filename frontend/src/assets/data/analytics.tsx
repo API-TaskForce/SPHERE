@@ -50,6 +50,7 @@ export interface AnalyticsDataEntry {
   currency: string;
   yaml: string;
   analytics: SaaSAnalytics;
+  isApi: boolean;
 }
 
 export interface AnalyticsData {

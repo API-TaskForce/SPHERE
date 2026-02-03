@@ -14,7 +14,7 @@ class PricingRepository extends RepositoryBase {
     let sortAggregator = [];
 
     if (Object.keys(queryParams).length > 0) {
-      const { name, subscriptions, minPrice, maxPrice, selectedOwners, sortBy, sort } = queryParams;
+      const { name, subscriptions, minPrice, maxPrice, selectedOwners, sortBy, sort, type } = queryParams as any;
 
       if (name) {
         filteringAggregators.push({
@@ -25,6 +25,16 @@ class PricingRepository extends RepositoryBase {
             },
           },
         });
+      }
+
+      // filter by pricing type: 'api' | 'saas' | 'all'
+      if (type && typeof type === 'string') {
+        if (type === 'api') {
+          filteringAggregators.push({ $match: { isApi: true } });
+        }
+        if (type === 'saas') {
+          filteringAggregators.push({ $match: { $or: [{ isApi: false }, { isApi: { $exists: false } }] } });
+        }
       }
 
       if (subscriptions) {

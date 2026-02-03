@@ -48,11 +48,26 @@ export const useAuth = () => {
     }
 
     useEffect(() => {
-        const token = getItem('token')
+        let token: string | null = null
+        try {
+            token = getItem('token')
+        } catch (err) {
+            console.error('Local storage access error', err)
+            // fallback: ensure no user is kept
+            removeUser()
+            return
+        }
 
         if (token) {
-            const firstAuthSent = getItem('firstAuthSent')
-            
+            let firstAuthSent: string | null = null
+            try {
+                firstAuthSent = getItem('firstAuthSent')
+            } catch (err) {
+                console.error('Local storage access error', err)
+                removeUser()
+                return
+            }
+
             if (firstAuthSent) {
                 return
             }

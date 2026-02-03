@@ -41,6 +41,7 @@ export default function PricingFilters({
   ]);
   const [owners, setOwners] = useState<Record<string, number>>({});
   const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
+  const [pricingType, setPricingType] = useState<string>('all');
 
   const handleOwnerChange = (owner: string) => {
     setSelectedOwners(prev =>
@@ -56,6 +57,7 @@ export default function PricingFilters({
       minPriceRange,
       maxPriceRange,
       selectedOwners,
+      type: pricingType,
     };
 
     setFilterValues(filterValues);
@@ -64,6 +66,7 @@ export default function PricingFilters({
   const handleClear = () => {
     setSortBy('');
     setSelectedOwners([]);
+    setPricingType('all');
     setFilterValues({
       subscriptionRange: [0, Number.MAX_SAFE_INTEGER],
       minPriceRange: [0, Number.MAX_SAFE_INTEGER],
@@ -121,6 +124,18 @@ export default function PricingFilters({
           <MenuItem value="addonsCount"> Add-Ons</MenuItem>
           <MenuItem value="minPrice">Min Price</MenuItem>
           <MenuItem value="maxPrice">Max price</MenuItem>
+        </Select>
+      </FormControl>
+
+      {/* Type filter: SaaS / API / All */}
+      <FormControl fullWidth sx={{ mb: 3 }}>
+        <InputLabel id="pricing-type-label" sx={{ backgroundColor: `${palette().background.neutral}`, padding: '0 5px' }}>
+          Tipo
+        </InputLabel>
+        <Select labelId="pricing-type-label" value={pricingType} onChange={e => setPricingType(e.target.value)}>
+          <MenuItem value="all">Ver todos</MenuItem>
+          <MenuItem value="saas">SaaS</MenuItem>
+          <MenuItem value="api">API</MenuItem>
         </Select>
       </FormControl>
 

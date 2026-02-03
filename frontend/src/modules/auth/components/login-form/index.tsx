@@ -20,8 +20,10 @@ const LoginForm: React.FC = () => {
   const {login} = useAuth();
   const router = useRouter();
 
-  function handleLogin(e: any) {
+  async function handleLogin(e: any) {
     e.preventDefault();
+    setErrors([]);
+
     const formData = new FormData(e.target);
     
     const formValues: LoginFormProps = {
@@ -29,32 +31,46 @@ const LoginForm: React.FC = () => {
       password: formData.get('password') as string,
     }
 
-    const errors = validateLogin(formValues);
+    const validationErrors = validateLogin(formValues);
     
-    if (errors.length > 0) {
-      setErrors(errors);
-    }else{
-      loginUser(formValues)
-        .then((response: any) => {
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
 
-          if (response.error) {
-            setErrors([response.error]);
-            return;
-          }
+    try {
+      const response: any = await loginUser(formValues);
 
-          const loggedUser = {
-            id: response.id,
-            firstName: response.firstName,
-            lastName: response.lastName,
-            username: response.username,
-            email: response.email,
-            avatar: response.avatar,
-          }
+      if (!response) {
+        setErrors(['Unexpected server response']);
+        return;
+      }
 
-          login(loggedUser, response.token, response.tokenExpiration);
+      if (response.error) {
+        setErrors([response.error]);
+        return;
+      }
 
-          router.push('/');
-        })
+      // sanity check
+      if (!response.id || !response.token) {
+        setErrors(['Invalid login response']);
+        return;
+      }
+
+      const loggedUser = {
+        id: response.id,
+        firstName: response.firstName,
+        lastName: response.lastName,
+        username: response.username,
+        email: response.email,
+        avatar: response.avatar,
+      }
+
+      login(loggedUser, response.token, response.tokenExpiration);
+
+      router.push('/');
+    } catch (err: any) {
+      setErrors([err.message || 'Login failed']);
     }
   }
   

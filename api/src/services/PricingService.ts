@@ -106,7 +106,7 @@ class PricingService {
     ];
   }
 
-  async create(pricingFile: any, owner: string, collectionId?: string) {
+  async create(pricingFile: any, owner: string, collectionId?: string, isApi?: boolean) {
     try {
       const uploadedPricing: Pricing = retrievePricingFromPath(
         typeof pricingFile === 'string' ? pricingFile : pricingFile.path
@@ -121,7 +121,7 @@ class PricingService {
         collectionId = previousPricing.versions[0]._collectionId.toString();
       }
 
-      const pricingData = {
+      const pricingData: any = {
         name: uploadedPricing.saasName,
         version: uploadedPricing.version,
         _collectionId: collectionId,
@@ -132,6 +132,9 @@ class PricingService {
         yaml: pricingFile.path.split('/').slice(1).join('/'),
         analytics: {},
       };
+
+      // set isApi flag if provided
+      if (typeof isApi !== 'undefined') pricingData.isApi = !!isApi;
 
       const pricing = await this.pricingRepository.create([pricingData]);
 
