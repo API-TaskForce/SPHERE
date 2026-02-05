@@ -35,15 +35,18 @@ const handleFileUpload = (imageFieldNames: string[], folder: string) => {
 
 const handlePricingUpload = (pricingFieldNames: string[], folder: string) => {
   const storage = multer.diskStorage({
+    // Store uploaded pricings in a temporary folder; we'll move/rename them later once we have saasName/version
     destination: function (req, file, cb) {
-      fs.mkdirSync(folder + `/${req.body.saasName}`, { recursive: true })
-      cb(null, folder)
+      const dest = folder + `/tmp`;
+      fs.mkdirSync(dest, { recursive: true });
+      cb(null, dest);
     },
     filename: function (req, file, cb) {
       if (file) {
-        cb(null, req.body.saasName + "/" + req.body.version + '.' + file.originalname.split('.').pop())
+        // Use uuid-based filename to avoid depending on form field order
+        cb(null, uuidv4() + '.' + file.originalname.split('.').pop());
       } else {
-        cb(new Error('File does not exist'), "fail.yml")
+        cb(new Error('File does not exist'), "fail.yml");
       }
     }
   })
@@ -54,7 +57,7 @@ const handlePricingUpload = (pricingFieldNames: string[], folder: string) => {
     const fields = pricingFieldNames.map(pricingFieldNames => { return { name: pricingFieldNames, maxCount: 1 } })
     return multer({ storage }).fields(fields)
   }
-}
+} 
 
 const handleCollectionUpload = (collectionFieldNames: string[], folder: string) => {
   const storage = multer.diskStorage({

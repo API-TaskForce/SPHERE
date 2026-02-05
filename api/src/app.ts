@@ -16,6 +16,21 @@ const bold = "\x1b[1m"; // Negrita
 
 const initializeApp = async () => {
   dotenv.config();
+
+  // Check for MiniZinc availability to provide a helpful warning early
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { spawnSync } = await import('child_process');
+    const result = spawnSync('minizinc', ['--version']);
+    if (result.error || result.status !== 0) {
+      // eslint-disable-next-line no-console
+      console.warn('MiniZinc not found on PATH. Pricing analytics will be disabled. To enable analytics, install MiniZinc: https://www.minizinc.org/');
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('Unable to check MiniZinc availability:', (err as Error).message);
+  }
+
   const app: Application = express();
   loadGlobalMiddlewares(app);
   await routes(app);
