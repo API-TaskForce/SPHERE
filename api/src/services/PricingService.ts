@@ -115,7 +115,7 @@ class PricingService {
     ];
   }
 
-  async create(pricingFile: any, owner: string, collectionId?: string) {
+  async createDev(pricingFile: any, owner: string, collectionId?: string) {
     try {
       if (!pricingFile || !pricingFile.path) {
         throw new Error('Pricing file not found in request');
@@ -200,6 +200,76 @@ class PricingService {
       }
 
       return pricing;
+    } catch (err) {
+      throw new Error((err as Error).message);
+    }
+  }
+
+  /**
+   * Minimal production create: stage the pricing and avoid doing analytics inline.
+   * Returns an object indicating acceptance for ingestion (202 semantics).
+   */
+  async createProd(pricingFile: any, owner: string, collectionId?: string) {
+    try {
+      if (!pricingFile || !pricingFile.path) {
+        throw new Error('Pricing file not found in request');
+      }
+
+      const filePath = typeof pricingFile === 'string' ? pricingFile : pricingFile.path;
+      const uploadedPricing: Pricing = retrievePricingFromPath(filePath);
+
+      if (!collectionId) {
+        const previousPricing = await this.pricingRepository.findByNameAndOwner(
+          uploadedPricing.saasName,
+          owner
+        );
+        if (previousPricing && previousPricing.versions[0]._collectionId) {
+          collectionId = previousPricing.versions[0]._collectionId.toString();
+        }
+      }
+
+      // Compute yaml path relative to SERVER_STATICS_FOLDER when possible and normalize separators
+      let yamlPath = filePath.split(path.sep).join('/');
+      try {
+        if (process.env.SERVER_STATICS_FOLDER) {
+          const staticsFolder = process.env.SERVER_STATICS_FOLDER.replace(/\\$/,'').replace(/\/$/, '').split(path.sep).join('/');
+          const idx = yamlPath.indexOf(staticsFolder);
+          if (idx !== -1) {
+            yamlPath = yamlPath.substring(idx + staticsFolder.length);
+            if (yamlPath.startsWith('/')) yamlPath = yamlPath.substring(1);
+          } else {
+            yamlPath = yamlPath.replace(/^[.\/]+/, '');
+          }
+        } else {
+          yamlPath = yamlPath.replace(/^[.\/]+/, '');
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('Error normalizing yaml path:', (e as Error).message);
+      }
+
+      const pricingData = {
+        name: uploadedPricing.saasName,
+        version: uploadedPricing.version,
+        _collectionId: collectionId,
+        owner: owner,
+        currency: uploadedPricing.currency,
+        extractionDate: new Date(uploadedPricing.createdAt),
+        url: '',
+        yaml: yamlPath,
+        analytics: {},
+      };
+
+      // Create record but DO NOT perform analytics extraction here (Production flow).
+      const pricing = await this.pricingRepository.create([pricingData]);
+
+      processFileUris(pricing[0], ['yaml']);
+
+      return {
+        accepted: true,
+        message: 'Pricing accepted for ingestion. Analytics will be processed asynchronously.',
+        pricing: pricing[0],
+      };
     } catch (err) {
       throw new Error((err as Error).message);
     }

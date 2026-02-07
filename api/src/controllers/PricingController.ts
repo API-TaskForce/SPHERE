@@ -144,8 +144,18 @@ class PricingController {
         return res.status(500).send({ error: 'Error storing uploaded file: ' + (err as Error).message });
       }
 
-      const pricing = await this.pricingService.create(req.file, req.user.username, req.body.collectionId);
-      res.json(pricing);
+      const environment = process.env.ENVIRONMENT;
+      let pricing;
+
+      if (environment === 'production') {
+        pricing = await this.pricingService.createProd(req.file, req.user.username, req.body.collectionId);
+        // In production we accept and process asynchronously
+        return res.status(202).json(pricing);
+      } else {
+        // Default to dev environment or if explicitly set to development
+        pricing = await this.pricingService.createDev(req.file, req.user.username, req.body.collectionId);
+        return res.json(pricing);
+      }
     } catch (err: any) {
       try {
         const file = req.file;

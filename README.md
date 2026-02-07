@@ -101,36 +101,50 @@ Finally, one of the dependencies of the project requires the **minizinc** CLI to
    ```
 
 4. **🔧 Install Dependencies and Run the Project**  
-   Once the `.env` files are set up, return to the main folder again, install the dependencies of both project by running the command `npm run install`, and start the project by running the command `npm run dev`:
+Once the `.env` files are set up, return to the main folder again, install the dependencies of both project by running the command `npm run install`.
 
-   ```bash
-   cd ..
-   npm run install
-   npm run dev
-   ```
+You can start the project either independently (one terminal per service) or using the `concurrently` helper:
 
-   🎉 After running these commands, the project should be up and running! This is the expected output:
+Option A — two terminals (independent):
 
-   ```bash
-   > sphere@0.2.0 dev
-   > npm run dev:api & npm run dev:vite
+Terminal 1 (API):
+```bash
+cd api
+npm run dev:api
+```
 
+Terminal 2 (Frontend):
+```bash
+cd frontend
+npm run dev:vite
+```
 
-   > sphere@0.2.0 dev:vite
-   > cd frontend && npx vite
+Option B — single terminal (concurrently):
+```bash
+npm run install
+npm run dev
+# or explicitly:
+npm run dev:concurrent
+```
 
+🎉 After running these commands, the project should be up and running! Example output (truncated):
 
-   > sphere@0.2.0 dev:api
-   > cd api && npx tsx --tsconfig tsconfig.json --watch src/backend.ts --seed
+```bash
+> sphere@0.2.0 dev
+> npm run dev:concurrent
 
-   ⠼The CJS build of Vite\'s Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+> sphere@0.2.0 dev:concurrent
+> concurrently "npm:dev:api" "npm:dev:vite" -n API,FRONTEND -c green,blue --kill-others-on-fail
 
-   VITE v5.4.11  ready in 182 ms
+> sphere@0.2.0 dev:vite
+> cd frontend && npx vite
 
-   ➜  Local:   http://localhost:5173/
-   ➜  Network: use --host to expose
-   ➜  press h + enter to show help
-   Trying to connect to mongodb://testUser:testUser@localhost:27017/sphere_db?authSource=sphere_db
+VITE v5.4.11  ready in 182 ms
+➜  Local:   http://localhost:5173/
+
+> sphere@0.2.0 dev:api
+> cd api && npx tsx --tsconfig tsconfig.json --watch src/backend.ts --seed
+
    ==== Mongo seeding successfull ====
    ➜  API:     http://localhost:8080/
    ```
