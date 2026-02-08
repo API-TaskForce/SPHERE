@@ -101,50 +101,36 @@ Finally, one of the dependencies of the project requires the **minizinc** CLI to
    ```
 
 4. **🔧 Install Dependencies and Run the Project**  
-Once the `.env` files are set up, return to the main folder again, install the dependencies of both project by running the command `npm run install`.
+   Once the `.env` files are set up, return to the main folder again, install the dependencies of both project by running the command `npm run install`, and start the project by running the command `npm run dev`:
 
-You can start the project either independently (one terminal per service) or using the `concurrently` helper:
+   ```bash
+   cd ..
+   npm run install
+   npm run dev
+   ```
 
-Option A — two terminals (independent):
+   🎉 After running these commands, the project should be up and running! This is the expected output:
 
-Terminal 1 (API):
-```bash
-cd api
-npm run dev:api
-```
+   ```bash
+   > sphere@0.2.0 dev
+   > npm run dev:api & npm run dev:vite
 
-Terminal 2 (Frontend):
-```bash
-cd frontend
-npm run dev:vite
-```
 
-Option B — single terminal (concurrently):
-```bash
-npm run install
-npm run dev
-# or explicitly:
-npm run dev:concurrent
-```
+   > sphere@0.2.0 dev:vite
+   > cd frontend && npx vite
 
-🎉 After running these commands, the project should be up and running! Example output (truncated):
 
-```bash
-> sphere@0.2.0 dev
-> npm run dev:concurrent
+   > sphere@0.2.0 dev:api
+   > cd api && npx tsx --tsconfig tsconfig.json --watch src/backend.ts --seed
 
-> sphere@0.2.0 dev:concurrent
-> concurrently "npm:dev:api" "npm:dev:vite" -n API,FRONTEND -c green,blue --kill-others-on-fail
+   ⠼The CJS build of Vite\'s Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
 
-> sphere@0.2.0 dev:vite
-> cd frontend && npx vite
+   VITE v5.4.11  ready in 182 ms
 
-VITE v5.4.11  ready in 182 ms
-➜  Local:   http://localhost:5173/
-
-> sphere@0.2.0 dev:api
-> cd api && npx tsx --tsconfig tsconfig.json --watch src/backend.ts --seed
-
+   ➜  Local:   http://localhost:5173/
+   ➜  Network: use --host to expose
+   ➜  press h + enter to show help
+   Trying to connect to mongodb://testUser:testUser@localhost:27017/sphere_db?authSource=sphere_db
    ==== Mongo seeding successfull ====
    ➜  API:     http://localhost:8080/
    ```
