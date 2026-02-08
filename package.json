@@ -4,8 +4,7 @@
   "version": "0.2.0",
   "scripts": {
     "install": "cd frontend && npm install && cd ../api && npm install",
-    "dev": "npm run dev:concurrent",
-    "dev:concurrent": "concurrently \"npm:dev:api\" \"npm:dev:vite\" -n API,FRONTEND -c green,blue --kill-others-on-fail",
+    "dev": "concurrently \"npm:dev:api\" \"npm:dev:vite\" -n API,FRONTEND -c green,blue --kill-others-on-fail",
     "test": "npm run test:api",
     "build": "cd frontend && tsc -b && vite build",
     "lint": "eslint .",
