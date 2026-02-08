@@ -2,6 +2,8 @@ import { Pricing } from 'pricing4ts';
 import { Pricing as PricingModel } from '../types/database/Pricing';
 import container from '../config/container';
 import { processFileUris } from './FileService';
+import path from 'path';
+import { spawnSync } from 'child_process';
 import {
   PricingService as PricingAnalytics,
   retrievePricingFromPath,
@@ -89,6 +91,13 @@ class PricingService {
       const pricingInfo: Pricing = retrievePricingFromPath(
         process.env.SERVER_STATICS_FOLDER + retrievedPricing.yaml
       );
+
+      // Ensure minizinc is available before attempting to compute configuration space
+      const result = spawnSync('minizinc', ['--version']);
+      if (result.error || result.status !== 0) {
+        throw new Error('MiniZinc not available');
+      }
+
       const pricingAnalytics = new PricingAnalytics(pricingInfo);
       configurationSpace = await pricingAnalytics.getConfigurationSpace();
       await this.cacheService.set(key, configurationSpace, 60 * 60 * 24);
@@ -106,11 +115,14 @@ class PricingService {
     ];
   }
 
-  async create(pricingFile: any, owner: string, collectionId?: string) {
+  async createDev(pricingFile: any, owner: string, collectionId?: string) {
     try {
-      const uploadedPricing: Pricing = retrievePricingFromPath(
-        typeof pricingFile === 'string' ? pricingFile : pricingFile.path
-      );
+      if (!pricingFile || !pricingFile.path) {
+        throw new Error('Pricing file not found in request');
+      }
+
+      const filePath = typeof pricingFile === 'string' ? pricingFile : pricingFile.path;
+      const uploadedPricing: Pricing = retrievePricingFromPath(filePath);
       // TODO: if the pricing exists in two or more collections, this could lead to error.
       const previousPricing = await this.pricingRepository.findByNameAndOwner(
         uploadedPricing.saasName,
@@ -121,6 +133,26 @@ class PricingService {
         collectionId = previousPricing.versions[0]._collectionId.toString();
       }
 
+      // Compute yaml path relative to SERVER_STATICS_FOLDER when possible and normalize separators
+      let yamlPath = filePath.split(path.sep).join('/');
+      try {
+        if (process.env.SERVER_STATICS_FOLDER) {
+          const staticsFolder = process.env.SERVER_STATICS_FOLDER.replace(/\\$/,'').replace(/\/$/, '').split(path.sep).join('/');
+          const idx = yamlPath.indexOf(staticsFolder);
+          if (idx !== -1) {
+            yamlPath = yamlPath.substring(idx + staticsFolder.length);
+            if (yamlPath.startsWith('/')) yamlPath = yamlPath.substring(1);
+          } else {
+            yamlPath = yamlPath.replace(/^[.\/]+/, '');
+          }
+        } else {
+          yamlPath = yamlPath.replace(/^[.\/]+/, '');
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('Error normalizing yaml path:', (e as Error).message);
+      }
+
       const pricingData = {
         name: uploadedPricing.saasName,
         version: uploadedPricing.version,
@@ -129,7 +161,7 @@ class PricingService {
         currency: uploadedPricing.currency,
         extractionDate: new Date(uploadedPricing.createdAt),
         url: '',
-        yaml: pricingFile.path.split('/').slice(1).join('/'),
+        yaml: yamlPath,
         analytics: {},
       };
 
@@ -139,21 +171,105 @@ class PricingService {
 
       const pricingAnalytics = new PricingAnalytics(uploadedPricing);
 
-      await pricingAnalytics
-        .getAnalytics()
-        .then((analytics: any) => {
-          this.pricingRepository.updateAnalytics(pricing[0]._id.toString(), analytics);
-        })
-        .catch(async (err: any) => {
-          await this.pricingRepository.destroy(pricing[0]._id.toString());
-          throw new Error((err as Error).message);
-        });
+      // Check if minizinc is available before attempting analytics extraction
+      try {
+        const result = spawnSync('minizinc', ['--version']);
+        if (result.error || result.status !== 0) {
+          // eslint-disable-next-line no-console
+          console.warn('MiniZinc not available on this environment. Skipping analytics extraction.');
+        } else {
+          await pricingAnalytics
+            .getAnalytics()
+            .then((analytics: any) => {
+              this.pricingRepository.updateAnalytics(pricing[0]._id.toString(), analytics);
+            })
+            .catch(async (err: any) => {
+              // If any error occurs during analytics extraction, rollback creation
+              await this.pricingRepository.destroy(pricing[0]._id.toString());
+              throw new Error((err as Error).message);
+            });
+        }
+      } catch (err) {
+        // If checking for minizinc availability itself fails, skip analytics but keep pricing
+        // eslint-disable-next-line no-console
+        console.warn('Error checking MiniZinc availability. Skipping analytics extraction:', (err as Error).message);
+      }
 
       if (collectionId) {
         await this.pricingCollectionService.updateCollectionAnalytics(collectionId);
       }
 
       return pricing;
+    } catch (err) {
+      throw new Error((err as Error).message);
+    }
+  }
+
+  /**
+   * Minimal production create: stage the pricing and avoid doing analytics inline.
+   * Returns an object indicating acceptance for ingestion (202 semantics).
+   */
+  async createProd(pricingFile: any, owner: string, collectionId?: string) {
+    try {
+      if (!pricingFile || !pricingFile.path) {
+        throw new Error('Pricing file not found in request');
+      }
+
+      const filePath = typeof pricingFile === 'string' ? pricingFile : pricingFile.path;
+      const uploadedPricing: Pricing = retrievePricingFromPath(filePath);
+
+      if (!collectionId) {
+        const previousPricing = await this.pricingRepository.findByNameAndOwner(
+          uploadedPricing.saasName,
+          owner
+        );
+        if (previousPricing && previousPricing.versions[0]._collectionId) {
+          collectionId = previousPricing.versions[0]._collectionId.toString();
+        }
+      }
+
+      // Compute yaml path relative to SERVER_STATICS_FOLDER when possible and normalize separators
+      let yamlPath = filePath.split(path.sep).join('/');
+      try {
+        if (process.env.SERVER_STATICS_FOLDER) {
+          const staticsFolder = process.env.SERVER_STATICS_FOLDER.replace(/\\$/,'').replace(/\/$/, '').split(path.sep).join('/');
+          const idx = yamlPath.indexOf(staticsFolder);
+          if (idx !== -1) {
+            yamlPath = yamlPath.substring(idx + staticsFolder.length);
+            if (yamlPath.startsWith('/')) yamlPath = yamlPath.substring(1);
+          } else {
+            yamlPath = yamlPath.replace(/^[.\/]+/, '');
+          }
+        } else {
+          yamlPath = yamlPath.replace(/^[.\/]+/, '');
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('Error normalizing yaml path:', (e as Error).message);
+      }
+
+      const pricingData = {
+        name: uploadedPricing.saasName,
+        version: uploadedPricing.version,
+        _collectionId: collectionId,
+        owner: owner,
+        currency: uploadedPricing.currency,
+        extractionDate: new Date(uploadedPricing.createdAt),
+        url: '',
+        yaml: yamlPath,
+        analytics: {},
+      };
+
+      // Create record but DO NOT perform analytics extraction here (Production flow).
+      const pricing = await this.pricingRepository.create([pricingData]);
+
+      processFileUris(pricing[0], ['yaml']);
+
+      return {
+        accepted: true,
+        message: 'Pricing accepted for ingestion. Analytics will be processed asynchronously.',
+        pricing: pricing[0],
+      };
     } catch (err) {
       throw new Error((err as Error).message);
     }
