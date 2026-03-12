@@ -1,21 +1,21 @@
 services:
   mongodb:
-      image: mongo:7.0.16
-      ports:
-        - "27017:27017"
-      env_file:
-        - ../../api/.env.testing
-      volumes:
-        - 'sphere-mongodb:/data/db'
-        - '../../api/init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh'
-      networks:
-        - testing-network
+    image: mongo:7.0.16
+    ports:
+      - '27017:27017'
+    env_file:
+      - ../../api/.env.testing
+    volumes:
+      - 'sphere-mongodb:/data/db'
+      - '../../api/init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh'
+    networks:
+      - testing-network
   redis:
     image: redis:7.4.2
     ports:
-      - "6379:6379"
+      - '6379:6379'
     healthcheck:
-      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      test: ['CMD', 'redis-cli', '--raw', 'incr', 'ping']
     volumes:
       - 'redis_data:/data'
     networks:
@@ -24,12 +24,12 @@ services:
     image: aleexgf/choco-pricing-analysis-engine:main
     container_name: choco-analysis-engine
     ports:
-      - "8000:8000"
+      - '8000:8000'
     environment:
       - PORT=8000
       - LOG_LEVEL=INFO
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -40,14 +40,14 @@ services:
     image: aleexgf/pricing-analysis-engine:main
     container_name: pricing-analysis-engine
     ports:
-      - "8002:3000"
+      - '8002:3000'
     environment:
       - NODE_ENV=production
       - PORT=3000
       - CHOCO_API=http://choco-analysis-engine:8000
       - LOG_LEVEL=INFO
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -60,7 +60,7 @@ services:
     image: aleexgf/a-mint:main
     container_name: a-mint
     ports:
-      - "8001:8000"
+      - '8001:8000'
     env_file: .env
     environment:
       - PYTHONPATH=/app
@@ -70,7 +70,7 @@ services:
       - ANALYSIS_API=http://analysis-engine:3000/api/v1
       - LOG_LEVEL=INFO
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -79,30 +79,56 @@ services:
       - analysis-engine
     networks:
       - testing-network
+  prime4api:
+    image: rgavira123/prime4api
+    container_name: prime4api
+    ports:
+      - '8003:8000'
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - testing-network
   mcp-server:
-    image: aleexgf/pi-mcp-server:main
+    image: daniruiz13524/pi-mcp-server:latest
     container_name: mcp-server
     environment:
       - AMINT_BASE_URL=http://a-mint:8000
       - ANALYSIS_BASE_URL=http://analysis-engine:3000
+      - PRIME4API_BASE_URL=http://prime4api:8000
       - CACHE_BACKEND=memory
       - LOG_LEVEL=INFO
       - HTTP_HOST=0.0.0.0
       - HTTP_PORT=8085
+      - UVICORN_HOST=0.0.0.0
+      - UVICORN_PORT=8085
+      - MCP_TRANSPORT=sse
     ports:
-      - "8085:8085"
+      - '8085:8085'
     depends_on:
       - a-mint
       - analysis-engine
+      - prime4api
     restart: unless-stopped
     networks:
       - testing-network
   harvey:
-    image: aleexgf/harvey:main
+    image: daniruiz13524/pi-harvey:latest
     container_name: harvey
     env_file: .env
     ports:
-      - "8086:8086"
+      - '8086:8086'
     environment:
       - LOG_LEVEL=INFO
       - OPENAI_API_KEY=${HARVEY_API_KEY}
@@ -110,12 +136,14 @@ services:
       - AMINT_BASE_URL=http://a-mint:8000
       - ANALYSIS_BASE_URL=http://analysis-engine:3000
       - CACHE_BACKEND=memory
-      - MCP_TRANSPORT=stdio
+      - MCP_TRANSPORT=sse
+      - MCP_SERVER_URL=http://mcp-server:8085/sse
     depends_on:
       - a-mint
       - analysis-engine
+      - mcp-server
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:8086/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -126,8 +154,8 @@ services:
     restart: always
     container_name: sphere-server
     build:
-        context: ../../api
-        dockerfile: ./docker/Dockerfile
+      context: ../../api
+      dockerfile: ./docker/Dockerfile
     ports:
       - 8080:8080
     env_file:
@@ -146,8 +174,8 @@ services:
     restart: always
     container_name: sphere-client
     build:
-        context: ../../frontend
-        dockerfile: ./docker/Dockerfile
+      context: ../../frontend
+      dockerfile: ./docker/Dockerfile
     ports:
       - 5173:5173
     env_file:
@@ -158,8 +186,8 @@ services:
     restart: always
     container_name: sphere-nginx
     build:
-        context: ../../nginx/local
-        dockerfile: ./Dockerfile
+      context: ../../nginx/local
+      dockerfile: ./Dockerfile
     ports:
       - 80:80
     depends_on:
