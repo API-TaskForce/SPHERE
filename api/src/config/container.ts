@@ -6,6 +6,11 @@ import process from "node:process";
 import MongooseUserRepository from "../repositories/mongoose/UserRepository";
 import MongoosePricingRepository from "../repositories/mongoose/PricingRepository";
 import MongoosePricingCollectionRepository from "../repositories/mongoose/PricingCollectionRepository";
+import MongooseOrganizationRepository from "../repositories/mongoose/OrganizationRepository";
+import MongooseGroupRepository from "../repositories/mongoose/GroupRepository";
+import MongooseOrganizationMembershipRepository from "../repositories/mongoose/OrganizationMembershipRepository";
+import MongooseGroupMembershipRepository from "../repositories/mongoose/GroupMembershipRepository";
+import MongooseGroupCollectionRepository from "../repositories/mongoose/GroupCollectionRepository";
 
 import UserService from "../services/UserService";
 import PricingService from "../services/PricingService";
@@ -16,12 +21,19 @@ dotenv.config();
 
 function initContainer(databaseType: string): AwilixContainer {
   const container: AwilixContainer = createContainer();
-  let userRepository, pricingRepository, pricingCollectionRepository;
+  let userRepository, pricingRepository, pricingCollectionRepository,
+      organizationRepository, groupRepository, organizationMembershipRepository,
+      groupMembershipRepository, groupCollectionRepository;
   switch (databaseType) {
     case "mongoDB":
       userRepository = new MongooseUserRepository();
       pricingRepository = new MongoosePricingRepository();
       pricingCollectionRepository = new MongoosePricingCollectionRepository();
+      organizationRepository = new MongooseOrganizationRepository();
+      groupRepository = new MongooseGroupRepository();
+      organizationMembershipRepository = new MongooseOrganizationMembershipRepository();
+      groupMembershipRepository = new MongooseGroupMembershipRepository();
+      groupCollectionRepository = new MongooseGroupCollectionRepository();
       break;
     default:
       throw new Error(`Unsupported database type: ${databaseType}`);
@@ -30,6 +42,11 @@ function initContainer(databaseType: string): AwilixContainer {
     userRepository: asValue(userRepository),
     pricingRepository: asValue(pricingRepository),
     pricingCollectionRepository: asValue(pricingCollectionRepository),
+    organizationRepository: asValue(organizationRepository),
+    groupRepository: asValue(groupRepository),
+    organizationMembershipRepository: asValue(organizationMembershipRepository),
+    groupMembershipRepository: asValue(groupMembershipRepository),
+    groupCollectionRepository: asValue(groupCollectionRepository),
     userService: asClass(UserService).singleton(),
     pricingService: asClass(PricingService).singleton(),
     pricingCollectionService: asClass(PricingCollectionService).singleton(),
