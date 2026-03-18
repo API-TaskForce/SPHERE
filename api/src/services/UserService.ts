@@ -4,13 +4,16 @@ import { UserRepository } from "../types/repositories/UserRepository";
 import { processFileUris } from "./FileService";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import OrganizationService from "./OrganizationService";
 
 class UserService {
-    
+
     private userRepository: UserRepository;
+    private organizationService: OrganizationService;
 
     constructor () {
       this.userRepository = container.resolve('userRepository');
+      this.organizationService = container.resolve('organizationService');
     }
 
     _createUserTokenDTO () {
@@ -27,6 +30,9 @@ class UserService {
 
       const registeredUser = await this.userRepository.create(newUser)
       // processFileUris(registeredUser, ['avatar'])
+
+      await this.organizationService.createPersonal(registeredUser.id, registeredUser.username)
+
       return registeredUser
     }
   

@@ -6,6 +6,7 @@ const organizationSchema = new Schema(
     displayName: { type: String, required: true },
     description: { type: String, required: false, default: null },
     avatarUrl: { type: String, required: false, default: null },
+    isPersonal: { type: Boolean, required: true, default: false },
   },
   {
     timestamps: true,

@@ -4,6 +4,7 @@ export interface Organization {
   displayName: string;
   description: string | null;
   avatarUrl: string | null;
+  isPersonal: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

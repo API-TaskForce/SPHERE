@@ -7,6 +7,7 @@ class OrganizationController {
   constructor() {
     this.organizationService = container.resolve('organizationService');
     this.index = this.index.bind(this);
+    this.indexByUser = this.indexByUser.bind(this);
     this.show = this.show.bind(this);
     this.showByName = this.showByName.bind(this);
     this.create = this.create.bind(this);
@@ -17,6 +18,15 @@ class OrganizationController {
   async index(req: any, res: any) {
     try {
       const organizations = await this.organizationService.index();
+      res.json(organizations);
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async indexByUser(req: any, res: any) {
+    try {
+      const organizations = await this.organizationService.indexByUser(req.user.id);
       res.json(organizations);
     } catch (err: any) {
       res.status(500).send({ error: err.message });
@@ -51,7 +61,7 @@ class OrganizationController {
 
   async create(req: any, res: any) {
     try {
-      const organization = await this.organizationService.create(req.body);
+      const organization = await this.organizationService.createWithOwner(req.body, req.user.id);
       res.status(201).json(organization);
     } catch (err: any) {
       if (err.name?.includes('ValidationError') || err.code === 11000) {
