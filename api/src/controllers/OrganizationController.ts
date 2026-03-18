@@ -13,7 +13,13 @@ class OrganizationController {
     this.create = this.create.bind(this);
     this.update = this.update.bind(this);
     this.destroy = this.destroy.bind(this);
+    this.listMembers = this.listMembers.bind(this);
+    this.addMember = this.addMember.bind(this);
+    this.updateMemberRole = this.updateMemberRole.bind(this);
+    this.removeMember = this.removeMember.bind(this);
   }
+
+  // ── Organization CRUD ───────────────────────────────────────────────────────
 
   async index(req: any, res: any) {
     try {
@@ -90,6 +96,66 @@ class OrganizationController {
       const result = await this.organizationService.destroy(req.params.organizationId);
       const message = result ? 'Successfully deleted.' : 'Could not delete organization.';
       res.json({ message });
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  // ── Member management ───────────────────────────────────────────────────────
+
+  async listMembers(req: any, res: any) {
+    try {
+      const members = await this.organizationService.listMembers(req.params.organizationId);
+      res.json(members);
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async addMember(req: any, res: any) {
+    try {
+      const { userId, role } = req.body;
+      const membership = await this.organizationService.addMember(
+        userId,
+        req.params.organizationId,
+        role
+      );
+      res.status(201).json(membership);
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('already a member')) {
+        res.status(422).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  async updateMemberRole(req: any, res: any) {
+    try {
+      const { role } = req.body;
+      const membership = await this.organizationService.updateMemberRole(
+        req.params.userId,
+        req.params.organizationId,
+        role
+      );
+      res.json(membership);
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  async removeMember(req: any, res: any) {
+    try {
+      await this.organizationService.removeMember(req.params.userId, req.params.organizationId);
+      res.json({ message: 'Successfully removed.' });
     } catch (err: any) {
       if (err.message.toLowerCase().includes('not found')) {
         res.status(404).send({ error: err.message });

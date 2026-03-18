@@ -11,6 +11,8 @@ class OrganizationService {
     this.organizationMembershipRepository = container.resolve('organizationMembershipRepository');
   }
 
+  // ── Organization CRUD ───────────────────────────────────────────────────────
+
   async index() {
     return await this.organizationRepository.findAll();
   }
@@ -96,6 +98,56 @@ class OrganizationService {
 
   async exists(id: string) {
     return await this.organizationRepository.findById(id);
+  }
+
+  // ── Member management ───────────────────────────────────────────────────────
+
+  async listMembers(organizationId: string) {
+    return await this.organizationMembershipRepository.findByOrganizationId(organizationId);
+  }
+
+  /**
+   * Adds a user to an organization with the given role.
+   * Prevents duplicate memberships.
+   */
+  async addMember(userId: string, organizationId: string, role: 'owner' | 'admin' | 'member') {
+    const existing = await this.organizationMembershipRepository.findByUserAndOrganization(
+      userId,
+      organizationId
+    );
+    if (existing) {
+      throw new Error('User is already a member of this organization');
+    }
+
+    return await this.organizationMembershipRepository.create({
+      _userId: userId,
+      _organizationId: organizationId,
+      role,
+      joinedAt: new Date(),
+    });
+  }
+
+  async updateMemberRole(userId: string, organizationId: string, role: 'owner' | 'admin' | 'member') {
+    const membership = await this.organizationMembershipRepository.updateByUserAndOrganization(
+      userId,
+      organizationId,
+      { role }
+    );
+    if (!membership) {
+      throw new Error('Organization membership not found');
+    }
+    return membership;
+  }
+
+  async removeMember(userId: string, organizationId: string) {
+    const result = await this.organizationMembershipRepository.destroyByUserAndOrganization(
+      userId,
+      organizationId
+    );
+    if (!result) {
+      throw new Error('Organization membership not found');
+    }
+    return true;
   }
 }
 
