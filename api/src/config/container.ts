@@ -16,6 +16,11 @@ import UserService from "../services/UserService";
 import PricingService from "../services/PricingService";
 import PricingCollectionService from "../services/PricingCollectionService";
 import CacheService from "../services/CacheService";
+import OrganizationService from "../services/OrganizationService";
+import OrganizationMembershipService from "../services/OrganizationMembershipService";
+import GroupService from "../services/GroupService";
+import GroupMembershipService from "../services/GroupMembershipService";
+import GroupCollectionService from "../services/GroupCollectionService";
 
 dotenv.config();
 
@@ -51,6 +56,11 @@ function initContainer(databaseType: string): AwilixContainer {
     pricingService: asClass(PricingService).singleton(),
     pricingCollectionService: asClass(PricingCollectionService).singleton(),
     cacheService: asClass(CacheService).singleton(),
+    organizationService: asClass(OrganizationService).singleton(),
+    organizationMembershipService: asClass(OrganizationMembershipService).singleton(),
+    groupService: asClass(GroupService).singleton(),
+    groupMembershipService: asClass(GroupMembershipService).singleton(),
+    groupCollectionService: asClass(GroupCollectionService).singleton(),
   });
   return container;
 }
