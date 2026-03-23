@@ -22,6 +22,10 @@ import MyPricingsPage from '../modules/profile/pages/pricings';
 import CreateCollectionPage from '../modules/profile/pages/create-collection';
 import CollectionsListPage from '../modules/pricing/pages/collections-list';
 import PricingAssistantPage from '../modules/harvey/pages/pricing-assistant';
+import DatasheetCardPage from '../modules/datasheet/pages/card';
+import DatasheetListPage from '../modules/datasheet/pages/list';
+import DatasheetCollectionsListPage from '../modules/datasheet/pages/collections-list';
+import DatasheetCollectionCardPage from '../modules/datasheet/pages/collection-card';
 
 
 export default function Router() {
@@ -39,8 +43,10 @@ export default function Router() {
         { element: <LoginPage />, path: "/login" },
         { element: <RegisterPage />, path: "/register" },
         { element: <PricingListPage />, path: "/pricings" },
+        { element: <DatasheetListPage />, path: "/datasheets" },
         { element: <CreatePricingPage />, path: "/pricings/new" },
         { element: <CardPage />, path: "/pricings/:owner/:name" },
+        { element: <DatasheetCardPage />, path: "/datasheets/:owner/:name" },
         // { element: <LegacyPricingCard />, path: "/pricings/card" },
         { element: <TeamPage />, path: "/team" },
         { element: <ResearchPage />, path: "/research" },
@@ -48,6 +54,8 @@ export default function Router() {
         { element: <CollectionsListPage />, path: "/pricings/collections" },
         { element: <CreateCollectionPage />, path: "/pricings/collections/new" },
         { element: <CollectionCardPage />, path: "/pricings/collections/:ownerId/:collectionName" },
+        { element: <DatasheetCollectionsListPage />, path: "/datasheets/collections" },
+        { element: <DatasheetCollectionCardPage />, path: "/datasheets/collections/:ownerId/:collectionName" },
         { element: <MyPricingsPage />, path: "/me/pricings" },
         { element: <PricingAssistantPage />, path: "/harvey"},
         { element: <PricingAssistantPage playground />, path: "/harvey-play"}
