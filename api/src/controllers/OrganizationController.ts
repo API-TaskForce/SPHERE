@@ -67,6 +67,9 @@ class OrganizationController {
 
   async create(req: any, res: any) {
     try {
+      if (req.body.isPersonal) {
+        req.body.name = req.user.username;
+      }
       const organization = await this.organizationService.createWithOwner(req.body, req.user.id);
       res.status(201).json(organization);
     } catch (err: any) {
