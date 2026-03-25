@@ -1,3 +1,4 @@
+[
 {
   "_id": {
     "$oid": "6787d0facaeb2b25748bc12a"
@@ -25,4 +26,21 @@
       "values": []
     }
   }
+},
+{
+  "_id": {
+    "$oid": "6787d0facaeb2b25748bc12b"
+  },
+  "name": "Cloud SaaS Benchmark 2024",
+  "description": "A curated benchmark dataset of SaaS pricing models across cloud providers, intended for comparative analysis, pricing strategy research, and serving as a reference collection for experimentation with pricing tools.",
+  "_ownerId": {
+    "$oid": "63f74bf8eeed64058364b52e"
+  },
+  "analytics": {
+    "evolutionOfPlans": { "dates": [], "values": [] },
+    "evolutionOfAddOns": { "dates": [], "values": [] },
+    "evolutionOfFeatures": { "dates": [], "values": [] },
+    "evolutionOfConfigurationSpaceSize": { "dates": [], "values": [] }
+  }
 }
+]
