@@ -44,6 +44,22 @@ export const headerRoutes: HeaderRoute[] = [
     ],
   },
   {
+    name: 'Datasheets',
+    disabled: false,
+    children: [
+      {
+        name: 'Datasheets',
+        disabled: false,
+        to: '/datasheets',
+      },
+      {
+        name: 'Collections',
+        disabled: false,
+        to: '/datasheets/collections',
+      },
+    ],
+  },
+  {
     name: 'Team',
     disabled: false,
     to: '/team',
