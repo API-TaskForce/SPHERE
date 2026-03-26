@@ -1,5 +1,5 @@
 import { Helmet } from 'react-helmet';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -16,10 +16,15 @@ import { FaSortAlphaDown, FaSortAlphaUpAlt } from 'react-icons/fa';
 import { primary } from '../../../core/theme/palette';
 import { PricingsGrid } from '../../../pricing/pages/list';
 import DatasheetListCard from '../../components/datasheet-list-card';
+import { useDatasheetCollectionsApi } from '../../../profile/api/datasheetCollectionsApi';
+import { useAuth } from '../../../auth/hooks/useAuth';
+import DatasheetCollectionSettings from '../../components/collection-settings';
 
 type DatasheetCollection = {
+  id: string;
   name: string;
   description?: string;
+  private?: boolean;
   owner: {
     id: string;
     username: string;
@@ -28,6 +33,7 @@ type DatasheetCollection = {
   analytics?: {
     evolutionOfPlans?: { dates: string[] };
   };
+  datasheets?: any[];
   pricings?: Array<{
     datasheets?: any[];
     pricings?: any[];
@@ -36,37 +42,48 @@ type DatasheetCollection = {
 
 export default function DatasheetCollectionCardPage() {
   const [collection, setCollection] = useState<DatasheetCollection | undefined>(undefined);
-  const [startDate, setStartDate] = useState<string | null>(new Date().toISOString());
-  const [endDate, setEndDate] = useState<string | null>(new Date().toISOString());
   const [tabValue, setTabValue] = useState(0);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const lastRequestedCollectionKeyRef = useRef<string | null>(null);
 
   const pathname = usePathname();
   const router = useRouter();
+  const { getCollectionByOwnerAndName, downloadCollection } = useDatasheetCollectionsApi();
+  const { authUser } = useAuth();
+
+  const isCollectionOwner = useMemo(() => {
+    if (!collection || !authUser?.user) {
+      return false;
+    }
+
+    const sameId =
+      collection.owner?.id && authUser.user.id
+        ? collection.owner.id === authUser.user.id
+        : false;
+
+    const sameUsername =
+      collection.owner?.username && authUser.user.username
+        ? collection.owner.username.toLowerCase() === authUser.user.username.toLowerCase()
+        : false;
+
+    return sameId || sameUsername;
+  }, [collection, authUser]);
 
   useEffect(() => {
     const segments = pathname.split('/');
     const name = segments.pop() as string;
     const ownerId = segments[segments.length - 1];
 
-    fetch(`${import.meta.env.VITE_API_URL}/datasheets/collections/${ownerId}/${name}`)
-      .then(response => {
-        if (!response.ok) {
-          return Promise.reject(response);
-        }
-        return response.json();
-      })
+    const currentCollectionKey = `${ownerId}/${name}`;
+    if (lastRequestedCollectionKeyRef.current === currentCollectionKey) {
+      return;
+    }
+    lastRequestedCollectionKeyRef.current = currentCollectionKey;
+
+    getCollectionByOwnerAndName(ownerId, name)
       .then(collectionData => {
         if (collectionData) {
           setCollection(collectionData);
-          if (collectionData.analytics?.evolutionOfPlans?.dates?.length > 0) {
-            setStartDate(collectionData.analytics.evolutionOfPlans.dates[0]);
-            setEndDate(
-              collectionData.analytics.evolutionOfPlans.dates[
-                collectionData.analytics.evolutionOfPlans.dates.length - 1
-              ]
-            );
-          }
         } else {
           router.push('/error');
         }
@@ -74,52 +91,36 @@ export default function DatasheetCollectionCardPage() {
       .catch(() => {
         router.push('/error');
       });
-  }, [pathname, router]);
+  }, [pathname, router, getCollectionByOwnerAndName]);
 
-  const handleInputDate = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setStartDate(new Date(e.target.value).toISOString());
-  };
 
-  const handleOutputDate = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEndDate(new Date(e.target.value).toISOString());
-  };
 
   const toggleSortOrder = () => {
     setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
   };
 
   const sortedDatasheets = useMemo(() => {
-    if (!collection || !collection.pricings || collection.pricings.length === 0) {
+    if (!collection) {
       return [];
     }
-    const entriesContainer = collection.pricings[0] ?? {};
-    const datasheetArray =
-      (entriesContainer.datasheets as any[]) ?? (entriesContainer.pricings as any[]) ?? [];
 
-    return datasheetArray.sort((a, b) => {
+    const datasheetArray =
+      Array.isArray(collection.datasheets?.[0]?.datasheets)
+        ? (collection.datasheets?.[0]?.datasheets as any[])
+        : Array.isArray(collection.datasheets)
+        ? collection.datasheets
+        : Array.isArray(collection.pricings?.[0]?.datasheets)
+        ? (collection.pricings?.[0]?.datasheets as any[])
+        : Array.isArray(collection.pricings?.[0]?.pricings)
+        ? (collection.pricings?.[0]?.pricings as any[])
+        : [];
+
+    return [...datasheetArray].sort((a, b) => {
       const nameA = a.name?.toLowerCase() || '';
       const nameB = b.name?.toLowerCase() || '';
       return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
     });
   }, [collection, sortOrder]);
-
-  const downloadCollection = async () => {
-    if (!collection) return;
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/datasheets/collections/${collection.owner.id}/${collection.name}/download`
-    );
-    if (!response.ok) return;
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = collection.name + '.zip';
-    document.body.appendChild(anchor);
-    anchor.click();
-    URL.revokeObjectURL(url);
-    document.body.removeChild(anchor);
-  };
 
   return (
     <>
@@ -139,6 +140,7 @@ export default function DatasheetCollectionCardPage() {
               <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                 <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
                   <Tab label="Collection card" />
+                  {isCollectionOwner && <Tab label="Settings" />}
                 </Tabs>
               </Box>
             </Box>
@@ -156,7 +158,7 @@ export default function DatasheetCollectionCardPage() {
                           .split('T')[0]
                       }
                       slotProps={{ inputLabel: { shrink: true } }}
-                      onChange={handleInputDate}
+                      disabled
                     />
                     <TextField
                       label="End Date"
@@ -164,7 +166,7 @@ export default function DatasheetCollectionCardPage() {
                       fullWidth
                       defaultValue={new Date().toISOString().split('T')[0]}
                       slotProps={{ inputLabel: { shrink: true } }}
-                      onChange={handleOutputDate}
+                      disabled
                     />
                   </>
                 ) : null}
@@ -174,6 +176,12 @@ export default function DatasheetCollectionCardPage() {
         </Box>
 
         <Box display="flex" gap={4} sx={{ mb: 4 }}>
+          {tabValue === 1 && collection && (
+            <DatasheetCollectionSettings
+              collection={collection}
+              updateCollectionMethod={setCollection}
+            />
+          )}
           {tabValue === 0 && (
             <Box flex={1}>
               <Typography variant="h6" gutterBottom fontWeight="bold">
@@ -206,7 +214,9 @@ export default function DatasheetCollectionCardPage() {
                       color: 'white',
                     },
                   }}
-                  onClick={downloadCollection}
+                  onClick={() =>
+                    downloadCollection(collection?.owner.id as string, collection?.name as string)
+                  }
                 >
                   DOWNLOAD
                 </Button>
@@ -235,6 +245,7 @@ export default function DatasheetCollectionCardPage() {
                         name={datasheet.name}
                         owner={ownerName}
                         dataEntry={datasheet}
+                        showOptions
                       />
                     );
                   })
@@ -250,8 +261,8 @@ export default function DatasheetCollectionCardPage() {
                     }}
                   >
                     NO DATASHEETS FOUND
-                    <Button variant="outlined" color="primary" onClick={() => router.push('/datasheets')}>
-                      Browse
+                    <Button variant="outlined" color="primary" onClick={() => router.push('/me/datasheets')}>
+                      Add
                     </Button>
                   </Box>
                 )}

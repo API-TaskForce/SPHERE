@@ -12,7 +12,7 @@ class DatasheetRepository extends RepositoryBase {
     let filteringAggregators = [];
     let sortAggregator = [];
 
-    if (Object.keys(queryParams).length > 0) {
+    if (queryParams && Object.keys(queryParams).length > 0) {
       const { name, selectedOwners, sortBy, sort } = queryParams;
 
       if (name) {
@@ -84,7 +84,10 @@ class DatasheetRepository extends RepositoryBase {
       const basePipeline: any[] = [
         {
           $match: {
-            private: false,
+            $or: [
+              { private: false },
+              { private: { $exists: false } },
+            ],
           },
         },
         ...aggregator,
@@ -165,12 +168,8 @@ class DatasheetRepository extends RepositoryBase {
           },
         ]);
       } else {
+        // Allow finding datasheets regardless of whether they're in a collection
         datasheet = await DatasheetMongoose.aggregate([
-          {
-            $match: {
-              _collectionId: { $exists: false },
-            },
-          },
           ...getDatasheetByNameAndOwnerAggregator(name, owner),
         ]);
       }

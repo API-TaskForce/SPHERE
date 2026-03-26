@@ -92,6 +92,7 @@ class DatasheetCollectionService {
           let extractedName = datasheet.split('/').pop()?.split('.')[0] || 'UnknownDatasheet';
           let extractedVersion = '1.0.0';
           let extractedCreatedAt = new Date();
+          let extractedCurrency = 'USD';
     
           const nameMatch = fileContent.match(/saasName:\s*([^\s\n]+)/);
           if (nameMatch) extractedName = nameMatch[1];
@@ -99,15 +100,21 @@ class DatasheetCollectionService {
           const versionMatch = fileContent.match(/version:\s*([^\s\n]+)/);
           if (versionMatch) extractedVersion = versionMatch[1];
 
+          const currencyMatch = fileContent.match(/currency:\s*([^\s\n]+)/);
+          if (currencyMatch) extractedCurrency = currencyMatch[1];
+
+          const extractedAnalytics = this._computeBasicAnalyticsFromYaml(fileContent);
+
           const datasheetData = {
             name: extractedName,
             version: extractedVersion,
             _collectionId: collection._id,
             owner: username,
+            currency: extractedCurrency,
             extractionDate: extractedCreatedAt,
             url: '',
             yaml: datasheet.split('/').slice(1).join('/'),
-            analytics: {},
+            analytics: extractedAnalytics,
           };
           datasheetDatas.push(datasheetData);
         }catch(err){
@@ -202,6 +209,61 @@ class DatasheetCollectionService {
 
   _computeCollectionAnalytics(collection: RetrievedDatasheetCollection) {
       return {};
+  }
+
+  _computeBasicAnalyticsFromYaml(fileContent: string) {
+    const lines = fileContent.split(/\r?\n/);
+    let inPlansSection = false;
+    let plansIndent = 0;
+    let currentPlanIndent: number | null = null;
+
+    let configurationSpaceSize = 0;
+    const planPrices: number[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) {
+        continue;
+      }
+
+      const indent = line.search(/\S/);
+
+      if (!inPlansSection) {
+        if (/^plans:\s*$/i.test(trimmed)) {
+          inPlansSection = true;
+          plansIndent = indent;
+        }
+        continue;
+      }
+
+      if (indent <= plansIndent) {
+        inPlansSection = false;
+        currentPlanIndent = null;
+        continue;
+      }
+
+      if (indent === plansIndent + 2 && /^[^:\s][^:]*:\s*$/.test(trimmed)) {
+        configurationSpaceSize += 1;
+        currentPlanIndent = indent;
+        continue;
+      }
+
+      if (currentPlanIndent !== null && indent === currentPlanIndent + 2) {
+        const priceMatch = trimmed.match(/^price:\s*(-?\d+(?:\.\d+)?)/i);
+        if (priceMatch) {
+          planPrices.push(Number(priceMatch[1]));
+        }
+      }
+    }
+
+    const minSubscriptionPrice = planPrices.length > 0 ? Math.min(...planPrices) : undefined;
+    const maxSubscriptionPrice = planPrices.length > 0 ? Math.max(...planPrices) : undefined;
+
+    return {
+      configurationSpaceSize,
+      minSubscriptionPrice,
+      maxSubscriptionPrice,
+    };
   }
 
 

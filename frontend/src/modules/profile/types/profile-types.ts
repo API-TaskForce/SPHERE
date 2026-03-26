@@ -6,7 +6,8 @@ export interface CollectionEntry {
     username: string,
     avatar: string,
   },
-  numberOfPricings: number
+  numberOfPricings?: number,
+  numberOfDatasheets?: number,
 }
 
 export interface PricingEntry {
@@ -17,5 +18,6 @@ export interface CollectionToCreate {
   name: string,
   description: string,
   private: boolean,
-  pricings: string[]
+  pricings?: string[],
+  datasheets?: string[]
 }

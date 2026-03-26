@@ -42,7 +42,13 @@ const NavItems = styled(Box)(({ theme }) => ({
   },
 }));
 
-const Header = ({ setUploadModalOpen }: { setUploadModalOpen: (state: boolean) => void }) => {
+const Header = ({
+  setUploadModalOpen,
+  setUploadDatasheetModalOpen,
+}: {
+  setUploadModalOpen: (state: boolean) => void;
+  setUploadDatasheetModalOpen: (state: boolean) => void;
+}) => {
   const [anchorEl, setAnchorEl] = useState(null);
 
   const theme = useTheme();
@@ -60,9 +66,24 @@ const Header = ({ setUploadModalOpen }: { setUploadModalOpen: (state: boolean) =
       },
     },
     {
+      name: 'My Datasheets',
+      onClick: () => {
+        router.push('/me/datasheets');
+        handleCloseUserMenu();
+      },
+    },
+    {
       name: 'Upload pricing',
       onClick: () => {
         setUploadModalOpen(true);
+        handleCloseUserMenu();
+      },
+    },
+    {
+      name: 'Upload datasheet',
+      onClick: () => {
+        setUploadDatasheetModalOpen(true);
+        handleCloseUserMenu();
       },
     },
     {

@@ -20,18 +20,42 @@ class DatasheetService {
   }
 
   async index(queryParams: DatasheetIndexQueryParams) {
-    const datasheets = await this.datasheetRepository.findAll(queryParams);
-    return datasheets;
+    const result: any = await this.datasheetRepository.findAll(queryParams);
+    
+    // Process file URIs if datasheets are returned
+    if (result && result.datasheets && Array.isArray(result.datasheets)) {
+      result.datasheets.forEach((datasheet: any) => {
+        processFileUris(datasheet, ['yaml']);
+      });
+    }
+    
+    return result;
   }
 
   async indexByUserWithoutCollection(username: string) {
-    const datasheets = await this.datasheetRepository.findByOwnerWithoutCollection(username);
-    return datasheets;
+    const result: any = await this.datasheetRepository.findByOwnerWithoutCollection(username);
+    
+    // Process file URIs for all datasheets if result is an object with datasheets array
+    if (result && result.datasheets && Array.isArray(result.datasheets)) {
+      result.datasheets.forEach((datasheet: any) => {
+        processFileUris(datasheet, ['yaml']);
+      });
+    }
+    
+    return result;
   }
 
   async indexByCollection(collectionId: string) {
-    const datasheets = await this.datasheetRepository.findByCollection(collectionId);
-    return datasheets;
+    const result: any = await this.datasheetRepository.findByCollection(collectionId);
+    
+    // Process file URIs for all datasheets if result is an object with datasheets array
+    if (result && result.datasheets && Array.isArray(result.datasheets)) {
+      result.datasheets.forEach((datasheet: any) => {
+        processFileUris(datasheet, ['yaml']);
+      });
+    }
+    
+    return result;
   }
 
   async show(name: string, owner: string, queryParams?: { collectionName?: string }) {
@@ -42,6 +66,7 @@ class DatasheetService {
     }
     for (const version of datasheet.versions) {
       processFileUris(version, ['yaml']);
+      version.yaml = this.normalizeYamlUrl(version.yaml);
     }
     const datasheetObject = Object.assign({}, datasheet);
     return datasheetObject;
@@ -52,17 +77,38 @@ class DatasheetService {
       const filePath = typeof datasheetFile === 'string' ? datasheetFile : datasheetFile.path;
       const fileContent = fs.readFileSync(filePath, 'utf8');
 
-      // Simple extraction of saasName and version for datasheets
-      // If none found, we default to the filename and version 1.0.0
-      let extractedName = filePath.split('/').pop()?.split('.')[0] || 'UnknownDatasheet';
-      let extractedVersion = '1.0.0';
-      let extractedCreatedAt = new Date();
-
-      const nameMatch = fileContent.match(/saasName:\s*([^\s\n]+)/);
-      if (nameMatch) extractedName = nameMatch[1];
+      // Extract the actual filename from the full path
+      const originalFileName = filePath.split(/[/\\]/).pop()?.split('.')[0] || 'UnknownDatasheet';
       
+      // Simple extraction of associated_saas (or saasName for backwards compatibility) and version for datasheets
+      let extractedName = originalFileName;
+      let extractedVersion = '1.0.0';
+      const extractedCreatedAt = new Date();
+      let extractedCurrency = 'USD';
+
+      // Try to extract from associated_saas or saasName field
+      const associatedSaasMatch = fileContent.match(/associated_saas:\s*([^\s\n]+)/);
+      if (associatedSaasMatch) {
+        extractedName = associatedSaasMatch[1];
+      } else {
+        const saasNameMatch = fileContent.match(/saasName:\s*([^\s\n]+)/);
+        if (saasNameMatch) {
+          extractedName = saasNameMatch[1];
+        }
+      }
+      
+      // Extract version
       const versionMatch = fileContent.match(/version:\s*([^\s\n]+)/);
-      if (versionMatch) extractedVersion = versionMatch[1];
+      if (versionMatch) {
+        extractedVersion = versionMatch[1];
+      }
+
+      const currencyMatch = fileContent.match(/currency:\s*([^\s\n]+)/);
+      if (currencyMatch) {
+        extractedCurrency = currencyMatch[1];
+      }
+
+      const extractedAnalytics = this.computeBasicAnalyticsFromYaml(fileContent);
 
       const previousDatasheet = await this.datasheetRepository.findByNameAndOwner(
         extractedName,
@@ -78,10 +124,11 @@ class DatasheetService {
         version: extractedVersion,
         _collectionId: collectionId,
         owner: owner,
+        currency: extractedCurrency,
         extractionDate: extractedCreatedAt,
         url: '',
-        yaml: filePath.split(/[/\\]/).slice(filePath.split(/[/\\]/).indexOf("public") >= 0 ? filePath.split(/[/\\]/).indexOf("public") : 1).join("/"),
-        analytics: {},
+        yaml: this.getRelativeYamlPath(filePath),
+        analytics: extractedAnalytics,
       };
 
       const datasheet = await this.datasheetRepository.create([datasheetData]);
@@ -228,6 +275,112 @@ class DatasheetService {
     }
 
     return true;
+  }
+
+  private getRelativeYamlPath(filePath: string): string {
+    // Normalize path separators to forward slashes
+    const normalizedPath = filePath.replace(/\\/g, '/');
+    
+    // Find the index of 'public' in the path
+    const publicIndex = normalizedPath.indexOf('/public/');
+    
+    if (publicIndex !== -1) {
+      // Extract after '/public/' so express.static('public') can resolve it at '/...'
+      return normalizedPath.substring(publicIndex + '/public/'.length);
+    }
+    
+    // Fallback: just take the relative part after 'public'
+    const parts = normalizedPath.split('/');
+    const publicPos = parts.indexOf('public');
+    if (publicPos !== -1) {
+      return parts.slice(publicPos + 1).join('/');
+    }
+    
+    // Last resort: return as is
+    return normalizedPath;
+  }
+
+  private normalizeYamlUrl(yamlPath: string): string {
+    if (!yamlPath) {
+      return yamlPath;
+    }
+
+    if (/^https?:\/\//i.test(yamlPath)) {
+      try {
+        const parsedUrl = new URL(yamlPath);
+        if (parsedUrl.pathname.startsWith('/public/')) {
+          parsedUrl.pathname = parsedUrl.pathname.replace('/public/', '/');
+        }
+        return parsedUrl.toString();
+      } catch {
+        return yamlPath;
+      }
+    }
+
+    if (yamlPath.startsWith('/public/')) {
+      return yamlPath.replace('/public/', '/');
+    }
+
+    if (yamlPath.startsWith('public/')) {
+      return yamlPath.replace('public/', '');
+    }
+
+    return yamlPath;
+  }
+
+  private computeBasicAnalyticsFromYaml(fileContent: string) {
+    const lines = fileContent.split(/\r?\n/);
+    let inPlansSection = false;
+    let plansIndent = 0;
+    let currentPlanIndent: number | null = null;
+
+    let configurationSpaceSize = 0;
+    const planPrices: number[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) {
+        continue;
+      }
+
+      const indent = line.search(/\S/);
+
+      if (!inPlansSection) {
+        if (/^plans:\s*$/i.test(trimmed)) {
+          inPlansSection = true;
+          plansIndent = indent;
+        }
+        continue;
+      }
+
+      if (indent <= plansIndent) {
+        inPlansSection = false;
+        currentPlanIndent = null;
+        continue;
+      }
+
+      if (indent === plansIndent + 2 && /^[^:\s][^:]*:\s*$/.test(trimmed)) {
+        configurationSpaceSize += 1;
+        currentPlanIndent = indent;
+        continue;
+      }
+
+      if (currentPlanIndent !== null && indent === currentPlanIndent + 2) {
+        const priceMatch = trimmed.match(/^price:\s*(-?\d+(?:\.\d+)?)/i);
+        if (priceMatch) {
+          planPrices.push(Number(priceMatch[1]));
+        }
+      }
+    }
+
+    const minSubscriptionPrice = planPrices.length > 0 ? Math.min(...planPrices) : undefined;
+    const maxSubscriptionPrice = planPrices.length > 0 ? Math.max(...planPrices) : undefined;
+
+    return {
+      configurationSpaceSize,
+      minSubscriptionPrice,
+      maxSubscriptionPrice,
+    };
   }
 }
 

@@ -3,12 +3,11 @@ import { Helmet } from 'react-helmet';
 import { useEffect, useState } from 'react';
 import SearchBar from '../../../pricing/components/search-bar';
 import { flex } from '../../../core/theme/css';
-import PricingFilters from '../../../pricing/components/pricing-filters';
 import { grey } from '../../../core/theme/palette';
 import PricingsPagination from '../../../pricing/components/pricings-pagination';
 import PricingsListContainer from '../../../pricing/components/pricings-list-container';
-import { VIMEO_MOCK_LIST_ENTRY } from '../../mocks/vimeoMock';
 import DatasheetListCard from '../../components/datasheet-list-card';
+import { useDatasheetsApi } from '../../api/datasheetsApi';
 
 export const DatasheetsGrid = styled(Box)(() => ({
   display: 'flex',
@@ -43,110 +42,35 @@ export type FilterValues = {
   }[];
 };
 
-export type FilterLimits = {
-  [key: string]: FilterValues;
-};
-
 export default function DatasheetListPage() {
   const [datasheetsList, setDatasheetsList] = useState<DatasheetEntry[]>([]);
-  const [filterLimits, setFilterLimits] = useState<FilterLimits | null>(null);
   const [filterValues, setFilterValues] = useState({});
   const [textFilterValue, setTextFilterValue] = useState('');
   const [limit, setLimit] = useState<number>(12);
   const [offset, setOffset] = useState<number>(0);
   const [totalCount, setTotalCount] = useState<number>(0);
 
+  const { getDatsheets } = useDatasheetsApi();
+
   useEffect(() => {
-    const filterParams = new URLSearchParams();
-    const normalizedFilter = textFilterValue.trim().toLowerCase();
-    const shouldIncludeVimeoMock =
-      normalizedFilter.length === 0 ||
-      VIMEO_MOCK_LIST_ENTRY.name.includes(normalizedFilter) ||
-      VIMEO_MOCK_LIST_ENTRY.owner.includes(normalizedFilter);
+    const filters: Record<string, string | FilterValues | number | undefined> = {
+      name: textFilterValue,
+      ...filterValues,
+    };
 
-    if (textFilterValue.trim().length > 0) {
-      filterParams.append('name', textFilterValue);
-    }
-
-    Object.entries(filterValues as Record<string, string | FilterValues | string[] | number[]>)
-      .forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          if (typeof value[0] === 'number') {
-            if (value[0]) filterParams.append('min-' + key.replace('Range', ''), value[0].toString());
-            if (value[1]) filterParams.append('max-' + key.replace('Range', ''), value[1].toString());
-          } else if (typeof value[0] === 'string') {
-            const owners = (value as string[]).join(',');
-            if (owners.length > 0) filterParams.append(key, owners);
-          }
-        } else if (typeof value === 'string' && value.trim().length > 0) {
-          filterParams.append(key, value);
-        }
-      });
-
-    filterParams.append('limit', String(limit));
-    filterParams.append('offset', String(offset));
-
-    fetch(`${import.meta.env.VITE_API_URL}/datasheets?${filterParams.toString()}`)
-      .then(response => {
-        if (!response.ok) {
-          return Promise.reject(response);
-        }
-        return response.json();
-      })
+    getDatsheets({ ...filters, limit, offset })
       .then(data => {
-        const retrievedDatasheets = data.datasheets || data.pricings || [];
-        const datasheetsWithMock = [...retrievedDatasheets];
-
-        if (
-          shouldIncludeVimeoMock &&
-          !datasheetsWithMock.some(
-            (entry: DatasheetEntry) => entry.name === 'vimeo' && entry.owner === 'mock'
-          )
-        ) {
-          datasheetsWithMock.unshift(VIMEO_MOCK_LIST_ENTRY as DatasheetEntry);
-        }
-
-        setDatasheetsList(datasheetsWithMock);
+        setDatasheetsList(data.datasheets || []);
         if (typeof data.total === 'number') {
-          setTotalCount(Math.max(data.total, datasheetsWithMock.length));
-        } else if (Array.isArray(datasheetsWithMock)) {
-          setTotalCount(offset + datasheetsWithMock.length);
-        }
-
-        if (datasheetsWithMock.length > 0) {
-          setFilterLimits({
-            minPrice: data.minPrice ?? { min: 0, max: 69, data: [] },
-            maxPrice: data.maxPrice ?? { min: 0, max: 69, data: [] },
-            configurationSpaceSize: data.configurationSpaceSize ?? { min: 1, max: 5, data: [] },
-            owners: datasheetsWithMock.map((datasheet: DatasheetEntry) => datasheet.owner),
-          });
-        } else {
-          setFilterLimits({
-            minPrice: { min: 0, max: 0, data: [] },
-            maxPrice: { min: 0, max: 0, data: [] },
-            configurationSpaceSize: { min: 0, max: 0, data: [] },
-            owners: [],
-          } as unknown as FilterLimits);
+          setTotalCount(data.total);
+        } else if (Array.isArray(data.datasheets)) {
+          setTotalCount(offset + data.datasheets.length);
         }
       })
       .catch(error => {
         console.error('Error:', error);
-
-        if (shouldIncludeVimeoMock) {
-          setDatasheetsList([VIMEO_MOCK_LIST_ENTRY as DatasheetEntry]);
-          setTotalCount(1);
-          setFilterLimits({
-            minPrice: { min: 0, max: 69, data: [] },
-            maxPrice: { min: 0, max: 69, data: [] },
-            configurationSpaceSize: { min: 1, max: 5, data: [] },
-            owners: ['mock'],
-          } as unknown as FilterLimits);
-        } else {
-          setDatasheetsList([]);
-          setTotalCount(0);
-        }
       });
-  }, [textFilterValue, filterValues, limit, offset]);
+  }, [textFilterValue, filterValues, limit, offset, getDatsheets]);
 
   return (
     <>
@@ -174,17 +98,6 @@ export default function DatasheetListPage() {
           }}
         >
           <Box component="div" width="20vw"></Box>
-          {filterLimits && (
-            <PricingFilters
-              filterLimits={filterLimits as any}
-              receivedOwners={datasheetsList.reduce((acc, datasheet) => {
-                acc[datasheet.owner] = (acc[datasheet.owner] || 0) + 1;
-                return acc;
-              }, {} as Record<string, number>)}
-              textFilterValue={textFilterValue}
-              setFilterValues={setFilterValues}
-            />
-          )}
         </Box>
         <Box
           component="div"
