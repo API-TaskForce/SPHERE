@@ -1,0 +1,42 @@
+[
+  {
+    "_id": { "$oid": "6800000000000000000000b1" },
+    "name": "engineering",
+    "displayName": "Engineering",
+    "description": "Software engineering and infrastructure team",
+    "_organizationId": { "$oid": "6800000000000000000000a2" },
+    "_parentGroupId": null,
+    "createdAt": { "$date": "2026-01-10T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-01-10T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "6800000000000000000000b2" },
+    "name": "marketing",
+    "displayName": "Marketing",
+    "description": "Marketing and communications team",
+    "_organizationId": { "$oid": "6800000000000000000000a2" },
+    "_parentGroupId": null,
+    "createdAt": { "$date": "2026-01-10T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-01-10T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "6800000000000000000000b3" },
+    "name": "data-science",
+    "displayName": "Data Science",
+    "description": "Data analytics and machine learning team",
+    "_organizationId": { "$oid": "6800000000000000000000a2" },
+    "_parentGroupId": null,
+    "createdAt": { "$date": "2026-01-15T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-01-15T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "6800000000000000000000b4" },
+    "name": "research",
+    "displayName": "Research",
+    "description": "Pricing research and experimentation",
+    "_organizationId": { "$oid": "6800000000000000000000a1" },
+    "_parentGroupId": null,
+    "createdAt": { "$date": "2026-01-05T00:00:00.000Z" },
+    "updatedAt": { "$date": "2026-01-05T00:00:00.000Z" }
+  }
+]
