@@ -29,6 +29,7 @@ import DatasheetListPage from '../modules/datasheet/pages/list';
 import CreateDatasheetPage from '../modules/datasheet/pages/create';
 import DatasheetCollectionsListPage from '../modules/datasheet/pages/collections-list';
 import DatasheetCollectionCardPage from '../modules/datasheet/pages/collection-card';
+import DatasheetEditorPage from '../modules/datasheet/pages/editor';
 
 
 export default function Router() {
@@ -75,6 +76,14 @@ export default function Router() {
             <EditorPage />
           </Suspense>
         </EditorLayout>
+      )
+    },
+    {
+      path: "/datasheet-editor",
+      element: (
+        <Suspense fallback={<LoadingView />}>
+          <DatasheetEditorPage />
+        </Suspense>
       )
     },
     {

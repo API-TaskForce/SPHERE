@@ -16,6 +16,11 @@ export const headerRoutes: HeaderRoute[] = [
         to: '/editor',
       },
       {
+        name: 'Datasheet Editor',
+        disabled: false,
+        to: '/datasheet-editor',
+      },
+      {
         name: 'HARVEY',
         disabled: false,
         to: '/harvey',
