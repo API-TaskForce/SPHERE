@@ -204,15 +204,19 @@ class PricingRepository extends RepositoryBase {
     }
   }
 
-  async findByOwnerWithoutCollection(owner: string, ...args: any) {
+  async findByOwnerWithoutCollection(owner: string, organizationId?: string, ...args: any) {
     try {
+      const match: any = {
+        owner: owner,
+        _collectionId: { $exists: false },
+      };
+
+      if (organizationId) {
+        match._organizationId = new mongoose.Types.ObjectId(organizationId);
+      }
+
       const pricings = await PricingMongoose.aggregate([
-        {
-          $match: {
-            owner: owner,
-            _collectionId: { $exists: false },
-          },
-        },
+        { $match: match },
         ...getAllPricingsAggregator([], []),
       ]);
 
@@ -281,6 +285,9 @@ class PricingRepository extends RepositoryBase {
 
   async create(data: any[], ...args: any) {
     data.forEach(item => {
+      if (item._organizationId) {
+        item._organizationId = new mongoose.Types.ObjectId(item._organizationId);
+      }
       if (item._collectionId) {
         item._collectionId = new mongoose.Types.ObjectId(item._collectionId);
       }
