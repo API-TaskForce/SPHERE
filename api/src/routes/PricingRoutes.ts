@@ -1,5 +1,6 @@
 import express from 'express';
 import { isLoggedIn } from '../middlewares/AuthMiddleware';
+import { orgContext } from '../middlewares/OrgMiddleware';
 import PricingController from '../controllers/PricingController';
 import { handlePricingUpload } from '../middlewares/FileHandlerMiddleware';
 import * as PricingValidator from '../controllers/validation/PricingValidation';
@@ -18,7 +19,7 @@ const loadFileRoutes = function (app: express.Application) {
   app
     .route(baseUrl + '/pricings')
     .get(pricingController.index)
-    .post(isLoggedIn, upload, pricingController.create)
+    .post(isLoggedIn, orgContext, upload, pricingController.create)
     .put(pricingController.updateVersion);
 
   app.route(baseUrl + '/pricings/:pricingId/configuration-space')
@@ -36,8 +37,8 @@ const loadFileRoutes = function (app: express.Application) {
 
   app
     .route(baseUrl + '/me/pricings')
-    .get(isLoggedIn, pricingController.indexByUserWithoutCollection)
-    .put(isLoggedIn, pricingController.addPricingToCollection);
+    .get(isLoggedIn, orgContext, pricingController.indexByUserWithoutCollection)
+    .put(isLoggedIn, orgContext, pricingController.addPricingToCollection);
 };
 
 export default loadFileRoutes;

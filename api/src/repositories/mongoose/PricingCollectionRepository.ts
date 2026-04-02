@@ -178,14 +178,15 @@ class PricingCollectionRepository extends RepositoryBase {
     }
   }
 
-  async findByUserId(userId: string, ...args: any) {
+  async findByUserId(userId: string, organizationId?: string, ...args: any) {
     try {
+      const match: any = { _ownerId: new mongoose.Types.ObjectId(userId) };
+      if (organizationId) {
+        match._organizationId = new mongoose.Types.ObjectId(organizationId);
+      }
+
       const collections = await PricingCollectionMongoose.aggregate([
-        {
-          $match: {
-            _ownerId: new mongoose.Types.ObjectId(userId),
-          },
-        },
+        { $match: match },
         ...addNumberOfPricingsAggregator(),
         ...addOwnerToCollectionAggregator(),
         {

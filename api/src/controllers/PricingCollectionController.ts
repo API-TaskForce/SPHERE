@@ -53,7 +53,7 @@ class PricingCollectionController {
 
   async showByUserId(req: any, res: any) {
     try {
-      const collections = await this.pricingCollectionService.showByUserId(req.user.id);
+      const collections = await this.pricingCollectionService.showByUserId(req.user.id, req.organizationId);
       res.json({ collections: collections });
     } catch (err: any) {
       res.status(500).send({ error: err.message });
@@ -119,7 +119,8 @@ class PricingCollectionController {
       const pricing = await this.pricingCollectionService.create(
         req.body,
         req.user.id,
-        req.user.username
+        req.user.username,
+        req.organizationId
       );
       res.json(pricing);
     } catch (err: any) {
@@ -138,7 +139,8 @@ class PricingCollectionController {
         req.file,
         req.body,
         req.user.id,
-        req.user.username
+        req.user.username,
+        req.organizationId
       );
       res.json({collection, pricingsWithErrors});
     } catch (err: any) {
