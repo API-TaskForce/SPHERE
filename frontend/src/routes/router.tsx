@@ -2,6 +2,7 @@ import { Navigate, Outlet, useRoutes } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import LoadingView from '../modules/core/pages/loading';
 import PresentationLayout from '../modules/presentation/layouts';
+import OrgScopeProvider from '../modules/organization/components/OrgScopeProvider';
 
 export const HomePage = lazy(() => import('../modules/presentation/pages/home'));
 export const TeamPage = lazy(() => import('../modules/presentation/pages/team'));
@@ -49,6 +50,19 @@ export default function Router() {
         { element: <CreateCollectionPage />, path: "/pricings/collections/new" },
         { element: <CollectionCardPage />, path: "/pricings/collections/:ownerId/:collectionName" },
         { element: <MyPricingsPage />, path: "/me/pricings" },
+        {
+          path: "/orgs/:orgName",
+          element: (
+            <OrgScopeProvider>
+              <Outlet />
+            </OrgScopeProvider>
+          ),
+          children: [
+            { element: <MyPricingsPage />, path: "pricings" },
+            { element: <CollectionsListPage />, path: "collections" },
+            { element: <CollectionCardPage />, path: "collections/:ownerId/:collectionName" },
+          ],
+        },
         { element: <PricingAssistantPage />, path: "/harvey"},
         { element: <PricingAssistantPage playground />, path: "/harvey-play"}
       ],
