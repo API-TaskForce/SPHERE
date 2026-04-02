@@ -28,8 +28,8 @@ class PricingService {
     return pricings;
   }
 
-  async indexByUserWithoutCollection(username: string) {
-    const pricings = await this.pricingRepository.findByOwnerWithoutCollection(username);
+  async indexByUserWithoutCollection(username: string, organizationId?: string) {
+    const pricings = await this.pricingRepository.findByOwnerWithoutCollection(username, organizationId);
     return pricings;
   }
 
@@ -106,7 +106,7 @@ class PricingService {
     ];
   }
 
-  async create(pricingFile: any, owner: string, collectionId?: string) {
+  async create(pricingFile: any, owner: string, collectionId?: string, organizationId?: string) {
     try {
       const uploadedPricing: Pricing = retrievePricingFromPath(
         typeof pricingFile === 'string' ? pricingFile : pricingFile.path
@@ -125,6 +125,7 @@ class PricingService {
         name: uploadedPricing.saasName,
         version: uploadedPricing.version,
         _collectionId: collectionId,
+        _organizationId: organizationId,
         owner: owner,
         currency: uploadedPricing.currency,
         extractionDate: new Date(uploadedPricing.createdAt),

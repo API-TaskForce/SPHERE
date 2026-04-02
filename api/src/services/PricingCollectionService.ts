@@ -33,8 +33,8 @@ class PricingCollectionService {
     return collection;
   }
 
-  async showByUserId(userId: string) {
-    const collections = await this.pricingCollectionRepository.findByUserId(userId);
+  async showByUserId(userId: string, organizationId?: string) {
+    const collections = await this.pricingCollectionRepository.findByUserId(userId, organizationId);
 
     return collections;
   }
@@ -48,10 +48,13 @@ class PricingCollectionService {
     return collection;
   }
 
-  async create(newCollection: any, userId: string, username: string) {
+  async create(newCollection: any, userId: string, username: string, organizationId?: string) {
     let collection: any;
     try {
       newCollection._ownerId = new mongoose.Types.ObjectId(userId);
+      if (organizationId) {
+        newCollection._organizationId = new mongoose.Types.ObjectId(organizationId);
+      }
       newCollection.analytics = {
         evolutionOfPlans: {
           dates: [],
@@ -87,7 +90,7 @@ class PricingCollectionService {
     }
   }
 
-  async bulkCreate(file: any, newCollectionData: any, userId: string, username: string) {
+  async bulkCreate(file: any, newCollectionData: any, userId: string, username: string, organizationId?: string) {
   let collection: any;
     try {
       const extractPath = this._getExtractPath(userId, newCollectionData.name);
@@ -96,6 +99,9 @@ class PricingCollectionService {
       const extractedFiles = await decompressZip(zipPath, extractPath);
 
       newCollectionData._ownerId = new mongoose.Types.ObjectId(userId);
+      if (organizationId) {
+        newCollectionData._organizationId = new mongoose.Types.ObjectId(organizationId);
+      }
 
   // Create collection and keep reference so we only attempt cleanup if it was created
   collection = await this.pricingCollectionRepository.create(newCollectionData);
@@ -114,6 +120,7 @@ class PricingCollectionService {
             name: uploadedPricing.saasName.split(" ")[0].charAt(0).toUpperCase() + uploadedPricing.saasName.split(" ")[0].slice(1).toLowerCase(),
             version: uploadedPricing.version,
             _collectionId: collection._id,
+            _organizationId: organizationId ? new mongoose.Types.ObjectId(organizationId) : undefined,
             owner: username,
             currency: uploadedPricing.currency,
             extractionDate: new Date(uploadedPricing.createdAt),
