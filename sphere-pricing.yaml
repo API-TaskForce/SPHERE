@@ -1,0 +1,320 @@
+saasName: SPHERE
+syntaxVersion: "3.0"
+version: "1.0"
+createdAt: "2026-04-02"
+currency: EUR
+
+features:
+
+  # ── DOMAIN ────────────────────────────────────────────────────────────────
+
+  pricingManagement:
+    description: >
+      Upload, view, edit and delete pricing YAML files within your organization.
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+
+  pricingVersioning:
+    description: >
+      Maintain multiple versions of a pricing model and navigate its full
+      version history.
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+
+  pricingEditor:
+    description: >
+      Edit pricing YAML files directly in the browser using the built-in
+      Monaco-based editor.
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+
+  configurationSpaceAnalysis:
+    description: >
+      Compute and explore the full configuration space of a pricing model
+      via constraint solving (MiniZinc).
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+
+  collectionManagement:
+    description: >
+      Create, organize and manage collections of pricing models within
+      your organization.
+    valueType: BOOLEAN
+    defaultValue: true
+    type: DOMAIN
+
+  bulkImport:
+    description: >
+      Import multiple pricing YAML files at once by uploading a ZIP archive
+      to create a collection in a single operation.
+    valueType: BOOLEAN
+    defaultValue: false
+    type: DOMAIN
+
+  collectionExport:
+    description: >
+      Download a pricing collection as a ZIP archive containing all its
+      YAML files.
+    valueType: BOOLEAN
+    defaultValue: false
+    type: DOMAIN
+
+  # ── INFORMATION ───────────────────────────────────────────────────────────
+
+  pricingAnalytics:
+    description: >
+      View analytical metrics for individual pricing models, including
+      feature counts, plan distribution, add-on breakdown and price ranges.
+    valueType: BOOLEAN
+    defaultValue: true
+    type: INFORMATION
+
+  collectionAnalytics:
+    description: >
+      Access evolution analytics for pricing collections, tracking changes
+      in plans, features, add-ons and configuration space size over time.
+    valueType: BOOLEAN
+    defaultValue: false
+    type: INFORMATION
+
+  # ── AUTOMATION ────────────────────────────────────────────────────────────
+
+  harveyAssistant:
+    description: >
+      Access Harvey, the AI-powered pricing assistant, to analyze, compare
+      and query pricing models using natural language.
+    valueType: BOOLEAN
+    defaultValue: true
+    type: AUTOMATION
+    automationType: BOT
+
+  # ── MANAGEMENT ────────────────────────────────────────────────────────────
+
+  organizationManagement:
+    description: >
+      Create and manage organizations, invite members and assign roles
+      (owner, admin, member).
+    valueType: BOOLEAN
+    defaultValue: true
+    type: MANAGEMENT
+
+  groupManagement:
+    description: >
+      Create and manage groups within an organization, assign members with
+      granular roles (admin, editor, viewer) and control collection access
+      per group.
+    valueType: BOOLEAN
+    defaultValue: false
+    type: MANAGEMENT
+
+  sharedCollections:
+    description: >
+      Assign a single collection to multiple groups within an organization,
+      enabling cross-team access to the same pricing resources.
+    valueType: BOOLEAN
+    defaultValue: false
+    type: MANAGEMENT
+
+  orgWideCollections:
+    description: >
+      Make collections accessible to all organization members without
+      requiring group assignment.
+    valueType: BOOLEAN
+    defaultValue: true
+    type: MANAGEMENT
+
+  # ── SUPPORT ───────────────────────────────────────────────────────────────
+
+  communitySupport:
+    description: >
+      Access community forums and public documentation for help and guidance.
+    valueType: BOOLEAN
+    defaultValue: true
+    type: SUPPORT
+
+  standardSupport:
+    description: >
+      Access official support channels via email with guaranteed response
+      times.
+    valueType: BOOLEAN
+    defaultValue: false
+    type: SUPPORT
+
+  prioritySupport:
+    description: >
+      Access dedicated priority support with accelerated response times and
+      direct escalation path.
+    valueType: BOOLEAN
+    defaultValue: false
+    type: SUPPORT
+
+usageLimits:
+
+  maxGroups:
+    description: Maximum number of groups allowed within the organization.
+    valueType: NUMERIC
+    defaultValue: 0
+    unit: group
+    type: NON_RENEWABLE
+    trackable: true
+    linkedFeatures:
+      - groupManagement
+
+  maxOrgMembers:
+    description: Maximum number of members allowed in the organization.
+    valueType: NUMERIC
+    defaultValue: 1
+    unit: member
+    type: NON_RENEWABLE
+    trackable: true
+    linkedFeatures:
+      - organizationManagement
+
+  maxGroupMembers:
+    description: Maximum number of members allowed in each group within the organization.
+    valueType: NUMERIC
+    defaultValue: 0
+    unit: member
+    type: NON_RENEWABLE
+    trackable: true
+    linkedFeatures:
+      - groupManagement
+
+  maxCollections:
+    description: Maximum number of pricing collections allowed within the organization.
+    valueType: NUMERIC
+    defaultValue: 5
+    unit: collection
+    type: NON_RENEWABLE
+    trackable: true
+    linkedFeatures:
+      - collectionManagement
+
+  maxPricings:
+    description: Maximum number of individual pricing models allowed within the organization.
+    valueType: NUMERIC
+    defaultValue: 15
+    unit: pricing
+    type: NON_RENEWABLE
+    trackable: true
+    linkedFeatures:
+      - pricingManagement
+
+plans:
+
+  FREE:
+    description: >
+      For individual researchers and personal use. Includes core pricing
+      analysis tools with no collaboration features.
+    price: 0
+    unit: org/month
+    features: null
+    usageLimits: null
+
+  PRO:
+    description: >
+      For teams and collaborative organizations. Unlocks group management,
+      collection sharing, evolution analytics and bulk operations.
+    price: 9
+    unit: org/month
+    features:
+      collectionAnalytics:
+        value: true
+      bulkImport:
+        value: true
+      collectionExport:
+        value: true
+      groupManagement:
+        value: true
+      sharedCollections:
+        value: true
+      standardSupport:
+        value: true
+    usageLimits:
+      maxGroups:
+        value: 5
+      maxOrgMembers:
+        value: 15
+      maxGroupMembers:
+        value: 10
+      maxCollections:
+        value: 30
+      maxPricings:
+        value: 200
+
+  ENTERPRISE:
+    description: >
+      For large organizations with no resource restrictions. Includes
+      priority support and unlimited usage across all limits.
+    price: 29
+    unit: org/month
+    features:
+      collectionAnalytics:
+        value: true
+      bulkImport:
+        value: true
+      collectionExport:
+        value: true
+      groupManagement:
+        value: true
+      sharedCollections:
+        value: true
+      standardSupport:
+        value: true
+      prioritySupport:
+        value: true
+    usageLimits:
+      maxGroups:
+        value: 9999
+      maxOrgMembers:
+        value: 9999
+      maxGroupMembers:
+        value: 9999
+      maxCollections:
+        value: 9999
+      maxPricings:
+        value: 9999
+
+addOns:
+
+  extraPricings:
+    description: >
+      Increase the pricing model limit by 50 for the current organization.
+      Can be stacked up to 10 times.
+    availableFor:
+      - PRO
+      - ENTERPRISE
+    price: 2
+    unit: org/month
+    subscriptionConstraints:
+      min: 1
+      max: 10
+      step: 1
+    features: null
+    usageLimits: null
+    usageLimitsExtensions:
+      maxPricings:
+        value: 50
+
+  extraCollections:
+    description: >
+      Increase the collection limit by 10 for the current organization.
+      Can be stacked up to 10 times.
+    availableFor:
+      - PRO
+      - ENTERPRISE
+    price: 2
+    unit: org/month
+    subscriptionConstraints:
+      min: 1
+      max: 10
+      step: 1
+    features: null
+    usageLimits: null
+    usageLimitsExtensions:
+      maxCollections:
+        value: 10
