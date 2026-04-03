@@ -37,6 +37,7 @@
     "pricing4ts": "^0.10.4",
     "prop-types": "^15.8.1",
     "redis": "^4.7.0",
+    "space-node-client": "^0.3.0",
     "supertest": "^7.0.0",
     "unzipper": "^0.12.3",
     "uuid": "^10.0.0"

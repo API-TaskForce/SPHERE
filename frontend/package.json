@@ -45,6 +45,7 @@
     "recharts": "^2.15.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.0",
+    "space-react-client": "^0.3.2",
     "swapy": "^0.4.2",
     "three": "^0.170.0",
     "uuid": "^11.1.0"
