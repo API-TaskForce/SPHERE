@@ -1,9 +1,14 @@
-import { Box, Divider, Typography } from '@mui/material';
+import { Box, Divider, Typography, Avatar } from '@mui/material';
+import BusinessIcon from '@mui/icons-material/Business';
+import PersonIcon from '@mui/icons-material/Person';
 import ProfileAvatar from '../profile-avatar';
 import { useAuth } from '../../../auth/hooks/useAuth';
+import { useOrganization } from '../../../organization/hooks/useOrganization';
+import { primary } from '../../../core/theme/palette';
 
 export default function ProfileSidebar({sidebarWidth}: {sidebarWidth: number}) {
   const {authUser} = useAuth();
+  const { organizations, activeOrganization } = useOrganization();
 
   return (
     <Box sx={{ p: 2 }}>
@@ -48,12 +53,54 @@ export default function ProfileSidebar({sidebarWidth}: {sidebarWidth: number}) {
       </Box> */}
 
       {/* Organizations Section */}
-      {/* <Box>
-        <Typography variant="subtitle2" color="text.secondary">
-          Organizations
-        </Typography>
-        <Typography>Ninguna todavía</Typography>
-      </Box> */}
+      {organizations.length > 0 && (
+        <Box>
+          <Typography variant="subtitle2" color="text.secondary" mb={1}>
+            Organizations
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+            {organizations.map((org) => (
+              <Box
+                key={org.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  p: 0.75,
+                  borderRadius: 1,
+                  bgcolor: org.id === activeOrganization?.id ? 'action.selected' : 'transparent',
+                }}
+              >
+                {org.avatarUrl ? (
+                  <Avatar src={org.avatarUrl} sx={{ width: 28, height: 28 }} />
+                ) : (
+                  <Avatar sx={{ width: 28, height: 28, bgcolor: primary[800], fontSize: 13 }}>
+                    {org.isPersonal ? (
+                      <PersonIcon sx={{ fontSize: 16 }} />
+                    ) : (
+                      <BusinessIcon sx={{ fontSize: 16 }} />
+                    )}
+                  </Avatar>
+                )}
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography
+                    variant="body2"
+                    fontWeight={500}
+                    sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {org.displayName}
+                  </Typography>
+                  {org.isPersonal && (
+                    <Typography variant="caption" color="text.secondary">
+                      Personal
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }

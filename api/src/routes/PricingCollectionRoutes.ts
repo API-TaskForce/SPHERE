@@ -1,6 +1,7 @@
 import express from 'express';
 import PricingCollectionController from '../controllers/PricingCollectionController';
 import { isLoggedIn } from '../middlewares/AuthMiddleware';
+import { orgContext } from '../middlewares/OrgMiddleware';
 import PricingController from '../controllers/PricingController';
 import { handleValidation } from '../middlewares/ValidationHandlingMiddleware';
 import * as PricingCollectionValidator from '../controllers/validation/PricingCollectionValidation';
@@ -21,13 +22,13 @@ const loadFileRoutes = function (app: express.Application) {
   app
     .route(baseUrl + '/pricings/collections')
     .get(pricingCollectionController.index)
-    .post(isLoggedIn, pricingCollectionController.create);
+    .post(isLoggedIn, orgContext, pricingCollectionController.create);
 
   app
     .route(baseUrl + '/pricings/collections/bulk')
-    .post(isLoggedIn, upload, pricingCollectionController.bulkCreate);
+    .post(isLoggedIn, orgContext, upload, pricingCollectionController.bulkCreate);
 
-  app.route(baseUrl + '/me/collections').get(isLoggedIn, pricingCollectionController.showByUserId);
+  app.route(baseUrl + '/me/collections').get(isLoggedIn, orgContext, pricingCollectionController.showByUserId);
 
   app
     .route(baseUrl + '/me/collections/pricings/:pricingName')

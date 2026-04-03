@@ -1,11 +1,13 @@
 import { useCallback, useMemo } from 'react';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { useOrgFetch } from '../../organization/hooks/useOrganization';
 import { FilterValues } from '../pages/list';
 
 export const PRICINGS_BASE_PATH = import.meta.env.VITE_API_URL + '/pricings';
 
 export function usePricingsApi() {
   const { fetchWithInterceptor, authUser } = useAuth();
+  const { fetchWithOrgContext } = useOrgFetch();
   const token = authUser?.token;
   const username = authUser?.user?.username;
 
@@ -87,7 +89,7 @@ export function usePricingsApi() {
   }, [basicHeaders]);
 
   const getLoggedUserPricings = useCallback(async () => {
-    return fetchWithInterceptor(`${import.meta.env.VITE_API_URL}/me/pricings`, {
+    return fetchWithOrgContext(`${import.meta.env.VITE_API_URL}/me/pricings`, {
       method: 'GET',
       headers: basicHeaders,
     })
@@ -101,7 +103,7 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders]);
+  }, [fetchWithOrgContext, basicHeaders]);
 
   const getConfigurationSpace = useCallback(async (pricingId: string, limit?: number, offset?: number) => {
     
@@ -133,7 +135,7 @@ export function usePricingsApi() {
   }, [fetchWithInterceptor, basicHeaders]);
 
   const createPricing = useCallback(async (formData: FormData, setErrors: (errors: string[]) => void = () => {}) => {
-    return fetchWithInterceptor(PRICINGS_BASE_PATH, {
+    return fetchWithOrgContext(PRICINGS_BASE_PATH, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -152,10 +154,10 @@ export function usePricingsApi() {
       .catch((error: Error) => {
         setErrors([error.message]);
       });
-  }, [fetchWithInterceptor, token]);
+  }, [fetchWithOrgContext, token]);
 
   const addPricingToCollection = useCallback(async (pricingName: string, collectionId: string) => {
-    return fetchWithInterceptor(`${import.meta.env.VITE_API_URL}/me/pricings`, {
+    return fetchWithOrgContext(`${import.meta.env.VITE_API_URL}/me/pricings`, {
       method: 'PUT',
       headers: basicHeaders,
       body: JSON.stringify({ pricingName, collectionId }),
@@ -170,11 +172,11 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders]);
+  }, [fetchWithOrgContext, basicHeaders]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updatePricing = useCallback((pricingName: string, pricingData: any) => {
-    return fetchWithInterceptor(`${PRICINGS_BASE_PATH}/${username}/${pricingName}`, {
+    return fetchWithOrgContext(`${PRICINGS_BASE_PATH}/${username}/${pricingName}`, {
       method: 'PUT',
       headers: basicHeaders,
       body: JSON.stringify(pricingData),
@@ -189,7 +191,7 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders, username]);
+  }, [fetchWithOrgContext, basicHeaders, username]);
 
   const updateClientPricingVersion = useCallback(async (pricingString: string) => {
     return fetchWithInterceptor(`${PRICINGS_BASE_PATH}`, {
@@ -210,7 +212,7 @@ export function usePricingsApi() {
   }, [fetchWithInterceptor, basicHeaders]);
 
   const removePricingVersion = useCallback(async (pricingName: string, pricingVersion: string) => {
-    return fetchWithInterceptor(
+    return fetchWithOrgContext(
       `${PRICINGS_BASE_PATH}/${username}/${pricingName}/${pricingVersion}`,
       {
         method: 'DELETE',
@@ -227,10 +229,10 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders, username]);
+  }, [fetchWithOrgContext, basicHeaders, username]);
 
   const removePricingFromCollection = useCallback(async (pricingName: string) => {
-    return fetchWithInterceptor(
+    return fetchWithOrgContext(
       `${import.meta.env.VITE_API_URL}/me/collections/pricings/${pricingName}`,
       {
         method: 'DELETE',
@@ -247,10 +249,10 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders]);
+  }, [fetchWithOrgContext, basicHeaders]);
 
   const removePricingByName = useCallback(async (name: string, collectionName?: string) => {
-    return fetchWithInterceptor(
+    return fetchWithOrgContext(
       `${PRICINGS_BASE_PATH}/${username}/${name}${
         collectionName ? `?collectionName=${collectionName}` : ''
       }`,
@@ -270,7 +272,7 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders, username]);
+  }, [fetchWithOrgContext, basicHeaders, username]);
 
   return useMemo(
     () => ({

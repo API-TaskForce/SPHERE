@@ -106,7 +106,8 @@ export const useAuth = () => {
 
     const fetchWithInterceptor = async (
         url: RequestInfo | URL,
-        options?: RequestInit
+        options?: RequestInit,
+        additionalHeaders?: Record<string, string>
     ) => {
         
         if (authUser.tokenExpiration) {
@@ -149,8 +150,18 @@ export const useAuth = () => {
             }
         }
         
-        const response = await fetch(url, options)
-        
+        const mergedOptions: RequestInit = additionalHeaders
+            ? {
+                  ...options,
+                  headers: {
+                      ...(options?.headers as Record<string, string>),
+                      ...additionalHeaders,
+                  },
+              }
+            : options ?? {};
+
+        const response = await fetch(url, mergedOptions)
+
         return response
     }
 

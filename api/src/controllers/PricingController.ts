@@ -41,7 +41,10 @@ class PricingController {
 
   async indexByUserWithoutCollection(req: any, res: any) {
     try {
-      const pricings = await this.pricingService.indexByUserWithoutCollection(req.user.username);
+      const pricings = await this.pricingService.indexByUserWithoutCollection(
+        req.user.username,
+        req.organizationId
+      );
       res.json({ pricings });
     } catch (err: any) {
       res.status(500).send(err.message);
@@ -85,7 +88,7 @@ class PricingController {
 
   async create(req: any, res: any) {
     try {
-      const pricing = await this.pricingService.create(req.file, req.user.username);
+      const pricing = await this.pricingService.create(req.file, req.user.username, undefined, req.organizationId);
       res.json(pricing);
     } catch (err: any) {
       try {

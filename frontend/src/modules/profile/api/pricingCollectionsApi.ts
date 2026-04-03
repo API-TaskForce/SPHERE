@@ -1,11 +1,13 @@
 import { useAuth } from '../../auth/hooks/useAuth';
 import { useCallback, useMemo } from 'react';
 import { CollectionToCreate } from '../types/profile-types';
+import { useOrgFetch } from '../../organization/hooks/useOrganization';
 
 export const COLLECTIONS_BASE_PATH = import.meta.env.VITE_API_URL + '/pricings/collections';
 
 export function usePricingCollectionsApi() {
   const { fetchWithInterceptor, authUser } = useAuth();
+  const { fetchWithOrgContext } = useOrgFetch();
 
   const token = authUser?.token;
 
@@ -44,7 +46,7 @@ export function usePricingCollectionsApi() {
   }, [basicHeaders]);
 
   const getLoggedUserCollections = useCallback(async () => {
-    return fetchWithInterceptor(`${import.meta.env.VITE_API_URL}/me/collections`, {
+    return fetchWithOrgContext(`${import.meta.env.VITE_API_URL}/me/collections`, {
       method: 'GET',
       headers: basicHeaders,
     })
@@ -52,10 +54,10 @@ export function usePricingCollectionsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders]);
+  }, [fetchWithOrgContext, basicHeaders]);
 
   const createCollection = useCallback(async (collection: CollectionToCreate) => {
-    return fetchWithInterceptor(COLLECTIONS_BASE_PATH, {
+    return fetchWithOrgContext(COLLECTIONS_BASE_PATH, {
       method: 'POST',
       headers: basicHeaders,
       body: JSON.stringify(collection),
@@ -75,10 +77,10 @@ export function usePricingCollectionsApi() {
       .catch(error => {
   return Promise.reject(error instanceof Error ? error : new Error(String(error)));
       });
-  }, [fetchWithInterceptor, basicHeaders]);
-  
+  }, [fetchWithOrgContext, basicHeaders]);
+
   const createBulkCollection = useCallback(async (formData: FormData) => {
-    return fetchWithInterceptor(COLLECTIONS_BASE_PATH + "/bulk", {
+    return fetchWithOrgContext(COLLECTIONS_BASE_PATH + "/bulk", {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -105,7 +107,7 @@ export function usePricingCollectionsApi() {
       .catch(error => {
         return Promise.reject(error instanceof Error ? error : new Error(String(error)));
       });
-  }, [fetchWithInterceptor, token]);
+  }, [fetchWithOrgContext, token]);
 
   const getCollectionByOwnerAndName = useCallback(async (ownerId: string, collectionName: string) => {
     return fetchWithInterceptor(`${COLLECTIONS_BASE_PATH}/${ownerId}/${collectionName}`, {
@@ -151,7 +153,7 @@ export function usePricingCollectionsApi() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateCollection = useCallback(async (collectionName: string, collectionData: any) => {
-    return fetchWithInterceptor(`${COLLECTIONS_BASE_PATH}/${authUser.user!.id}/${collectionName}`, {
+    return fetchWithOrgContext(`${COLLECTIONS_BASE_PATH}/${authUser.user!.id}/${collectionName}`, {
       method: 'PUT',
       headers: basicHeaders,
       body: JSON.stringify(collectionData),
@@ -160,10 +162,10 @@ export function usePricingCollectionsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders, authUser]);
+  }, [fetchWithOrgContext, basicHeaders, authUser]);
 
   const deleteCollection = useCallback(async (collectionName: string, deleteCascade: boolean) => {
-    return fetchWithInterceptor(`${COLLECTIONS_BASE_PATH}/${authUser.user!.id}/${collectionName}?cascade=${deleteCascade}`, {
+    return fetchWithOrgContext(`${COLLECTIONS_BASE_PATH}/${authUser.user!.id}/${collectionName}?cascade=${deleteCascade}`, {
       method: 'DELETE',
       headers: basicHeaders
     })
@@ -171,7 +173,7 @@ export function usePricingCollectionsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders, authUser]);
+  }, [fetchWithOrgContext, basicHeaders, authUser]);
 
   return useMemo(() => ({
     getLoggedUserCollections,

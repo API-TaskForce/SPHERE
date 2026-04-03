@@ -22,6 +22,7 @@ import MobileHeaderItems from './components/mobile-header-items';
 import DesktopHeaderItems from './components/desktop-header-items';
 import { headerRoutes } from './router/header-routes';
 import { useRouter } from '../../core/hooks/useRouter';
+import OrgSelector from './components/org-selector';
 
 const StyledAppBar = styled(AppBar)(() => ({
   background: grey[100],
@@ -96,6 +97,7 @@ const Header = ({ setUploadModalOpen }: { setUploadModalOpen: (state: boolean) =
           )}
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {authUser.isAuthenticated && <OrgSelector />}
             <NavItems>
               {authUser.isAuthenticated ? (
                 <Tooltip title="Open settings">
