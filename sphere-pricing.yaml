@@ -1,4 +1,4 @@
-saasName: SPHERE
+saasName: sphere
 syntaxVersion: "3.0"
 version: "1.0"
 createdAt: "2026-04-02"
@@ -13,6 +13,17 @@ features:
       Upload, view, edit and delete pricing YAML files within your organization.
     valueType: BOOLEAN
     defaultValue: true
+    expression: pricingContext['features']['pricingManagement']
+    type: DOMAIN
+
+  pricings:
+    description: >
+      Number of individual pricing models the organization can store.
+      Gated by the maxPricings usage limit.
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: subscriptionContext['pricings'] < pricingContext['usageLimits']['maxPricings']
+    serverExpression: subscriptionContext['pricings'] <= pricingContext['usageLimits']['maxPricings']
     type: DOMAIN
 
   pricingVersioning:
@@ -21,6 +32,7 @@ features:
       version history.
     valueType: BOOLEAN
     defaultValue: true
+    expression: pricingContext['features']['pricingVersioning']
     type: DOMAIN
 
   pricingEditor:
@@ -29,6 +41,7 @@ features:
       Monaco-based editor.
     valueType: BOOLEAN
     defaultValue: true
+    expression: pricingContext['features']['pricingEditor']
     type: DOMAIN
 
   configurationSpaceAnalysis:
@@ -37,6 +50,7 @@ features:
       via constraint solving (MiniZinc).
     valueType: BOOLEAN
     defaultValue: true
+    expression: pricingContext['features']['configurationSpaceAnalysis']
     type: DOMAIN
 
   collectionManagement:
@@ -45,6 +59,17 @@ features:
       your organization.
     valueType: BOOLEAN
     defaultValue: true
+    expression: pricingContext['features']['collectionManagement']
+    type: DOMAIN
+
+  collections:
+    description: >
+      Number of pricing collections the organization can store.
+      Gated by the maxCollections usage limit.
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: subscriptionContext['collections'] < pricingContext['usageLimits']['maxCollections']
+    serverExpression: subscriptionContext['collections'] <= pricingContext['usageLimits']['maxCollections']
     type: DOMAIN
 
   bulkImport:
@@ -53,6 +78,7 @@ features:
       to create a collection in a single operation.
     valueType: BOOLEAN
     defaultValue: false
+    expression: pricingContext['features']['bulkImport']
     type: DOMAIN
 
   collectionExport:
@@ -61,6 +87,7 @@ features:
       YAML files.
     valueType: BOOLEAN
     defaultValue: false
+    expression: pricingContext['features']['collectionExport']
     type: DOMAIN
 
   # ── INFORMATION ───────────────────────────────────────────────────────────
@@ -71,6 +98,7 @@ features:
       feature counts, plan distribution, add-on breakdown and price ranges.
     valueType: BOOLEAN
     defaultValue: true
+    expression: pricingContext['features']['pricingAnalytics']
     type: INFORMATION
 
   collectionAnalytics:
@@ -79,6 +107,7 @@ features:
       in plans, features, add-ons and configuration space size over time.
     valueType: BOOLEAN
     defaultValue: false
+    expression: pricingContext['features']['collectionAnalytics']
     type: INFORMATION
 
   # ── AUTOMATION ────────────────────────────────────────────────────────────
@@ -89,6 +118,7 @@ features:
       and query pricing models using natural language.
     valueType: BOOLEAN
     defaultValue: true
+    expression: pricingContext['features']['harveyAssistant']
     type: AUTOMATION
     automationType: BOT
 
@@ -100,6 +130,17 @@ features:
       (owner, admin, member).
     valueType: BOOLEAN
     defaultValue: true
+    expression: pricingContext['features']['organizationManagement']
+    type: MANAGEMENT
+
+  orgMembers:
+    description: >
+      Number of members the organization can have.
+      Gated by the maxOrgMembers usage limit.
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: subscriptionContext['orgMembers'] < pricingContext['usageLimits']['maxOrgMembers']
+    serverExpression: subscriptionContext['orgMembers'] <= pricingContext['usageLimits']['maxOrgMembers']
     type: MANAGEMENT
 
   groupManagement:
@@ -109,6 +150,27 @@ features:
       per group.
     valueType: BOOLEAN
     defaultValue: false
+    expression: pricingContext['features']['groupManagement']
+    type: MANAGEMENT
+
+  groups:
+    description: >
+      Number of groups the organization can create.
+      Gated by the maxGroups usage limit.
+    valueType: BOOLEAN
+    defaultValue: false
+    expression: subscriptionContext['groups'] < pricingContext['usageLimits']['maxGroups']
+    serverExpression: subscriptionContext['groups'] <= pricingContext['usageLimits']['maxGroups']
+    type: MANAGEMENT
+
+  groupMembers:
+    description: >
+      Number of members that can be added to each group.
+      Gated by the maxGroupMembers usage limit.
+    valueType: BOOLEAN
+    defaultValue: false
+    expression: subscriptionContext['groupMembers'] < pricingContext['usageLimits']['maxGroupMembers']
+    serverExpression: subscriptionContext['groupMembers'] <= pricingContext['usageLimits']['maxGroupMembers']
     type: MANAGEMENT
 
   sharedCollections:
@@ -117,6 +179,7 @@ features:
       enabling cross-team access to the same pricing resources.
     valueType: BOOLEAN
     defaultValue: false
+    expression: pricingContext['features']['sharedCollections']
     type: MANAGEMENT
 
   orgWideCollections:
@@ -125,6 +188,7 @@ features:
       requiring group assignment.
     valueType: BOOLEAN
     defaultValue: true
+    expression: pricingContext['features']['orgWideCollections']
     type: MANAGEMENT
 
   # ── SUPPORT ───────────────────────────────────────────────────────────────
@@ -134,6 +198,7 @@ features:
       Access community forums and public documentation for help and guidance.
     valueType: BOOLEAN
     defaultValue: true
+    expression: pricingContext['features']['communitySupport']
     type: SUPPORT
 
   standardSupport:
@@ -142,6 +207,7 @@ features:
       times.
     valueType: BOOLEAN
     defaultValue: false
+    expression: pricingContext['features']['standardSupport']
     type: SUPPORT
 
   prioritySupport:
@@ -150,6 +216,7 @@ features:
       direct escalation path.
     valueType: BOOLEAN
     defaultValue: false
+    expression: pricingContext['features']['prioritySupport']
     type: SUPPORT
 
 usageLimits:
@@ -162,7 +229,7 @@ usageLimits:
     type: NON_RENEWABLE
     trackable: true
     linkedFeatures:
-      - groupManagement
+      - groups
 
   maxOrgMembers:
     description: Maximum number of members allowed in the organization.
@@ -172,7 +239,7 @@ usageLimits:
     type: NON_RENEWABLE
     trackable: true
     linkedFeatures:
-      - organizationManagement
+      - orgMembers
 
   maxGroupMembers:
     description: Maximum number of members allowed in each group within the organization.
@@ -182,7 +249,7 @@ usageLimits:
     type: NON_RENEWABLE
     trackable: true
     linkedFeatures:
-      - groupManagement
+      - groupMembers
 
   maxCollections:
     description: Maximum number of pricing collections allowed within the organization.
@@ -192,7 +259,7 @@ usageLimits:
     type: NON_RENEWABLE
     trackable: true
     linkedFeatures:
-      - collectionManagement
+      - collections
 
   maxPricings:
     description: Maximum number of individual pricing models allowed within the organization.
@@ -202,7 +269,7 @@ usageLimits:
     type: NON_RENEWABLE
     trackable: true
     linkedFeatures:
-      - pricingManagement
+      - pricings
 
 plans:
 
