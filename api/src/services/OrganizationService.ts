@@ -1,14 +1,17 @@
 import container from '../config/container';
 import { OrganizationRepository } from '../types/repositories/OrganizationRepository';
 import { OrganizationMembershipRepository } from '../types/repositories/OrganizationMembershipRepository';
+import SpaceService from './SpaceService';
 
 class OrganizationService {
   private organizationRepository: OrganizationRepository;
   private organizationMembershipRepository: OrganizationMembershipRepository;
+  private spaceService: SpaceService;
 
   constructor() {
     this.organizationRepository = container.resolve('organizationRepository');
     this.organizationMembershipRepository = container.resolve('organizationMembershipRepository');
+    this.spaceService = container.resolve('spaceService');
   }
 
   // ── Organization CRUD ───────────────────────────────────────────────────────
@@ -39,7 +42,8 @@ class OrganizationService {
   }
 
   /**
-   * Creates an organization and automatically assigns the given user as owner.
+   * Creates an organization, assigns the given user as owner, and provisions
+   * a FREE contract in SPACE for the new organization.
    */
   async createWithOwner(data: any, userId: string) {
     const organization = await this.organizationRepository.create(data);
@@ -50,6 +54,8 @@ class OrganizationService {
       role: 'owner',
       joinedAt: new Date(),
     });
+
+    await this.spaceService.ensureFreeContract(organization.id, organization.name);
 
     return organization;
   }
