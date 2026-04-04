@@ -20,8 +20,16 @@ import CreatePricingPage from '../modules/pricing/pages/create';
 import CollectionCardPage from '../modules/pricing/pages/collection-card';
 import MyPricingsPage from '../modules/profile/pages/pricings';
 import CreateCollectionPage from '../modules/profile/pages/create-collection';
+import CreateDatasheetCollectionPage from '../modules/profile/pages/create-datasheet-collection';
+import MyDatasheetsPage from '../modules/profile/pages/datasheets';
 import CollectionsListPage from '../modules/pricing/pages/collections-list';
 import PricingAssistantPage from '../modules/harvey/pages/pricing-assistant';
+import DatasheetCardPage from '../modules/datasheet/pages/card';
+import DatasheetListPage from '../modules/datasheet/pages/list';
+import CreateDatasheetPage from '../modules/datasheet/pages/create';
+import DatasheetCollectionsListPage from '../modules/datasheet/pages/collections-list';
+import DatasheetCollectionCardPage from '../modules/datasheet/pages/collection-card';
+import DatasheetEditorPage from '../modules/datasheet/pages/editor';
 
 
 export default function Router() {
@@ -39,8 +47,11 @@ export default function Router() {
         { element: <LoginPage />, path: "/login" },
         { element: <RegisterPage />, path: "/register" },
         { element: <PricingListPage />, path: "/pricings" },
+        { element: <DatasheetListPage />, path: "/datasheets" },
         { element: <CreatePricingPage />, path: "/pricings/new" },
+        { element: <CreateDatasheetPage />, path: "/datasheets/new" },
         { element: <CardPage />, path: "/pricings/:owner/:name" },
+        { element: <DatasheetCardPage />, path: "/datasheets/:owner/:name" },
         // { element: <LegacyPricingCard />, path: "/pricings/card" },
         { element: <TeamPage />, path: "/team" },
         { element: <ResearchPage />, path: "/research" },
@@ -48,7 +59,11 @@ export default function Router() {
         { element: <CollectionsListPage />, path: "/pricings/collections" },
         { element: <CreateCollectionPage />, path: "/pricings/collections/new" },
         { element: <CollectionCardPage />, path: "/pricings/collections/:ownerId/:collectionName" },
+        { element: <DatasheetCollectionsListPage />, path: "/datasheets/collections" },
+        { element: <CreateDatasheetCollectionPage />, path: "/datasheets/collections/new" },
+        { element: <DatasheetCollectionCardPage />, path: "/datasheets/collections/:ownerId/:collectionName" },
         { element: <MyPricingsPage />, path: "/me/pricings" },
+        { element: <MyDatasheetsPage />, path: "/me/datasheets" },
         { element: <PricingAssistantPage />, path: "/harvey"},
         { element: <PricingAssistantPage playground />, path: "/harvey-play"}
       ],
@@ -61,6 +76,14 @@ export default function Router() {
             <EditorPage />
           </Suspense>
         </EditorLayout>
+      )
+    },
+    {
+      path: "/datasheet-editor",
+      element: (
+        <Suspense fallback={<LoadingView />}>
+          <DatasheetEditorPage />
+        </Suspense>
       )
     },
     {

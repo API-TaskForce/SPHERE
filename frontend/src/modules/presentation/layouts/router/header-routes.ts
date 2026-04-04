@@ -16,6 +16,11 @@ export const headerRoutes: HeaderRoute[] = [
         to: '/editor',
       },
       {
+        name: 'Datasheet Editor',
+        disabled: false,
+        to: '/datasheet-editor',
+      },
+      {
         name: 'HARVEY',
         disabled: false,
         to: '/harvey',
@@ -40,6 +45,22 @@ export const headerRoutes: HeaderRoute[] = [
         name: 'Collections',
         disabled: false,
         to: '/pricings/collections',
+      },
+    ],
+  },
+  {
+    name: 'Datasheets',
+    disabled: false,
+    children: [
+      {
+        name: 'Datasheets',
+        disabled: false,
+        to: '/datasheets',
+      },
+      {
+        name: 'Collections',
+        disabled: false,
+        to: '/datasheets/collections',
       },
     ],
   },
