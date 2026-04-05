@@ -19,6 +19,45 @@ class SpaceService {
   }
 
   /**
+   * Retrieves the SPACE contract for the given organization.
+   * Throws if the contract does not exist or SPACE is unreachable.
+   */
+  async getContract(organizationId: string): Promise<any> {
+    return this.spaceClient.contracts.getContract(organizationId);
+  }
+
+  /**
+   * Evaluates whether the organization's current plan allows the given feature.
+   *
+   * SPACE resolves the evaluation internally using the registered pricing YAML,
+   * the organization's contracted plan, add-ons and current usage levels.
+   *
+   * @param organizationId  The organization whose contract is evaluated.
+   * @param featureName     Feature name as defined in sphere-pricing.yaml (e.g. 'collectionManagement').
+   * @param expectedConsumption  Optional — increment to check against usage-limited features
+   *                             (e.g. pass 1 when about to create a new resource).
+   * @returns Object with `eval: boolean` and optionally `used` and `limit`.
+   */
+  async evaluateFeature(
+    organizationId: string,
+    featureName: string,
+    expectedConsumption?: number
+  ): Promise<{ eval: boolean; used?: number; limit?: number }> {
+    const featureId = `${SPACE_SERVICE_NAME}-${featureName}`;
+    return this.spaceClient.features.evaluate(organizationId, featureId, expectedConsumption);
+  }
+
+  /**
+   * Reverts the usage update produced by a previous evaluateFeature call.
+   * Only effective within 2 minutes of the original evaluation.
+   * Use this as a safety net when a request fails after evaluation.
+   */
+  async revertFeatureEvaluation(organizationId: string, featureName: string): Promise<void> {
+    const featureId = `${SPACE_SERVICE_NAME}-${featureName}`;
+    await this.spaceClient.features.revertEvaluation(organizationId, featureId);
+  }
+
+  /**
    * Ensures a FREE contract exists in SPACE for the given organization.
    * If a contract already exists, it does nothing.
    * If no contract exists (404), it creates a new FREE one.
