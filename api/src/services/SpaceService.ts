@@ -58,6 +58,57 @@ class SpaceService {
   }
 
   /**
+   * Updates the subscription plan and add-ons of an existing contract.
+   * Use this when an organization upgrades or changes its plan.
+   *
+   * @param organizationId  The organization whose contract is updated.
+   * @param plan            New plan name (e.g. 'PRO', 'ENTERPRISE').
+   * @param addOns          Add-ons map: { addonName: quantity }. Defaults to empty.
+   */
+  async updateContract(
+    organizationId: string,
+    plan: string,
+    addOns: Record<string, number> = {}
+  ): Promise<void> {
+    await this.spaceClient.contracts.updateContractSubscription(organizationId, {
+      contractedServices: { [SPACE_SERVICE_NAME]: SPACE_SERVICE_VERSION },
+      subscriptionPlans: { [SPACE_SERVICE_NAME]: plan },
+      subscriptionAddOns: { [SPACE_SERVICE_NAME]: addOns },
+    });
+  }
+
+  /**
+   * Downgrades the organization's contract to FREE, effectively cancelling
+   * the active paid plan while keeping the contract alive in SPACE.
+   */
+  async cancelContract(organizationId: string): Promise<void> {
+    await this.updateContract(organizationId, FREE_PLAN);
+  }
+
+  /**
+   * Permanently removes the organization's contract from SPACE.
+   * Use this when an organization is deleted.
+   *
+   * A 404 response is treated as a no-op (contract already gone).
+   */
+  async deleteContract(organizationId: string): Promise<void> {
+    const response = await fetch(`${SPACE_URL}api/v1/contracts/${organizationId}`, {
+      method: 'DELETE',
+      headers: {
+        'x-api-key': SPACE_API_KEY,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok || response.status === 404) {
+      return;
+    }
+
+    const errorText = await response.text();
+    throw new Error(`Failed to delete contract for organization ${organizationId}: ${response.status} ${errorText}`);
+  }
+
+  /**
    * Ensures a FREE contract exists in SPACE for the given organization.
    * If a contract already exists, it does nothing.
    * If no contract exists (404), it creates a new FREE one.
