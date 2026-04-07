@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useScrollToTop } from './modules/core/hooks/useScrollToTop';
 import { OrganizationContext } from './modules/organization/contexts/organizationContext';
 import { useOrganizationManager } from './modules/organization/hooks/useOrganization';
+import SpaceSync from './modules/space/components/SpaceSync';
 
 function OrganizationProvider({ children }: { children: React.ReactNode }) {
   const { organizations, activeOrganization, setActiveOrganization, isLoading } =
@@ -15,6 +16,7 @@ function OrganizationProvider({ children }: { children: React.ReactNode }) {
     <OrganizationContext.Provider
       value={{ organizations, activeOrganization, setActiveOrganization, isLoading }}
     >
+      <SpaceSync />
       {children}
     </OrganizationContext.Provider>
   );
