@@ -1,5 +1,38 @@
 {
   "SPHERE": {
+    "commonTypes": {
+      "OrgContext": {
+        "type": "Record",
+        "attributes": {
+          "orgRole": { "type": "String" }
+        }
+      },
+      "GroupContext": {
+        "type": "Record",
+        "attributes": {
+          "orgRole":         { "type": "String" },
+          "groupRole":       { "type": "String" },
+          "parentGroupRole": { "type": "String" },
+          "isRootGroup":     { "type": "Boolean" }
+        }
+      },
+      "CreateCollectionContext": {
+        "type": "Record",
+        "attributes": {
+          "orgRole":   { "type": "String" },
+          "groupRole": { "type": "String" }
+        }
+      },
+      "ResourceContext": {
+        "type": "Record",
+        "attributes": {
+          "orgRole":       { "type": "String" },
+          "effectiveRole": { "type": "String" },
+          "isCreator":     { "type": "Boolean" }
+        }
+      }
+    },
+
     "entityTypes": {
       "User": {
         "shape": {
@@ -83,130 +116,151 @@
       "createOrganization": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Organization"]
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
         }
       },
       "readOrganization": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Organization"]
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
         }
       },
       "updateOrganization": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Organization"]
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
         }
       },
       "deleteOrganization": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Organization"]
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
         }
       },
       "manageOrganizationMembers": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Organization"]
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
         }
       },
       "manageSubscription": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Organization"]
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
         }
       },
 
       "createGroup": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Organization"]
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
         }
       },
       "createSubgroup": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Group"]
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
         }
       },
       "readGroup": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Group"]
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
         }
       },
       "updateGroup": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Group"]
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
         }
       },
       "deleteGroup": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Group"]
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
         }
       },
       "manageGroupMembers": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Group"]
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
         }
       },
       "manageGroupCollections": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Group"]
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
         }
       },
 
       "createCollection": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Organization"]
+          "resourceTypes":  ["Organization", "Group"],
+          "context": { "type": "CreateCollectionContext" }
         }
       },
       "readCollection": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["PricingCollection"]
+          "resourceTypes":  ["PricingCollection"],
+          "context": { "type": "ResourceContext" }
         }
       },
       "updateCollection": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["PricingCollection"]
+          "resourceTypes":  ["PricingCollection"],
+          "context": { "type": "ResourceContext" }
         }
       },
       "deleteCollection": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["PricingCollection"]
+          "resourceTypes":  ["PricingCollection"],
+          "context": { "type": "ResourceContext" }
         }
       },
 
       "createPricing": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["PricingCollection"]
+          "resourceTypes":  ["PricingCollection"],
+          "context": { "type": "ResourceContext" }
         }
       },
       "readPricing": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Pricing"]
+          "resourceTypes":  ["Pricing"],
+          "context": { "type": "ResourceContext" }
         }
       },
       "updatePricing": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Pricing"]
+          "resourceTypes":  ["Pricing"],
+          "context": { "type": "ResourceContext" }
         }
       },
       "deletePricing": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Pricing"]
+          "resourceTypes":  ["Pricing"],
+          "context": { "type": "ResourceContext" }
         }
       }
     }
