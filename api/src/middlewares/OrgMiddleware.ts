@@ -43,4 +43,20 @@ const orgContext = async (req: any, res: any, next: NextFunction) => {
   }
 };
 
-export { orgContext };
+/**
+ * Populates req.organizationId directly from a route path parameter.
+ * Use this for routes where the organization is explicit in the URL
+ * (e.g. /organizations/:organizationId/...).
+ *
+ * Skips membership validation — the controller is responsible for
+ * authorizing the user's access to that organization.
+ *
+ * Must be applied AFTER isLoggedIn (requires req.user).
+ */
+const orgContextFromParam = (paramName: string = 'organizationId') =>
+  (req: any, _res: any, next: NextFunction) => {
+    req.organizationId = req.params[paramName];
+    next();
+  };
+
+export { orgContext, orgContextFromParam };

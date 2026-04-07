@@ -2,6 +2,8 @@ import express from 'express';
 import OrganizationController from '../controllers/OrganizationController';
 import OrganizationMembershipController from '../controllers/OrganizationMembershipController';
 import { isLoggedIn } from '../middlewares/AuthMiddleware';
+import { orgContext, orgContextFromParam } from '../middlewares/OrgMiddleware';
+import { checkSpacePlan } from '../middlewares/SpacePlanMiddleware';
 import { handleValidation } from '../middlewares/ValidationHandlingMiddleware';
 import * as OrganizationValidation from '../controllers/validation/OrganizationValidation';
 
@@ -15,7 +17,14 @@ const loadFileRoutes = function (app: express.Application) {
   app
     .route(baseUrl + '/organizations')
     .get(organizationController.index)
-    .post(isLoggedIn, OrganizationValidation.create, handleValidation, organizationController.create);
+    .post(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('organizationManagement'),
+      OrganizationValidation.create,
+      handleValidation,
+      organizationController.create
+    );
 
   app
     .route(baseUrl + '/organizations/by-name/:name')
@@ -24,19 +33,51 @@ const loadFileRoutes = function (app: express.Application) {
   app
     .route(baseUrl + '/organizations/:organizationId')
     .get(organizationController.show)
-    .put(isLoggedIn, OrganizationValidation.update, handleValidation, organizationController.update)
-    .delete(isLoggedIn, organizationController.destroy);
+    .put(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkSpacePlan('organizationManagement'),
+      OrganizationValidation.update,
+      handleValidation,
+      organizationController.update
+    )
+    .delete(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkSpacePlan('organizationManagement'),
+      organizationController.destroy
+    );
 
   // ── Member management ──────────────────────────────────────────────────────
   app
     .route(baseUrl + '/organizations/:organizationId/members')
     .get(isLoggedIn, organizationController.listMembers)
-    .post(isLoggedIn, OrganizationValidation.addMember, handleValidation, organizationController.addMember);
+    .post(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkSpacePlan('organizationManagement'),
+      checkSpacePlan('orgMembers', 1),
+      OrganizationValidation.addMember,
+      handleValidation,
+      organizationController.addMember
+    );
 
   app
     .route(baseUrl + '/organizations/:organizationId/members/:userId')
-    .put(isLoggedIn, OrganizationValidation.updateMemberRole, handleValidation, organizationController.updateMemberRole)
-    .delete(isLoggedIn, organizationController.removeMember);
+    .put(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkSpacePlan('organizationManagement'),
+      OrganizationValidation.updateMemberRole,
+      handleValidation,
+      organizationController.updateMemberRole
+    )
+    .delete(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkSpacePlan('organizationManagement'),
+      organizationController.removeMember
+    );
 
   // ── User-scoped organization routes ───────────────────────────────────────
   app

@@ -1,5 +1,7 @@
 import express from 'express';
 import { isLoggedIn } from '../middlewares/AuthMiddleware';
+import { orgContext, orgContextFromParam } from '../middlewares/OrgMiddleware';
+import { checkSpacePlan } from '../middlewares/SpacePlanMiddleware';
 import { handleValidation } from '../middlewares/ValidationHandlingMiddleware';
 import GroupController from '../controllers/GroupController';
 import GroupMembershipController from '../controllers/GroupMembershipController';
@@ -21,19 +23,51 @@ const loadFileRoutes = function (app: express.Application) {
   app
     .route(baseUrl + '/groups/:groupId')
     .get(groupController.show)
-    .put(isLoggedIn, GroupValidation.update, handleValidation, groupController.update)
-    .delete(isLoggedIn, groupController.destroy);
+    .put(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('groupManagement'),
+      GroupValidation.update,
+      handleValidation,
+      groupController.update
+    )
+    .delete(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('groupManagement'),
+      groupController.destroy
+    );
 
   // ── Group member management ───────────────────────────────────────────────
   app
     .route(baseUrl + '/groups/:groupId/members')
     .get(isLoggedIn, groupController.listMembers)
-    .post(isLoggedIn, GroupValidation.addMember, handleValidation, groupController.addMember);
+    .post(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('groupManagement'),
+      checkSpacePlan('groupMembers', 1),
+      GroupValidation.addMember,
+      handleValidation,
+      groupController.addMember
+    );
 
   app
     .route(baseUrl + '/groups/:groupId/members/:userId')
-    .put(isLoggedIn, GroupValidation.updateMemberRole, handleValidation, groupController.updateMemberRole)
-    .delete(isLoggedIn, groupController.removeMember);
+    .put(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('groupManagement'),
+      GroupValidation.updateMemberRole,
+      handleValidation,
+      groupController.updateMemberRole
+    )
+    .delete(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('groupManagement'),
+      groupController.removeMember
+    );
 
   // ── Group collection associations ─────────────────────────────────────────
   app
@@ -42,18 +76,45 @@ const loadFileRoutes = function (app: express.Application) {
 
   app
     .route(baseUrl + '/groups/:groupId/collections/:pricingCollectionId')
-    .put(isLoggedIn, GroupValidation.updateCollectionAccess, handleValidation, groupController.updateCollectionAccess)
-    .delete(isLoggedIn, groupController.removeCollection);
+    .put(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('groupManagement'),
+      GroupValidation.updateCollectionAccess,
+      handleValidation,
+      groupController.updateCollectionAccess
+    )
+    .delete(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('groupManagement'),
+      groupController.removeCollection
+    );
 
   // ── Organization-scoped group routes ──────────────────────────────────────
   app
     .route(baseUrl + '/organizations/:organizationId/groups')
     .get(groupController.indexByOrganization)
-    .post(isLoggedIn, GroupValidation.create, handleValidation, groupController.create);
+    .post(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkSpacePlan('groupManagement'),
+      checkSpacePlan('groups', 1),
+      GroupValidation.create,
+      handleValidation,
+      groupController.create
+    );
 
   app
     .route(baseUrl + '/organizations/:organizationId/groups/:groupId/collections')
-    .post(isLoggedIn, GroupValidation.addCollection, handleValidation, groupController.addCollection);
+    .post(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkSpacePlan('sharedCollections'),
+      GroupValidation.addCollection,
+      handleValidation,
+      groupController.addCollection
+    );
 
   // ── Lightweight read endpoints ────────────────────────────────────────────
   app
