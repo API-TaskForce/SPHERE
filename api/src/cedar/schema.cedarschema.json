@@ -26,9 +26,10 @@
       "ResourceContext": {
         "type": "Record",
         "attributes": {
-          "orgRole":       { "type": "String" },
-          "effectiveRole": { "type": "String" },
-          "isCreator":     { "type": "Boolean" }
+          "orgRole":             { "type": "String" },
+          "effectiveRole":       { "type": "String" },
+          "isCreator":           { "type": "Boolean" },
+          "hasGroupEditorRole":  { "type": "Boolean" }
         }
       }
     },
@@ -238,7 +239,7 @@
       "createPricing": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["PricingCollection"],
+          "resourceTypes":  ["Organization", "PricingCollection"],
           "context": { "type": "ResourceContext" }
         }
       },
