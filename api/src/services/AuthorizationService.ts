@@ -125,6 +125,14 @@ export default class AuthorizationService {
       if (action === 'createCollection') {
         return { orgRole, groupRole: 'none' };
       }
+      // createPricing standalone: member necesita ser admin/editor en al menos un grupo
+      if (action === 'createPricing') {
+        const groupMemberships = await this.groupMembershipRepository.findByUserId(userId);
+        const hasGroupEditorRole = groupMemberships.some(
+          (gm: any) => gm.role === 'editor' || gm.role === 'admin'
+        );
+        return { orgRole, effectiveRole: 'none', isCreator: false, hasGroupEditorRole };
+      }
       return { orgRole };
     }
 
@@ -147,7 +155,7 @@ export default class AuthorizationService {
     const effectiveRole = await this.resolveEffectiveRole(userId, collectionId);
     const isCreator     = Boolean(creatorId) && creatorId === userId;
 
-    return { orgRole, effectiveRole, isCreator };
+    return { orgRole, effectiveRole, isCreator, hasGroupEditorRole: false };
   }
 
   private async resolveGroupContext(
