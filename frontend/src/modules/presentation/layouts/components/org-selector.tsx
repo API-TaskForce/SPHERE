@@ -1,132 +1,124 @@
-import { useState } from 'react';
-import {
-  Box,
-  Button,
-  Menu,
-  MenuItem,
-  Typography,
-  Avatar,
-  Divider,
-} from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import BusinessIcon from '@mui/icons-material/Business';
-import PersonIcon from '@mui/icons-material/Person';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import Iconify from '../../../core/components/iconify';
 import { useOrganization } from '../../../organization/hooks/useOrganization';
 import { Organization } from '../../../organization/api/organizationsApi';
-import { grey, primary } from '../../../core/theme/palette';
 
 const OrgAvatar = ({ org, size = 24 }: { org: Organization; size?: number }) => {
   if (org.avatarUrl) {
-    return <Avatar src={org.avatarUrl} sx={{ width: size, height: size }} />;
+    return (
+      <img
+        src={org.avatarUrl}
+        alt={org.displayName}
+        className="rounded-full object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
   }
   return (
-    <Avatar sx={{ width: size, height: size, bgcolor: primary[800], fontSize: size * 0.45 }}>
-      {org.isPersonal ? (
-        <PersonIcon sx={{ fontSize: size * 0.65 }} />
-      ) : (
-        <BusinessIcon sx={{ fontSize: size * 0.65 }} />
-      )}
-    </Avatar>
+    <span
+      className="flex items-center justify-center rounded-full bg-sphere-primary-800 text-white"
+      style={{ width: size, height: size }}
+    >
+      <Iconify icon={org.isPersonal ? 'mdi:account' : 'mdi:domain'} width={Math.round(size * 0.65)} />
+    </span>
   );
 };
 
 export default function OrgSelector() {
   const { organizations, activeOrganization, setActiveOrganization, isLoading } = useOrganization();
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   if (isLoading || !activeOrganization) return null;
 
-  const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+  const handleToggle = () => setIsOpen(prev => !prev);
 
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
+  const handleClose = () => setIsOpen(false);
 
   const handleSelect = (org: Organization) => {
     setActiveOrganization(org);
     handleClose();
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        handleClose();
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') handleClose();
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen]);
+
   return (
-    <>
-      <Button
-        onClick={handleOpen}
-        size="small"
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 0.75,
-          textTransform: 'none',
-          color: 'text.primary',
-          border: `1px solid ${grey[300]}`,
-          borderRadius: 2,
-          px: 1.25,
-          py: 0.5,
-          minWidth: 0,
-          '&:hover': {
-            bgcolor: grey[200],
-            borderColor: grey[400],
-          },
-        }}
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={handleToggle}
         aria-label="select organization"
+        aria-expanded={isOpen}
+        className="flex items-center gap-1.5 rounded-lg border border-sphere-grey-300 px-2.5 py-1 text-sm font-medium transition-colors hover:border-sphere-grey-400 hover:bg-sphere-grey-200"
       >
         <OrgAvatar org={activeOrganization} size={22} />
-        <Typography
-          variant="body2"
-          fontWeight={500}
-          sx={{
-            maxWidth: 120,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
+        <span className="max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap">
           {activeOrganization.displayName}
-        </Typography>
-        <ExpandMoreIcon sx={{ fontSize: 16, color: grey[600] }} />
-      </Button>
+        </span>
+        <Iconify icon="mdi:chevron-down" width={16} />
+      </button>
 
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleClose}
-        transformOrigin={{ horizontal: 'left', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
-        PaperProps={{ sx: { minWidth: 200, mt: 0.5 } }}
-      >
-        <Box sx={{ px: 2, py: 1 }}>
-          <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase">
-            Organizations
-          </Typography>
-        </Box>
-        <Divider />
-        {organizations.map((org) => (
-          <MenuItem
-            key={org.id}
-            onClick={() => handleSelect(org)}
-            selected={org.id === activeOrganization.id}
-            sx={{ gap: 1.5, py: 1 }}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="absolute left-0 top-full z-50 mt-2 min-w-[200px] origin-top-left rounded-md border border-sphere-grey-300 bg-white shadow-md"
           >
-            <OrgAvatar org={org} size={28} />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography
-                variant="body2"
-                fontWeight={500}
-                sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            <div className="px-3 py-1.5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sphere-grey-600">
+                Organizations
+              </p>
+            </div>
+            <div className="border-b border-sphere-grey-300" />
+            {organizations.map((org) => (
+              <button
+                key={org.id}
+                type="button"
+                onClick={() => handleSelect(org)}
+                className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-sphere-grey-100 ${
+                  org.id === activeOrganization.id ? 'bg-sphere-grey-100' : ''
+                }`}
               >
-                {org.displayName}
-              </Typography>
-              {org.isPersonal && (
-                <Typography variant="caption" color="text.secondary">
-                  Personal
-                </Typography>
-              )}
-            </Box>
-          </MenuItem>
-        ))}
-      </Menu>
-    </>
+                <OrgAvatar org={org} size={28} />
+                <div className="min-w-0">
+                  <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
+                    {org.displayName}
+                  </p>
+                  {org.isPersonal && (
+                    <p className="text-xs text-sphere-grey-600">Personal</p>
+                  )}
+                </div>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

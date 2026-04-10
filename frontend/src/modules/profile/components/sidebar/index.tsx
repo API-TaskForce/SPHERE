@@ -1,106 +1,67 @@
-import { Box, Divider, Typography, Avatar } from '@mui/material';
-import BusinessIcon from '@mui/icons-material/Business';
-import PersonIcon from '@mui/icons-material/Person';
 import ProfileAvatar from '../profile-avatar';
+import Iconify from '../../../core/components/iconify';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import { useOrganization } from '../../../organization/hooks/useOrganization';
-import { primary } from '../../../core/theme/palette';
 
 export default function ProfileSidebar({sidebarWidth}: {sidebarWidth: number}) {
   const {authUser} = useAuth();
   const { organizations, activeOrganization } = useOrganization();
 
+  const avatarSizeClass = sidebarWidth >= 400 ? 'h-[400px] w-[400px]' : 'h-[300px] w-[300px]';
+
   return (
-    <Box sx={{ p: 2 }}>
+    <div className="p-2">
       {/* Avatar */}
-      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-        <ProfileAvatar size={sidebarWidth} />
-      </Box>
+      <div className="flex justify-center">
+        <ProfileAvatar sizeClass={avatarSizeClass} />
+      </div>
 
       {/* Name and Username */}
-      <Box sx={{ textAlign: 'center', mt: 2 }}>
-        <Typography variant="h6">{authUser.user?.firstName} {authUser.user?.lastName}</Typography>
-        <Typography variant="subtitle1" color="text.secondary">
+      <div className="mt-2 text-center">
+        <h2 className="text-xl font-semibold">{authUser.user?.firstName} {authUser.user?.lastName}</h2>
+        <p className="text-base text-sphere-grey-600">
           {authUser.user?.username}
-        </Typography>
-      </Box>
+        </p>
+      </div>
 
-      {/* Action Buttons */}
-      {/* <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'center' }}>
-        <Button variant="outlined" size="small">
-          Edit profile
-        </Button>
-        <Button variant="outlined" size="small">
-          Settings
-        </Button>
-      </Box> */}
-
-      {/* URL */}
-      {/* <Box sx={{ mt: 2, textAlign: 'center' }}>
-        <Link to="https://alejandro-garcia-fernandez..." target="_blank" rel="noopener noreferrer">
-          https://alejandro-garcia-fernandez.vercel.app/
-        </Link>
-      </Box> */}
-
-      <Divider sx={{ my: 2 }} />
-
-      {/* Interest Sections */}
-      {/* <Box sx={{ mb: 2 }}>
-        <Typography variant="subtitle2" color="text.secondary">
-          AI & ML interests
-        </Typography>
-        <Typography>No tiene intereses configurados todavía.</Typography>
-      </Box> */}
+      <div className="my-2 border-b border-slate-300" />
 
       {/* Organizations Section */}
       {organizations.length > 0 && (
-        <Box>
-          <Typography variant="subtitle2" color="text.secondary" mb={1}>
-            Organizations
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+        <div>
+          <p className="mb-1 text-xs font-semibold text-sphere-grey-600">Organizations</p>
+          <div className="flex flex-col gap-1.5">
             {organizations.map((org) => (
-              <Box
+              <div
                 key={org.id}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  p: 0.75,
-                  borderRadius: 1,
-                  bgcolor: org.id === activeOrganization?.id ? 'action.selected' : 'transparent',
-                }}
+                className={`flex items-center gap-2 rounded p-1.5 ${
+                  org.id === activeOrganization?.id ? 'bg-sphere-grey-200' : ''
+                }`}
               >
                 {org.avatarUrl ? (
-                  <Avatar src={org.avatarUrl} sx={{ width: 28, height: 28 }} />
+                  <img
+                    src={org.avatarUrl}
+                    alt={org.displayName}
+                    className="h-7 w-7 rounded-full object-cover"
+                  />
                 ) : (
-                  <Avatar sx={{ width: 28, height: 28, bgcolor: primary[800], fontSize: 13 }}>
-                    {org.isPersonal ? (
-                      <PersonIcon sx={{ fontSize: 16 }} />
-                    ) : (
-                      <BusinessIcon sx={{ fontSize: 16 }} />
-                    )}
-                  </Avatar>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sphere-primary-800 text-white">
+                    <Iconify icon={org.isPersonal ? 'mdi:account' : 'mdi:domain'} width={14} />
+                  </span>
                 )}
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography
-                    variant="body2"
-                    fontWeight={500}
-                    sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                  >
+                <div className="min-w-0">
+                  <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
                     {org.displayName}
-                  </Typography>
+                  </p>
                   {org.isPersonal && (
-                    <Typography variant="caption" color="text.secondary">
-                      Personal
-                    </Typography>
+                    <p className="text-xs text-sphere-grey-600">Personal</p>
                   )}
-                </Box>
-              </Box>
+                </div>
+              </div>
             ))}
-          </Box>
-        </Box>
+          </div>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }
