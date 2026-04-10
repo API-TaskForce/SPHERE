@@ -3,6 +3,7 @@ import { User } from "./User";
 export interface PricingCollection {
     name: string,
     owner: User,
+    _organizationId?: string,
     analytics: PricingCollectionAnalytics
 }
 

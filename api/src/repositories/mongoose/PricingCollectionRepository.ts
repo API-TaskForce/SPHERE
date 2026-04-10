@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
-import { PricingCollectionAnalytics, PricingCollectionAnalyticsToAdd } from '../../types/database/PricingCollection';
+import {
+  PricingCollectionAnalytics,
+  PricingCollectionAnalyticsToAdd,
+} from '../../types/database/PricingCollection';
 import RepositoryBase from '../RepositoryBase';
 import PricingCollectionMongoose from './models/PricingCollectionMongoose';
 import PricingMongoose from './models/PricingMongoose';
@@ -12,14 +15,21 @@ import { CollectionIndexQueryParams } from '../../types/services/PricingCollecti
 
 class PricingCollectionRepository extends RepositoryBase {
   async findAll(queryParams: CollectionIndexQueryParams, ...args: any) {
-    
     let filteringAggregators = [];
     let sortAggregator = [];
 
-    if (Object.keys(queryParams).length > 0){
-      const { name, selectedOwners, sortBy, sort } = queryParams;
+    if (Object.keys(queryParams).length > 0) {
+      const { name, selectedOwners, sortBy, sort, organizationId } = queryParams;
 
-      if (name){
+      if (organizationId) {
+        filteringAggregators.push({
+          $match: {
+            _organizationId: new mongoose.Types.ObjectId(organizationId as string),
+          },
+        });
+      }
+
+      if (name) {
         filteringAggregators.push({
           $match: {
             name: {
@@ -35,34 +45,33 @@ class PricingCollectionRepository extends RepositoryBase {
 
         filteringAggregators.push({
           $match: {
-            "owner.username": {
+            'owner.username': {
               $in: selectedOwnersFilter,
             },
           },
         });
       }
-      if (sortBy && sort){
-
-        let sortParameter = "";
-        let sortOrder: 1 | -1 = sort === "asc" ? 1 : -1;
+      if (sortBy && sort) {
+        let sortParameter = '';
+        let sortOrder: 1 | -1 = sort === 'asc' ? 1 : -1;
 
         switch (sortBy) {
           case 'numberOfPricings':
-            sortParameter = "numberOfPricings";
+            sortParameter = 'numberOfPricings';
             break;
           case 'configurationSpaceSize':
-            sortParameter = "analytics.evolutionOfConfigurationSpaceSize.values";
+            sortParameter = 'analytics.evolutionOfConfigurationSpaceSize.values';
             break;
           case 'numberOfFeatures':
-            sortParameter = "analytics.evolutionOfFeatures.values";
+            sortParameter = 'analytics.evolutionOfFeatures.values';
             break;
           case 'numberOfPlans':
-            sortParameter = "analytics.evolutionOfPlans.values";
+            sortParameter = 'analytics.evolutionOfPlans.values';
             break;
           case 'numberOfAddons':
-            sortParameter = "analytics.evolutionOfAddOns.values";
+            sortParameter = 'analytics.evolutionOfAddOns.values';
             break;
-        };
+        }
         sortAggregator.push({
           $sort: {
             [sortParameter]: sortOrder,
@@ -70,8 +79,7 @@ class PricingCollectionRepository extends RepositoryBase {
         });
       }
     }
-    
-    
+
     try {
       // parse pagination params
       const limitRaw = queryParams?.limit;
@@ -123,18 +131,16 @@ class PricingCollectionRepository extends RepositoryBase {
         const facetPipeline = [
           {
             $facet: {
-              collections: [
-                { $skip: start },
-                { $limit: take },
-              ],
-              total: [
-                { $count: 'count' },
-              ],
+              collections: [{ $skip: start }, { $limit: take }],
+              total: [{ $count: 'count' }],
             },
           },
         ];
 
-        const aggResult = await PricingCollectionMongoose.aggregate([...basePipeline, ...facetPipeline]);
+        const aggResult = await PricingCollectionMongoose.aggregate([
+          ...basePipeline,
+          ...facetPipeline,
+        ]);
         const first = aggResult[0] || { collections: [], total: [] };
         const collections = first.collections || [];
         const total = (first.total && first.total[0] && first.total[0].count) || 0;
@@ -192,7 +198,7 @@ class PricingCollectionRepository extends RepositoryBase {
         {
           $addFields: {
             id: { $toString: '$_id' },
-          }
+          },
         },
         {
           $project: {
@@ -215,25 +221,23 @@ class PricingCollectionRepository extends RepositoryBase {
     }
   }
 
-  async findByNameAndUserId(name: string, userId: string, ...args: any) {
+  async findByNameAndUserId(name: string, userId: string, organizationId?: string, ...args: any) {
     try {
+      const match: any = {
+        name: { $regex: name, $options: 'i' },
+        _ownerId: new mongoose.Types.ObjectId(userId),
+      };
+      if (organizationId) match._organizationId = new mongoose.Types.ObjectId(organizationId);
+
       const collections = await PricingCollectionMongoose.aggregate([
-        {
-          $match: {
-            name: {
-              $regex: name,
-              $options: 'i',
-            },
-            _ownerId: new mongoose.Types.ObjectId(userId),
-          },
-        },
+        { $match: match },
         ...getAllPricingsFromCollection(),
         ...addOwnerToCollectionAggregator(),
         ...addLastPricingUpdateAggregator(),
         {
           $addFields: {
             id: { $toString: '$_id' },
-          }
+          },
         },
         {
           $project: {
@@ -260,25 +264,23 @@ class PricingCollectionRepository extends RepositoryBase {
     }
   }
 
-  async findCollectionPricings(name: string, userId: string, ...args: any) {
+  async findCollectionPricings(name: string, userId: string, organizationId?: string, ...args: any) {
     try {
+      const match: any = {
+        name: { $regex: name, $options: 'i' },
+        _ownerId: new mongoose.Types.ObjectId(userId),
+      };
+      if (organizationId) match._organizationId = new mongoose.Types.ObjectId(organizationId);
+
       const collections = await PricingCollectionMongoose.aggregate([
-        {
-          $match: {
-            name: {
-              $regex: name,
-              $options: 'i',
-            },
-            _ownerId: new mongoose.Types.ObjectId(userId),
-          },
-        },
+        { $match: match },
         {
           $lookup: {
             from: 'pricings',
             localField: '_id',
             foreignField: '_collectionId',
             as: 'pricings',
-          }
+          },
         },
         {
           $project: {
@@ -312,7 +314,7 @@ class PricingCollectionRepository extends RepositoryBase {
     const updateData: any = {};
     for (const key in analytics) {
       if (analytics.hasOwnProperty(key)) {
-        updateData[`analytics.${key}.dates`] = new Date (analytics[key].date);
+        updateData[`analytics.${key}.dates`] = new Date(analytics[key].date);
         updateData[`analytics.${key}.values`] = analytics[key].value;
       }
     }
@@ -326,9 +328,8 @@ class PricingCollectionRepository extends RepositoryBase {
   }
 
   async update(collectionId: string, data: any) {
-    
     const collection = await PricingCollectionMongoose.findById(collectionId);
-    
+
     if (!collection) {
       throw new Error('Collection not found in database');
     }
@@ -358,8 +359,12 @@ class PricingCollectionRepository extends RepositoryBase {
   }
 
   async destroyWithPricings(id: string, ...args: any) {
-    const resultPricings = await PricingMongoose.deleteMany({ _collectionId: new mongoose.Types.ObjectId(id) });
-    const resultCollections = await PricingCollectionMongoose.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+    const resultPricings = await PricingMongoose.deleteMany({
+      _collectionId: new mongoose.Types.ObjectId(id),
+    });
+    const resultCollections = await PricingCollectionMongoose.deleteOne({
+      _id: new mongoose.Types.ObjectId(id),
+    });
     return resultCollections?.deletedCount === 1 && resultPricings?.deletedCount > 0;
   }
 }

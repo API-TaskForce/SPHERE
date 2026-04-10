@@ -5,27 +5,28 @@ import PricingRepository from '../repositories/mongoose/PricingRepository';
 import { RetrievedCollection } from '../types/database/PricingCollection';
 import { CollectionIndexQueryParams } from '../types/services/PricingCollection';
 import { decompressZip } from '../utils/zip-manager';
-import {  PricingService as PricingAnalytics, retrievePricingFromPath } from 'pricing4ts/server';
+import { PricingService as PricingAnalytics, retrievePricingFromPath } from 'pricing4ts/server';
 import fs from 'fs';
 import { calculateAnalyticsForPricings } from '../utils/pricing-collections-utils';
 
 class PricingCollectionService {
   private readonly pricingCollectionRepository: PricingCollectionRepository;
   private readonly pricingRepository: PricingRepository;
+  private readonly groupCollectionRepository: any;
 
   constructor() {
-  this.pricingCollectionRepository = container.resolve('pricingCollectionRepository');
-  this.pricingRepository = container.resolve('pricingRepository');
+    this.pricingCollectionRepository = container.resolve('pricingCollectionRepository');
+    this.pricingRepository = container.resolve('pricingRepository');
+    this.groupCollectionRepository = container.resolve('groupCollectionRepository');
   }
 
   async index(queryParams: CollectionIndexQueryParams) {
     const result = await this.pricingCollectionRepository.findAll(queryParams);
-    // result is { collections, total }
     return result;
   }
 
-  async showByNameAndUserId(name: string, userId: string) {
-    const collection = await this.pricingCollectionRepository.findByNameAndUserId(name, userId);
+  async showByNameAndUserId(name: string, userId: string, organizationId?: string) {
+    const collection = await this.pricingCollectionRepository.findByNameAndUserId(name, userId, organizationId);
     if (!collection) {
       throw new Error('Pricing collection not found');
     }
@@ -33,7 +34,7 @@ class PricingCollectionService {
     return collection;
   }
 
-  async showByUserId(userId: string, organizationId?: string) {
+  async showByUserId(userId: string, organizationId: string) {
     const collections = await this.pricingCollectionRepository.findByUserId(userId, organizationId);
 
     return collections;
@@ -48,13 +49,18 @@ class PricingCollectionService {
     return collection;
   }
 
-  async create(newCollection: any, userId: string, username: string, organizationId?: string) {
+  async create(
+    newCollection: any,
+    userId: string,
+    username: string,
+    organizationId: string,
+    groupId?: string
+  ) {
     let collection: any;
     try {
       newCollection._ownerId = new mongoose.Types.ObjectId(userId);
-      if (organizationId) {
-        newCollection._organizationId = new mongoose.Types.ObjectId(organizationId);
-      }
+      newCollection._organizationId = new mongoose.Types.ObjectId(organizationId);
+
       newCollection.analytics = {
         evolutionOfPlans: {
           dates: [],
@@ -82,16 +88,33 @@ class PricingCollectionService {
         newCollection.pricings
       );
 
+      if (groupId) {
+        await this.groupCollectionRepository.create({
+          _groupId: groupId,
+          _pricingCollectionId: collection._id,
+          _organizationId: organizationId,
+          accessRole: 'editor',
+          createdAt: new Date(),
+        });
+      }
+
       await this.updateCollectionAnalytics(collection._id.toString());
 
       return collection;
     } catch (err) {
-      await this._handleCollectionCreationError(err as Error, collection, newCollection, userId);
+      await this._handleCollectionCreationError(err as Error, collection, newCollection, userId, organizationId);
     }
   }
 
-  async bulkCreate(file: any, newCollectionData: any, userId: string, username: string, organizationId?: string) {
-  let collection: any;
+  async bulkCreate(
+    file: any,
+    newCollectionData: any,
+    userId: string,
+    username: string,
+    organizationId: string,
+    groupId?: string
+  ) {
+    let collection: any;
     try {
       const extractPath = this._getExtractPath(userId, newCollectionData.name);
       const zipPath = file.path;
@@ -99,39 +122,51 @@ class PricingCollectionService {
       const extractedFiles = await decompressZip(zipPath, extractPath);
 
       newCollectionData._ownerId = new mongoose.Types.ObjectId(userId);
-      if (organizationId) {
-        newCollectionData._organizationId = new mongoose.Types.ObjectId(organizationId);
-      }
+      newCollectionData._organizationId = new mongoose.Types.ObjectId(organizationId);
 
-  // Create collection and keep reference so we only attempt cleanup if it was created
-  collection = await this.pricingCollectionRepository.create(newCollectionData);
+      // Create collection and keep reference so we only attempt cleanup if it was created
+      collection = await this.pricingCollectionRepository.create(newCollectionData);
+
+      if (groupId) {
+        await this.groupCollectionRepository.create({
+          _groupId: groupId,
+          _pricingCollectionId: collection._id,
+          _organizationId: organizationId,
+          accessRole: 'editor',
+          createdAt: new Date(),
+        });
+      }
 
       const pricingDatas = [];
       const pricingsWithErrors = [];
       for (const pricing of extractedFiles) {
         if (!(pricing.endsWith('.yaml') || pricing.endsWith('.yml'))) {
-          continue
+          continue;
         }
-        try{
+        try {
           const uploadedPricing = retrievePricingFromPath(pricing);
           const pricingAnalytics = new PricingAnalytics(uploadedPricing);
-  
-            const pricingData = {
-            name: uploadedPricing.saasName.split(" ")[0].charAt(0).toUpperCase() + uploadedPricing.saasName.split(" ")[0].slice(1).toLowerCase(),
+
+          const pricingData = {
+            name:
+              uploadedPricing.saasName.split(' ')[0].charAt(0).toUpperCase() +
+              uploadedPricing.saasName.split(' ')[0].slice(1).toLowerCase(),
             version: uploadedPricing.version,
             _collectionId: collection._id,
-            _organizationId: organizationId ? new mongoose.Types.ObjectId(organizationId) : undefined,
+            _organizationId: new mongoose.Types.ObjectId(organizationId),
             owner: username,
             currency: uploadedPricing.currency,
             extractionDate: new Date(uploadedPricing.createdAt),
             url: '',
             yaml: pricing.split('/').slice(1).join('/'),
             analytics: await pricingAnalytics.getAnalytics(),
-            };
+          };
           pricingDatas.push(pricingData);
-        }catch(err){
+        } catch (err) {
           pricingsWithErrors.push({
-            name: `${pricing.split("/")[pricing.split("/").length - 2]}/${pricing.split("/")[pricing.split("/").length - 1]}`,
+            name: `${pricing.split('/')[pricing.split('/').length - 2]}/${
+              pricing.split('/')[pricing.split('/').length - 1]
+            }`,
             error: err,
           });
         }
@@ -142,31 +177,45 @@ class PricingCollectionService {
       await this.updateCollectionAnalytics(collection._id.toString());
 
       return [collection, pricingsWithErrors];
-    } catch(err) {
-      throw await this._handleCollectionCreationError(err as Error, collection, newCollectionData, userId);
+    } catch (err) {
+      throw await this._handleCollectionCreationError(
+        err as Error,
+        collection,
+        newCollectionData,
+        userId,
+        organizationId
+      );
     }
   }
 
-  async generateCollectionAnalytics(collectionName: string, ownerId: string) {
-    try{
-      const collectionPricings = await this.pricingCollectionRepository.findCollectionPricings(collectionName, ownerId);
+  async generateCollectionAnalytics(collectionName: string, ownerId: string, organizationId?: string) {
+    try {
+      const collectionPricings = await this.pricingCollectionRepository.findCollectionPricings(
+        collectionName,
+        ownerId,
+        organizationId
+      );
       if (!collectionPricings) {
         throw new Error('Collection not found');
       }
 
       const analytics = calculateAnalyticsForPricings(collectionPricings.pricings);
-      
-      await this.pricingCollectionRepository.setCollectionAnalytics(collectionPricings._id, analytics);
+
+      await this.pricingCollectionRepository.setCollectionAnalytics(
+        collectionPricings._id,
+        analytics
+      );
       return true;
-    }catch(err){
+    } catch (err) {
       throw new Error((err as Error).message);
     }
   }
 
-  async update(collectionName: string, ownerId: string, data: any) {
+  async update(collectionName: string, ownerId: string, data: any, organizationId?: string) {
     const collection = await this.pricingCollectionRepository.findByNameAndUserId(
       collectionName,
-      ownerId
+      ownerId,
+      organizationId
     );
     if (!collection) {
       throw new Error('Either the collection does not exist or you are not its owner');
@@ -174,7 +223,9 @@ class PricingCollectionService {
 
     await this.pricingCollectionRepository.update(collection._id.toString(), data);
 
-    const updatedCollection = await this.pricingCollectionRepository.findById(collection._id.toString());
+    const updatedCollection = await this.pricingCollectionRepository.findById(
+      collection._id.toString()
+    );
 
     if (updatedCollection.name !== collectionName) {
       fs.renameSync(
@@ -198,10 +249,17 @@ class PricingCollectionService {
     await this.pricingCollectionRepository.updateAnalytics(collection._id, newAnalyticsEntry);
   }
 
-  async destroy(collectionName: string, ownerId: string, deleteCascade: boolean, ignoreResult: boolean = false) {
+  async destroy(
+    collectionName: string,
+    ownerId: string,
+    deleteCascade: boolean,
+    ignoreResult: boolean = false,
+    organizationId?: string
+  ) {
     const collection = await this.pricingCollectionRepository.findByNameAndUserId(
       collectionName,
-      ownerId
+      ownerId,
+      organizationId
     );
     if (!collection) {
       throw new Error('Either the collection does not exist or you are not its owner');
@@ -213,7 +271,7 @@ class PricingCollectionService {
       result = await this.pricingCollectionRepository.destroyWithPricings(
         collection._id.toString()
       );
-      
+
       fs.rmdirSync(this._getExtractPath(ownerId, collectionName), { recursive: true });
     } else {
       await this.pricingRepository.removePricingsFromCollection(collection._id.toString());
@@ -276,26 +334,36 @@ class PricingCollectionService {
     return `${process.env.COLLECTIONS_FOLDER}/${userId}/${collectionName}`;
   }
 
-  async _handleCollectionCreationError(err: Error, collection: any, newCollectionData: any, userId: string): Promise<Error> {
+  async _handleCollectionCreationError(
+    err: Error,
+    collection: any,
+    newCollectionData: any,
+    userId: string,
+    organizationId?: string
+  ): Promise<Error> {
     // If a collection was created before the error, remove it (cleanup of partial state)
-      try {
-        if (collection?._id) {
-          await this.destroy(newCollectionData.name, userId, true, true);
-        }
-      } catch (cleanupErr) {
-        // If cleanup fails, log it but continue to throw the original error
-        // eslint-disable-next-line no-console
-        console.error('Error during cleanup after bulkCreate failure:', cleanupErr);
+    try {
+      if (collection?._id) {
+        await this.destroy(newCollectionData.name, userId, true, true, organizationId);
       }
+    } catch (cleanupErr) {
+      // If cleanup fails, log it but continue to throw the original error
+      // eslint-disable-next-line no-console
+      console.error('Error during cleanup after bulkCreate failure:', cleanupErr);
+    }
 
-      const errMsg = (err as any)?.message || String(err);
+    const errMsg = (err as any)?.message || String(err);
 
-      // Detect duplicate key / already exists errors and surface a clear message
-      if (errMsg.includes('E11000') || errMsg.toLowerCase().includes('duplicate') || errMsg.toLowerCase().includes('already exists')) {
-        throw new Error('A collection with this name already exists. Please choose another name.');
-      }
+    // Detect duplicate key / already exists errors and surface a clear message
+    if (
+      errMsg.includes('E11000') ||
+      errMsg.toLowerCase().includes('duplicate') ||
+      errMsg.toLowerCase().includes('already exists')
+    ) {
+      throw new Error('A collection with this name already exists. Please choose another name.');
+    }
 
-      throw new Error(errMsg);
+    throw new Error(errMsg);
   }
 }
 
