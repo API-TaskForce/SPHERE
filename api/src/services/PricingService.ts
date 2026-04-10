@@ -127,10 +127,6 @@ class PricingService {
         collectionId = previousPricing.versions[0]._collectionId.toString();
       }
 
-      console.log("-------------------");
-      console.log(pricingFile.path);
-      console.log("-------------------");
-
       const rawPath = typeof pricingFile === 'string' ? pricingFile : pricingFile.path;
       const normalizedPath = rawPath.replace(/\\/g, '/');
       const staticIndex = normalizedPath.indexOf('static/');
