@@ -1,6 +1,3 @@
-import { Box, Divider, Typography, Avatar } from '@mui/material';
-import BusinessIcon from '@mui/icons-material/Business';
-import PersonIcon from '@mui/icons-material/Person';
 import ProfileAvatar from '../profile-avatar';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import { useOrganization } from '../../../organization/hooks/useOrganization';
@@ -10,20 +7,22 @@ export default function ProfileSidebar({sidebarWidth}: {sidebarWidth: number}) {
   const {authUser} = useAuth();
   const { organizations, activeOrganization } = useOrganization();
 
+  const avatarSizeClass = sidebarWidth >= 400 ? 'h-[400px] w-[400px]' : 'h-[300px] w-[300px]';
+
   return (
-    <Box sx={{ p: 2 }}>
+    <div className="p-2">
       {/* Avatar */}
-      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-        <ProfileAvatar size={sidebarWidth} />
-      </Box>
+      <div className="flex justify-center">
+        <ProfileAvatar sizeClass={avatarSizeClass} />
+      </div>
 
       {/* Name and Username */}
-      <Box sx={{ textAlign: 'center', mt: 2 }}>
-        <Typography variant="h6">{authUser.user?.firstName} {authUser.user?.lastName}</Typography>
-        <Typography variant="subtitle1" color="text.secondary">
+      <div className="mt-2 text-center">
+        <h2 className="text-xl font-semibold">{authUser.user?.firstName} {authUser.user?.lastName}</h2>
+        <p className="text-base text-sphere-grey-600">
           {authUser.user?.username}
-        </Typography>
-      </Box>
+        </p>
+      </div>
 
       {/* Action Buttons */}
       {/* <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'center' }}>
@@ -42,7 +41,7 @@ export default function ProfileSidebar({sidebarWidth}: {sidebarWidth: number}) {
         </Link>
       </Box> */}
 
-      <Divider sx={{ my: 2 }} />
+      <div className="my-2 border-b border-slate-300" />
 
       {/* Interest Sections */}
       {/* <Box sx={{ mb: 2 }}>
@@ -53,54 +52,12 @@ export default function ProfileSidebar({sidebarWidth}: {sidebarWidth: number}) {
       </Box> */}
 
       {/* Organizations Section */}
-      {organizations.length > 0 && (
-        <Box>
-          <Typography variant="subtitle2" color="text.secondary" mb={1}>
-            Organizations
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            {organizations.map((org) => (
-              <Box
-                key={org.id}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  p: 0.75,
-                  borderRadius: 1,
-                  bgcolor: org.id === activeOrganization?.id ? 'action.selected' : 'transparent',
-                }}
-              >
-                {org.avatarUrl ? (
-                  <Avatar src={org.avatarUrl} sx={{ width: 28, height: 28 }} />
-                ) : (
-                  <Avatar sx={{ width: 28, height: 28, bgcolor: primary[800], fontSize: 13 }}>
-                    {org.isPersonal ? (
-                      <PersonIcon sx={{ fontSize: 16 }} />
-                    ) : (
-                      <BusinessIcon sx={{ fontSize: 16 }} />
-                    )}
-                  </Avatar>
-                )}
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography
-                    variant="body2"
-                    fontWeight={500}
-                    sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                  >
-                    {org.displayName}
-                  </Typography>
-                  {org.isPersonal && (
-                    <Typography variant="caption" color="text.secondary">
-                      Personal
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      )}
-    </Box>
+      {/* <Box>
+        <Typography variant="subtitle2" color="text.secondary">
+          Organizations
+        </Typography>
+        <Typography>Ninguna todavía</Typography>
+      </Box> */}
+    </div>
   );
 }

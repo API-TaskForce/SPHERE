@@ -4,6 +4,7 @@ import App from "./App.tsx";
 import { BrowserRouter } from "react-router-dom";
 import { SpaceProvider } from "space-react-client";
 import LoadingView from "./modules/core/pages/loading";
+import "./styles/tailwind.css";
 
 const spaceConfig = {
   url: import.meta.env.VITE_SPACE_URL || 'http://localhost:5403',

@@ -147,6 +147,15 @@ class PricingCollectionService {
           const uploadedPricing = retrievePricingFromPath(pricing);
           const pricingAnalytics = new PricingAnalytics(uploadedPricing);
 
+          const normalizedPath = pricing.replace(/\\/g, '/');
+          const staticIndex = normalizedPath.indexOf('static/');
+
+          if (staticIndex === -1) {
+            throw new Error('Invalid pricing path: it must contain "static/".');
+          }
+
+          const yamlPath = normalizedPath.slice(staticIndex);
+
           const pricingData = {
             name:
               uploadedPricing.saasName.split(' ')[0].charAt(0).toUpperCase() +
@@ -158,7 +167,7 @@ class PricingCollectionService {
             currency: uploadedPricing.currency,
             extractionDate: new Date(uploadedPricing.createdAt),
             url: '',
-            yaml: pricing.split('/').slice(1).join('/'),
+            yaml: yamlPath,
             analytics: await pricingAnalytics.getAnalytics(),
           };
           pricingDatas.push(pricingData);
