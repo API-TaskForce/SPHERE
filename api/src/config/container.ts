@@ -22,6 +22,7 @@ import GroupService from "../services/GroupService";
 import GroupMembershipService from "../services/GroupMembershipService";
 import GroupCollectionService from "../services/GroupCollectionService";
 import SpaceService from "../services/SpaceService";
+import AuthorizationService from "../services/AuthorizationService";
 
 dotenv.config();
 
@@ -63,6 +64,7 @@ function initContainer(databaseType: string): AwilixContainer {
     groupMembershipService: asClass(GroupMembershipService).singleton(),
     groupCollectionService: asClass(GroupCollectionService).singleton(),
     spaceService: asClass(SpaceService).singleton(),
+    authorizationService: asClass(AuthorizationService).singleton(),
   });
   return container;
 }

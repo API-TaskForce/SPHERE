@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Pricing } from 'pricing4ts';
 import { Pricing as PricingModel } from '../types/database/Pricing';
 import container from '../config/container';
@@ -29,7 +30,10 @@ class PricingService {
   }
 
   async indexByUserWithoutCollection(username: string, organizationId?: string) {
-    const pricings = await this.pricingRepository.findByOwnerWithoutCollection(username, organizationId);
+    const pricings = await this.pricingRepository.findByOwnerWithoutCollection(
+      username,
+      organizationId
+    );
     return pricings;
   }
 
@@ -38,9 +42,9 @@ class PricingService {
     return pricings;
   }
 
-  async show(name: string, owner: string, queryParams?: { collectionName?: string }) {
+  async show(name: string, owner: string, queryParams?: { collectionName?: string }, organizationId?: string) {
     const pricing: { name: string; versions: PricingModel[] } | null =
-      await this.pricingRepository.findByNameAndOwner(name, owner, queryParams);
+      await this.pricingRepository.findByNameAndOwner(name, owner, queryParams, organizationId);
     if (!pricing) {
       throw new Error('Pricing not found');
     }
@@ -106,7 +110,7 @@ class PricingService {
     ];
   }
 
-  async create(pricingFile: any, owner: string, collectionId?: string, organizationId?: string) {
+  async create(pricingFile: any, owner: string, collectionId: string | undefined, organizationId: string) {
     try {
       const uploadedPricing: Pricing = retrievePricingFromPath(
         typeof pricingFile === 'string' ? pricingFile : pricingFile.path
@@ -114,7 +118,9 @@ class PricingService {
       // TODO: if the pricing exists in two or more collections, this could lead to error.
       const previousPricing = await this.pricingRepository.findByNameAndOwner(
         uploadedPricing.saasName,
-        owner
+        owner,
+        undefined,
+        organizationId
       );
 
       if (!collectionId && previousPricing && previousPricing.versions[0]._collectionId) {
@@ -125,7 +131,7 @@ class PricingService {
         name: uploadedPricing.saasName,
         version: uploadedPricing.version,
         _collectionId: collectionId,
-        _organizationId: organizationId,
+        _organizationId: new mongoose.Types.ObjectId(organizationId),
         owner: owner,
         currency: uploadedPricing.currency,
         extractionDate: new Date(uploadedPricing.createdAt),
@@ -160,14 +166,14 @@ class PricingService {
     }
   }
 
-  async addPricingToCollection(pricingName: string, owner: string, collectionId: string) {
+  async addPricingToCollection(pricingName: string, owner: string, collectionId: string, organizationId?: string) {
     try {
-      const pricing = await this.pricingRepository.findByNameAndOwner(pricingName, owner);
+      const pricing = await this.pricingRepository.findByNameAndOwner(pricingName, owner, undefined, organizationId);
       if (!pricing) {
         throw new Error('Either the pricing does not exist or you are not its owner');
       }
 
-      await this.pricingRepository.addPricingToCollection(pricingName, owner, collectionId);
+      await this.pricingRepository.addPricingToCollection(pricingName, owner, collectionId, organizationId);
       await this.pricingCollectionService.updateCollectionAnalytics(collectionId);
 
       return true;
@@ -176,8 +182,8 @@ class PricingService {
     }
   }
 
-  async update(pricingName: string, owner: string, data: any) {
-    const pricing = await this.pricingRepository.findByNameAndOwner(pricingName, owner);
+  async update(pricingName: string, owner: string, data: any, organizationId?: string) {
+    const pricing = await this.pricingRepository.findByNameAndOwner(pricingName, owner, undefined, organizationId);
     if (!pricing) {
       throw new Error('Either the pricing does not exist or you are not its owner');
     }
@@ -186,7 +192,7 @@ class PricingService {
       await this.pricingRepository.update(pricingVersion.id, data);
     }
 
-    const updatedPricing = await this.pricingRepository.findByNameAndOwner(pricingName, owner);
+    const updatedPricing = await this.pricingRepository.findByNameAndOwner(pricingName, owner, undefined, organizationId);
 
     return updatedPricing;
   }
@@ -227,15 +233,15 @@ class PricingService {
     return true;
   }
 
-  async removePricingFromCollection(pricingName: string, owner: string) {
+  async removePricingFromCollection(pricingName: string, owner: string, organizationId?: string) {
     try {
-      const pricing = await this.pricingRepository.findByNameAndOwner(pricingName, owner);
+      const pricing = await this.pricingRepository.findByNameAndOwner(pricingName, owner, undefined, organizationId);
 
       if (!pricing) {
         throw new Error('Either the pricing does not exist or you are not its owner');
       }
 
-      await this.pricingRepository.removePricingFromCollection(pricingName, owner);
+      await this.pricingRepository.removePricingFromCollection(pricingName, owner, organizationId);
       if (pricing.versions[0]._collectionId) {
         await this.pricingCollectionService.updateCollectionAnalytics(
           pricing.versions[0]._collectionId
@@ -250,13 +256,14 @@ class PricingService {
     }
   }
 
-  async destroy(pricingName: string, owner: string, queryParams?: { collectionName?: string }) {
+  async destroy(pricingName: string, owner: string, queryParams?: { collectionName?: string }, organizationId?: string) {
     let collectionId;
 
     if (queryParams?.collectionName) {
       const collection = await this.pricingCollectionService.showByNameAndUserId(
         queryParams.collectionName,
-        owner
+        owner,
+        organizationId
       );
       if (!collection) {
         throw new Error('Collection not found');
@@ -268,7 +275,8 @@ class PricingService {
     const result = await this.pricingRepository.destroyByNameOwnerAndCollectionId(
       pricingName,
       owner,
-      collectionId
+      collectionId,
+      organizationId
     );
     if (!result) {
       throw new Error('Either the pricing does not exist or you are not its owner');
@@ -276,20 +284,22 @@ class PricingService {
     return true;
   }
 
-  async destroyVersion(pricingName: string, pricingVersion: string, owner: string) {
+  async destroyVersion(pricingName: string, pricingVersion: string, owner: string, organizationId?: string) {
     let result;
 
     result = await this.pricingRepository.destroyVersionByNameAndOwner(
       pricingName,
       pricingVersion,
-      owner
+      owner,
+      organizationId
     );
 
     if (!result) {
       result = await this.pricingRepository.destroyVersionByNameAndOwner(
         pricingName,
         pricingVersion.replace('_', '.'),
-        owner
+        owner,
+        organizationId
       );
     }
 

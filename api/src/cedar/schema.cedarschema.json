@@ -1,0 +1,269 @@
+{
+  "SPHERE": {
+    "commonTypes": {
+      "OrgContext": {
+        "type": "Record",
+        "attributes": {
+          "orgRole": { "type": "String" }
+        }
+      },
+      "GroupContext": {
+        "type": "Record",
+        "attributes": {
+          "orgRole":         { "type": "String" },
+          "groupRole":       { "type": "String" },
+          "parentGroupRole": { "type": "String" },
+          "isRootGroup":     { "type": "Boolean" }
+        }
+      },
+      "CreateCollectionContext": {
+        "type": "Record",
+        "attributes": {
+          "orgRole":   { "type": "String" },
+          "groupRole": { "type": "String" }
+        }
+      },
+      "ResourceContext": {
+        "type": "Record",
+        "attributes": {
+          "orgRole":             { "type": "String" },
+          "effectiveRole":       { "type": "String" },
+          "isCreator":           { "type": "Boolean" },
+          "hasGroupEditorRole":  { "type": "Boolean" }
+        }
+      }
+    },
+
+    "entityTypes": {
+      "User": {
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "username": { "type": "String" },
+            "email":    { "type": "String" },
+            "userType": { "type": "String" }
+          }
+        }
+      },
+
+      "Organization": {
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "name":       { "type": "String" },
+            "isPersonal": { "type": "Boolean" }
+          }
+        }
+      },
+
+      "OrganizationMembership": {
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "role":         { "type": "String" },
+            "organization": { "type": "Entity", "name": "SPHERE::Organization" },
+            "user":         { "type": "Entity", "name": "SPHERE::User" }
+          }
+        }
+      },
+
+      "Group": {
+        "memberOfTypes": ["Group"],
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "name":         { "type": "String" },
+            "organization": { "type": "Entity", "name": "SPHERE::Organization" },
+            "isRoot":       { "type": "Boolean" }
+          }
+        }
+      },
+
+      "GroupMembership": {
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "role":         { "type": "String" },
+            "group":        { "type": "Entity", "name": "SPHERE::Group" },
+            "organization": { "type": "Entity", "name": "SPHERE::Organization" },
+            "user":         { "type": "Entity", "name": "SPHERE::User" }
+          }
+        }
+      },
+
+      "PricingCollection": {
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "name":         { "type": "String" },
+            "organization": { "type": "Entity", "name": "SPHERE::Organization" }
+          }
+        }
+      },
+
+      "Pricing": {
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "name":       { "type": "String" },
+            "collection": { "type": "Entity", "name": "SPHERE::PricingCollection" },
+            "creator":    { "type": "Entity", "name": "SPHERE::User" }
+          }
+        }
+      }
+    },
+
+    "actions": {
+      "createOrganization": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
+        }
+      },
+      "readOrganization": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
+        }
+      },
+      "updateOrganization": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
+        }
+      },
+      "deleteOrganization": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
+        }
+      },
+      "manageOrganizationMembers": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
+        }
+      },
+      "manageSubscription": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
+        }
+      },
+
+      "createGroup": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Organization"],
+          "context": { "type": "OrgContext" }
+        }
+      },
+      "createSubgroup": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
+        }
+      },
+      "readGroup": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
+        }
+      },
+      "updateGroup": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
+        }
+      },
+      "deleteGroup": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
+        }
+      },
+      "manageGroupMembers": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
+        }
+      },
+      "manageGroupCollections": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
+        }
+      },
+
+      "createCollection": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Organization", "Group"],
+          "context": { "type": "CreateCollectionContext" }
+        }
+      },
+      "readCollection": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["PricingCollection"],
+          "context": { "type": "ResourceContext" }
+        }
+      },
+      "updateCollection": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["PricingCollection"],
+          "context": { "type": "ResourceContext" }
+        }
+      },
+      "deleteCollection": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["PricingCollection"],
+          "context": { "type": "ResourceContext" }
+        }
+      },
+
+      "createPricing": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Organization", "PricingCollection"],
+          "context": { "type": "ResourceContext" }
+        }
+      },
+      "readPricing": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Pricing"],
+          "context": { "type": "ResourceContext" }
+        }
+      },
+      "updatePricing": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Pricing"],
+          "context": { "type": "ResourceContext" }
+        }
+      },
+      "deletePricing": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Pricing"],
+          "context": { "type": "ResourceContext" }
+        }
+      }
+    }
+  }
+}

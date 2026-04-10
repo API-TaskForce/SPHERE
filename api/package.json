@@ -8,6 +8,7 @@
     "dev": "npx migrate up && npx tsx --tsconfig tsconfig.json src/backend.ts"
   },
   "dependencies": {
+    "@cedar-policy/cedar-wasm": "^4.9.1",
     "@faker-js/faker": "^9.3.0",
     "@types/archiver": "^6.0.3",
     "@types/bcryptjs": "^2.4.6",

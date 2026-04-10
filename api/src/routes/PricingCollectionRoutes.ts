@@ -2,6 +2,7 @@ import express from 'express';
 import PricingCollectionController from '../controllers/PricingCollectionController';
 import { isLoggedIn } from '../middlewares/AuthMiddleware';
 import { orgContext } from '../middlewares/OrgMiddleware';
+import { checkCedar } from '../middlewares/CedarMiddleware';
 import { checkSpacePlan } from '../middlewares/SpacePlanMiddleware';
 import PricingController from '../controllers/PricingController';
 import { handleValidation } from '../middlewares/ValidationHandlingMiddleware';
@@ -22,12 +23,24 @@ const loadFileRoutes = function (app: express.Application) {
 
   app
     .route(baseUrl + '/pricings/collections')
-    .get(pricingCollectionController.index)
+    .get(isLoggedIn, orgContext, pricingCollectionController.index)
     .post(
       isLoggedIn,
       orgContext,
       checkSpacePlan('collectionManagement'),
       checkSpacePlan('collections', 1),
+      checkCedar('createCollection', 'Organization'),
+      pricingCollectionController.create
+    );
+
+  app
+    .route(baseUrl + '/groups/:groupId/collections')
+    .post(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('collectionManagement'),
+      checkSpacePlan('collections', 1),
+      checkCedar('createCollection', 'Group', 'groupId'),
       pricingCollectionController.create
     );
 
@@ -39,6 +52,7 @@ const loadFileRoutes = function (app: express.Application) {
       checkSpacePlan('bulkImport'),
       checkSpacePlan('collectionManagement'),
       checkSpacePlan('collections', 1),
+      checkCedar('createCollection', 'Organization'),
       upload,
       pricingCollectionController.bulkCreate
     );
@@ -49,21 +63,34 @@ const loadFileRoutes = function (app: express.Application) {
 
   app
     .route(baseUrl + '/me/collections/pricings/:pricingName')
-    .delete(isLoggedIn, pricingController.removePricingFromCollection);
+    .delete(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('pricingManagement'),
+      checkCedar('deletePricing', 'Pricing'),
+      pricingController.removePricingFromCollection
+    );
 
   app
     .route(baseUrl + '/pricings/collections/:userId/:collectionName')
-    .get(pricingCollectionController.showByNameAndUserId)
+    .get(
+      isLoggedIn,
+      orgContext,
+      checkCedar('readCollection', 'PricingCollection'),
+      pricingCollectionController.showByNameAndUserId
+    )
     .post(
       isLoggedIn,
       orgContext,
       checkSpacePlan('collectionAnalytics'),
+      checkCedar('updateCollection', 'PricingCollection'),
       pricingCollectionController.generateAnalytics
     )
     .put(
       isLoggedIn,
       orgContext,
       checkSpacePlan('collectionManagement'),
+      checkCedar('updateCollection', 'PricingCollection'),
       PricingCollectionValidator.update,
       handleValidation,
       pricingCollectionController.update
@@ -72,6 +99,7 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('collectionManagement'),
+      checkCedar('deleteCollection', 'PricingCollection'),
       pricingCollectionController.destroy
     );
 
@@ -81,6 +109,7 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('collectionExport'),
+      checkCedar('readCollection', 'PricingCollection'),
       pricingCollectionController.downloadCollection
     );
 };
