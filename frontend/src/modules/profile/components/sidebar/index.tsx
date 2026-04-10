@@ -1,7 +1,6 @@
 import ProfileAvatar from '../profile-avatar';
 import Iconify from '../../../core/components/iconify';
 import { useAuth } from '../../../auth/hooks/useAuth';
-import Iconify from '../../../core/components/iconify';
 import { useOrganization } from '../../../organization/hooks/useOrganization';
 
 export default function ProfileSidebar({sidebarWidth}: {sidebarWidth: number}) {
@@ -25,32 +24,6 @@ export default function ProfileSidebar({sidebarWidth}: {sidebarWidth: number}) {
         </p>
       </div>
 
-      {/* Action Buttons */}
-      {/* <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'center' }}>
-        <Button variant="outlined" size="small">
-          Edit profile
-        </Button>
-        <Button variant="outlined" size="small">
-          Settings
-        </Button>
-      </Box> */}
-
-      {/* URL */}
-      {/* <Box sx={{ mt: 2, textAlign: 'center' }}>
-        <Link to="https://alejandro-garcia-fernandez..." target="_blank" rel="noopener noreferrer">
-          https://alejandro-garcia-fernandez.vercel.app/
-        </Link>
-      </Box> */}
-
-      <div className="my-2 border-b border-slate-300" />
-
-      {/* Interest Sections */}
-      {/* <Box sx={{ mb: 2 }}>
-        <Typography variant="subtitle2" color="text.secondary">
-          AI & ML interests
-        </Typography>
-        <Typography>No tiene intereses configurados todavía.</Typography>
-      </Box> */}
       <div className="my-2 border-b border-slate-300" />
 
       {/* Organizations Section */}
