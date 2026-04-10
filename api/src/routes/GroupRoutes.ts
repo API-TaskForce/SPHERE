@@ -1,6 +1,7 @@
 import express from 'express';
 import { isLoggedIn } from '../middlewares/AuthMiddleware';
 import { orgContext, orgContextFromParam } from '../middlewares/OrgMiddleware';
+import { checkCedar } from '../middlewares/CedarMiddleware';
 import { checkSpacePlan } from '../middlewares/SpacePlanMiddleware';
 import { handleValidation } from '../middlewares/ValidationHandlingMiddleware';
 import GroupController from '../controllers/GroupController';
@@ -16,17 +17,16 @@ const loadFileRoutes = function (app: express.Application) {
   const baseUrl = process.env.BASE_URL_PATH;
 
   // ── Group CRUD ────────────────────────────────────────────────────────────
-  app
-    .route(baseUrl + '/groups')
-    .get(groupController.index);
+  app.route(baseUrl + '/groups').get(groupController.index);
 
   app
     .route(baseUrl + '/groups/:groupId')
-    .get(groupController.show)
+    .get(isLoggedIn, orgContext, checkCedar('readGroup', 'Group', 'groupId'), groupController.show)
     .put(
       isLoggedIn,
       orgContext,
       checkSpacePlan('groupManagement'),
+      checkCedar('updateGroup', 'Group', 'groupId'),
       GroupValidation.update,
       handleValidation,
       groupController.update
@@ -35,18 +35,25 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('groupManagement'),
+      checkCedar('deleteGroup', 'Group', 'groupId'),
       groupController.destroy
     );
 
   // ── Group member management ───────────────────────────────────────────────
   app
     .route(baseUrl + '/groups/:groupId/members')
-    .get(isLoggedIn, groupController.listMembers)
+    .get(
+      isLoggedIn,
+      orgContext,
+      checkCedar('readGroup', 'Group', 'groupId'), // Assuming readGroup covers listing members
+      groupController.listMembers
+    )
     .post(
       isLoggedIn,
       orgContext,
       checkSpacePlan('groupManagement'),
       checkSpacePlan('groupMembers', 1),
+      checkCedar('manageGroupMembers', 'Group', 'groupId'),
       GroupValidation.addMember,
       handleValidation,
       groupController.addMember
@@ -58,6 +65,7 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('groupManagement'),
+      checkCedar('manageGroupMembers', 'Group', 'groupId'),
       GroupValidation.updateMemberRole,
       handleValidation,
       groupController.updateMemberRole
@@ -66,13 +74,19 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('groupManagement'),
+      checkCedar('manageGroupMembers', 'Group', 'groupId'),
       groupController.removeMember
     );
 
   // ── Group collection associations ─────────────────────────────────────────
   app
     .route(baseUrl + '/groups/:groupId/collections')
-    .get(isLoggedIn, groupController.listCollections);
+    .get(
+      isLoggedIn,
+      orgContext,
+      checkCedar('readGroup', 'Group', 'groupId'),
+      groupController.listCollections
+    );
 
   app
     .route(baseUrl + '/groups/:groupId/collections/:pricingCollectionId')
@@ -80,6 +94,7 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('groupManagement'),
+      checkCedar('manageGroupCollections', 'Group', 'groupId'),
       GroupValidation.updateCollectionAccess,
       handleValidation,
       groupController.updateCollectionAccess
@@ -88,18 +103,25 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('groupManagement'),
+      checkCedar('manageGroupCollections', 'Group', 'groupId'),
       groupController.removeCollection
     );
 
   // ── Organization-scoped group routes ──────────────────────────────────────
   app
     .route(baseUrl + '/organizations/:organizationId/groups')
-    .get(groupController.indexByOrganization)
+    .get(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('readOrganization', 'Organization', 'organizationId'),
+      groupController.indexByOrganization
+    )
     .post(
       isLoggedIn,
       orgContextFromParam('organizationId'),
       checkSpacePlan('groupManagement'),
       checkSpacePlan('groups', 1),
+      checkCedar('createGroup', 'Organization', 'organizationId'),
       GroupValidation.create,
       handleValidation,
       groupController.create
@@ -111,6 +133,7 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContextFromParam('organizationId'),
       checkSpacePlan('sharedCollections'),
+      checkCedar('manageGroupCollections', 'Group', 'groupId'),
       GroupValidation.addCollection,
       handleValidation,
       groupController.addCollection
@@ -131,7 +154,12 @@ const loadFileRoutes = function (app: express.Application) {
 
   app
     .route(baseUrl + '/organizations/:organizationId/group-collections')
-    .get(isLoggedIn, groupCollectionController.indexByOrganization);
+    .get(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('readOrganization', 'Organization', 'organizationId'),
+      groupCollectionController.indexByOrganization
+    );
 };
 
 export default loadFileRoutes;

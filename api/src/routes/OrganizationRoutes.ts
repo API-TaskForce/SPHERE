@@ -3,6 +3,7 @@ import OrganizationController from '../controllers/OrganizationController';
 import OrganizationMembershipController from '../controllers/OrganizationMembershipController';
 import { isLoggedIn } from '../middlewares/AuthMiddleware';
 import { orgContext, orgContextFromParam } from '../middlewares/OrgMiddleware';
+import { checkCedar } from '../middlewares/CedarMiddleware';
 import { checkSpacePlan } from '../middlewares/SpacePlanMiddleware';
 import { handleValidation } from '../middlewares/ValidationHandlingMiddleware';
 import * as OrganizationValidation from '../controllers/validation/OrganizationValidation';
@@ -21,22 +22,27 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('organizationManagement'),
+      checkCedar('createOrganization', 'Organization'),
       OrganizationValidation.create,
       handleValidation,
       organizationController.create
     );
 
-  app
-    .route(baseUrl + '/organizations/by-name/:name')
-    .get(organizationController.showByName);
+  app.route(baseUrl + '/organizations/by-name/:name').get(organizationController.showByName);
 
   app
     .route(baseUrl + '/organizations/:organizationId')
-    .get(organizationController.show)
+    .get(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('readOrganization', 'Organization', 'organizationId'),
+      organizationController.show
+    )
     .put(
       isLoggedIn,
       orgContextFromParam('organizationId'),
       checkSpacePlan('organizationManagement'),
+      checkCedar('updateOrganization', 'Organization', 'organizationId'),
       OrganizationValidation.update,
       handleValidation,
       organizationController.update
@@ -45,18 +51,26 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContextFromParam('organizationId'),
       checkSpacePlan('organizationManagement'),
+      checkCedar('deleteOrganization', 'Organization', 'organizationId'),
+      checkSpacePlan('organizationManagement'),
       organizationController.destroy
     );
 
   // ── Member management ──────────────────────────────────────────────────────
   app
     .route(baseUrl + '/organizations/:organizationId/members')
-    .get(isLoggedIn, organizationController.listMembers)
+    .get(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('readOrganization', 'Organization', 'organizationId'),
+      organizationController.listMembers
+    )
     .post(
       isLoggedIn,
       orgContextFromParam('organizationId'),
       checkSpacePlan('organizationManagement'),
       checkSpacePlan('orgMembers', 1),
+      checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
       OrganizationValidation.addMember,
       handleValidation,
       organizationController.addMember
@@ -68,6 +82,7 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContextFromParam('organizationId'),
       checkSpacePlan('organizationManagement'),
+      checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
       OrganizationValidation.updateMemberRole,
       handleValidation,
       organizationController.updateMemberRole
@@ -76,6 +91,7 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContextFromParam('organizationId'),
       checkSpacePlan('organizationManagement'),
+      checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
       organizationController.removeMember
     );
 
