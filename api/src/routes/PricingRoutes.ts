@@ -1,6 +1,7 @@
 import express from 'express';
 import { isLoggedIn } from '../middlewares/AuthMiddleware';
 import { orgContext } from '../middlewares/OrgMiddleware';
+import { checkCedar } from '../middlewares/CedarMiddleware';
 import { checkSpacePlan } from '../middlewares/SpacePlanMiddleware';
 import PricingController from '../controllers/PricingController';
 import { handlePricingUpload } from '../middlewares/FileHandlerMiddleware';
@@ -19,12 +20,15 @@ const loadFileRoutes = function (app: express.Application) {
 
   app
     .route(baseUrl + '/pricings')
-    .get(pricingController.index)
+    .get(isLoggedIn, orgContext, pricingController.index)
     .post(
       isLoggedIn,
       orgContext,
       checkSpacePlan('pricingManagement'),
       checkSpacePlan('pricings', 1),
+      // Standalone pricing upload: authorized at org level.
+      // owner/admin always pass; members need editor/admin role in at least one group.
+      checkCedar('createPricing', 'Organization'),
       upload,
       pricingController.create
     )
@@ -33,6 +37,8 @@ const loadFileRoutes = function (app: express.Application) {
       orgContext,
       checkSpacePlan('pricingManagement'),
       checkSpacePlan('pricingVersioning'),
+      // updateVersion only parses/validates a YAML string in-memory — no DB resource is read or written.
+      // orgContext (org membership) + SpacePlan gates are sufficient here.
       pricingController.updateVersion
     );
 
@@ -42,6 +48,7 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('configurationSpaceAnalysis'),
+      checkCedar('readPricing', 'Pricing', 'pricingId'),
       pricingController.getConfigurationSpace
     );
 
@@ -51,6 +58,7 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('pricingAnalytics'),
+      checkCedar('readPricing', 'Pricing'),
       pricingController.show
     )
     .put(
@@ -58,6 +66,7 @@ const loadFileRoutes = function (app: express.Application) {
       orgContext,
       checkSpacePlan('pricingManagement'),
       checkSpacePlan('pricingEditor'),
+      checkCedar('updatePricing', 'Pricing'),
       PricingValidator.update,
       handleValidation,
       pricingController.update
@@ -66,6 +75,7 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('pricingManagement'),
+      checkCedar('deletePricing', 'Pricing'),
       pricingController.destroyByNameAndOwner
     );
 
@@ -76,9 +86,9 @@ const loadFileRoutes = function (app: express.Application) {
       orgContext,
       checkSpacePlan('pricingManagement'),
       checkSpacePlan('pricingVersioning'),
+      checkCedar('deletePricing', 'Pricing'),
       pricingController.destroyVersionByNameAndOwner
     );
-
   app
     .route(baseUrl + '/me/pricings')
     .get(isLoggedIn, orgContext, pricingController.indexByUserWithoutCollection)
@@ -86,6 +96,9 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('pricingManagement'),
+      // Adding a pricing to a collection requires editor/admin role on that collection.
+      // collectionId comes from request body; Cedar middleware resolves it as PricingCollection resource.
+      checkCedar('createPricing', 'PricingCollection', 'collectionId'),
       pricingController.addPricingToCollection
     );
 };

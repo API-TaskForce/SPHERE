@@ -25,6 +25,7 @@ class PricingController {
   async index(req: any, res: any) {
     try {
       const queryParams: PricingIndexQueryParams = this._transformIndexQueryParams(req.query);
+      queryParams.organizationId = req.organizationId;
 
       // include pagination params if provided
       const pagination = {
@@ -57,7 +58,8 @@ class PricingController {
       const pricing = await this.pricingService.show(
         req.params.pricingName,
         req.params.owner,
-        queryParams
+        queryParams,
+        req.organizationId
       );
       res.json(pricing);
     } catch (err: any) {
@@ -88,7 +90,12 @@ class PricingController {
 
   async create(req: any, res: any) {
     try {
-      const pricing = await this.pricingService.create(req.file, req.user.username, undefined, req.organizationId);
+      const pricing = await this.pricingService.create(
+        req.file,
+        req.user.username,
+        undefined,
+        req.organizationId
+      );
       res.json(pricing);
     } catch (err: any) {
       try {
@@ -111,7 +118,8 @@ class PricingController {
       const result = await this.pricingService.addPricingToCollection(
         req.body.pricingName,
         req.user.username,
-        req.body.collectionId
+        req.body.collectionId,
+        req.organizationId
       );
       res.json(result);
     } catch (err: any) {
@@ -124,7 +132,8 @@ class PricingController {
       const pricing = await this.pricingService.update(
         req.params.pricingName,
         req.user.username,
-        req.body
+        req.body,
+        req.organizationId
       );
       res.json(pricing);
     } catch (err: any) {
@@ -149,7 +158,8 @@ class PricingController {
     try {
       const result = await this.pricingService.removePricingFromCollection(
         req.params.pricingName,
-        req.user.username
+        req.user.username,
+        req.organizationId
       );
       res.json(result);
     } catch (err: any) {
@@ -163,7 +173,8 @@ class PricingController {
       const result = await this.pricingService.destroy(
         req.params.pricingName,
         req.user.username,
-        queryParams
+        queryParams,
+        req.organizationId
       );
       if (!result) {
         res.status(404).send({ error: 'Pricing not found' });
@@ -180,7 +191,8 @@ class PricingController {
       const result = await this.pricingService.destroyVersion(
         req.params.pricingName,
         req.params.pricingVersion,
-        req.user.username
+        req.user.username,
+        req.organizationId
       );
       if (!result) {
         res.status(404).send({ error: 'Pricing version not found' });
