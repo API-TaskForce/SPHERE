@@ -1,4 +1,5 @@
 import ProfileAvatar from '../profile-avatar';
+import Iconify from '../../../core/components/iconify';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import Iconify from '../../../core/components/iconify';
 import { useOrganization } from '../../../organization/hooks/useOrganization';
@@ -50,6 +51,7 @@ export default function ProfileSidebar({sidebarWidth}: {sidebarWidth: number}) {
         </Typography>
         <Typography>No tiene intereses configurados todavía.</Typography>
       </Box> */}
+      <div className="my-2 border-b border-slate-300" />
 
       {/* Organizations Section */}
       {organizations.length > 0 && (
