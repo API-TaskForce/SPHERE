@@ -37,11 +37,11 @@ export function useSpaceSync() {
       });
     };
 
-    spaceClient.on('pricing_activated', onPricingChange);
+    spaceClient.on('pricing_actived', onPricingChange);
     spaceClient.on('pricing_archived', onPricingChange);
 
     return () => {
-      spaceClient.off('pricing_activated', onPricingChange);
+      spaceClient.off('pricing_actived', onPricingChange);
       spaceClient.off('pricing_archived', onPricingChange);
     };
   }, [activeOrganization?.id, spaceClient]);
