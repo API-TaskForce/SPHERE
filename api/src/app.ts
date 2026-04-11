@@ -49,6 +49,20 @@ const initializeServer = async (): Promise<{
   return { server, app };
 };
 
+const provisionSpaceContractsForSeededOrgs = async () => {
+  try {
+    const organizationRepository = container.resolve('organizationRepository');
+    const spaceService = container.resolve('spaceService');
+    const orgs = await organizationRepository.findAll();
+    await Promise.all(
+      orgs.map((org: any) => spaceService.ensureFreeContract(org.id, org.name))
+    );
+    console.log(`  ${green}➜${reset}  ${bold}SPACE:${reset}   contracts provisioned for ${orgs.length} organizations`);
+  } catch (err) {
+    console.error('Failed to provision SPACE contracts for seeded orgs:', err);
+  }
+};
+
 const initializeDatabase = async () => {
   let connection;
   try {
@@ -57,6 +71,7 @@ const initializeDatabase = async () => {
         connection = await initMongoose();
         if (process.env.ENVIRONMENT === "development") {
           await seedDatabase();
+          await provisionSpaceContractsForSeededOrgs();
         }
         break
       default:
