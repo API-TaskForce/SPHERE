@@ -27,6 +27,13 @@ const Header = ({ setUploadModalOpen }: { setUploadModalOpen: (state: boolean) =
       },
     },
     {
+      name: 'My Organizations',
+      onClick: () => {
+        router.push('/me/organizations');
+        handleCloseUserMenu();
+      },
+    },
+    {
       name: 'Upload pricing',
       onClick: () => {
         setUploadModalOpen(true);
