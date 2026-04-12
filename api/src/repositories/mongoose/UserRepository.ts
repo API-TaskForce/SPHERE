@@ -55,6 +55,18 @@ class UserRepository extends RepositoryBase {
     return UserMongoose.findOne({ token })
   }
 
+  async findUserByUsernamePublic (username: string) {
+    try {
+      const user = await UserMongoose.findOne(
+        { username, userType: 'user' },
+        { password: 0, token: 0, tokenExpiration: 0 }
+      );
+      return user ? user.toObject({ getters: true, virtuals: true, versionKey: false }) : null;
+    } catch {
+      return null;
+    }
+  }
+
   async _findByEmailAndUserType (email: string, userType: "user" | "admin") {
     return UserMongoose.findOne({ email, userType }, { id: 1, password: 1})
   }

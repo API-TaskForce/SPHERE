@@ -161,6 +161,20 @@ class UserService {
     async exists (id: string) {
       return await this.userRepository.findById(id)
     }
+
+    async findByUsername (username: string) {
+      const user = await (this.userRepository as any).findUserByUsernamePublic(username);
+      if (!user) {
+        throw new Error('User not found');
+      }
+      return {
+        id: user.id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar ?? null,
+      };
+    }
   }
   
   export default UserService
