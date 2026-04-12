@@ -17,6 +17,11 @@ class OrganizationController {
     this.addMember = this.addMember.bind(this);
     this.updateMemberRole = this.updateMemberRole.bind(this);
     this.removeMember = this.removeMember.bind(this);
+    this.createInvitation = this.createInvitation.bind(this);
+    this.listInvitations = this.listInvitations.bind(this);
+    this.revokeInvitation = this.revokeInvitation.bind(this);
+    this.previewInvitation = this.previewInvitation.bind(this);
+    this.joinViaInvitation = this.joinViaInvitation.bind(this);
   }
 
   // ── Organization CRUD ───────────────────────────────────────────────────────
@@ -161,6 +166,83 @@ class OrganizationController {
       res.json({ message: 'Successfully removed.' });
     } catch (err: any) {
       if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  // ── Invitation management ───────────────────────────────────────────────────
+
+  async createInvitation(req: any, res: any) {
+    try {
+      const { expiresInDays, maxUses } = req.body;
+      const invitation = await this.organizationService.createInvitation(
+        req.params.organizationId,
+        req.user.id,
+        { expiresInDays, maxUses }
+      );
+      res.status(201).json(invitation);
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async listInvitations(req: any, res: any) {
+    try {
+      const invitations = await this.organizationService.listInvitations(req.params.organizationId);
+      res.json(invitations);
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async revokeInvitation(req: any, res: any) {
+    try {
+      await this.organizationService.revokeInvitation(req.params.invitationId);
+      res.json({ message: 'Invitation revoked.' });
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  async previewInvitation(req: any, res: any) {
+    try {
+      const data = await this.organizationService.previewInvitation(req.params.code);
+      res.json(data);
+    } catch (err: any) {
+      if (
+        err.message.toLowerCase().includes('not found') ||
+        err.message.toLowerCase().includes('expired') ||
+        err.message.toLowerCase().includes('maximum')
+      ) {
+        res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  async joinViaInvitation(req: any, res: any) {
+    try {
+      const organization = await this.organizationService.joinViaInvitation(
+        req.params.code,
+        req.user.id
+      );
+      res.json(organization);
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('already a member')) {
+        res.status(422).send({ error: err.message });
+      } else if (
+        err.message.toLowerCase().includes('not found') ||
+        err.message.toLowerCase().includes('expired') ||
+        err.message.toLowerCase().includes('maximum')
+      ) {
         res.status(404).send({ error: err.message });
       } else {
         res.status(500).send({ error: err.message });
