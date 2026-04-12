@@ -47,7 +47,6 @@ const loadFileRoutes = function (app: express.Application) {
     .put(
       isLoggedIn,
       orgContextFromParam('organizationId'),
-      checkSpacePlan('organizationManagement'),
       checkCedar('updateOrganization', 'Organization', 'organizationId'),
       OrganizationValidation.update,
       handleValidation,
@@ -56,9 +55,7 @@ const loadFileRoutes = function (app: express.Application) {
     .delete(
       isLoggedIn,
       orgContextFromParam('organizationId'),
-      checkSpacePlan('organizationManagement'),
       checkCedar('deleteOrganization', 'Organization', 'organizationId'),
-      checkSpacePlan('organizationManagement'),
       organizationController.destroy
     );
 
@@ -74,7 +71,6 @@ const loadFileRoutes = function (app: express.Application) {
     .post(
       isLoggedIn,
       orgContextFromParam('organizationId'),
-      checkSpacePlan('organizationManagement'),
       checkSpacePlan('orgMembers', 1),
       checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
       OrganizationValidation.addMember,
@@ -87,7 +83,6 @@ const loadFileRoutes = function (app: express.Application) {
     .put(
       isLoggedIn,
       orgContextFromParam('organizationId'),
-      checkSpacePlan('organizationManagement'),
       checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
       OrganizationValidation.updateMemberRole,
       handleValidation,
@@ -96,7 +91,6 @@ const loadFileRoutes = function (app: express.Application) {
     .delete(
       isLoggedIn,
       orgContextFromParam('organizationId'),
-      checkSpacePlan('organizationManagement'),
       checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
       organizationController.removeMember
     );
