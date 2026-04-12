@@ -48,14 +48,20 @@ class UserService {
       const orgs = await this.organizationService.indexByUser(userId)
       const hasPersonal = orgs.some((o: any) => o.isPersonal)
       if (!hasPersonal) {
-        await this.organizationService.createPersonal(userId, username)
+        try {
+          await this.organizationService.createPersonal(userId, username)
+        } catch (err: any) {
+          // Concurrent request already created the personal org — not an error
+          if (err.code !== 11000 && !err.message?.includes('duplicate')) {
+            throw err
+          }
+        }
       }
     }
 
     async loginByToken (token: string) {
       const user = await this.userRepository.findByToken(token)
       if (user && user.tokenExpiration! > new Date()) {
-        await this._ensurePersonalOrg(user.id, user.username)
         processFileUris(user, ['avatar'])
         return user
       }
