@@ -30,12 +30,8 @@ export default function OrgSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  if (isLoading || !activeOrganization) return null;
-
   const handleToggle = () => setIsOpen(prev => !prev);
-
   const handleClose = () => setIsOpen(false);
-
   const handleSelect = (org: Organization) => {
     setActiveOrganization(org);
     handleClose();
@@ -64,6 +60,8 @@ export default function OrgSelector() {
       document.removeEventListener('keydown', handleEscape);
     };
   }, [isOpen]);
+
+  if (isLoading || !activeOrganization) return null;
 
   return (
     <div ref={containerRef} className="relative">

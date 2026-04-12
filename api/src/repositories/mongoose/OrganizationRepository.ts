@@ -14,7 +14,8 @@ class OrganizationRepository extends RepositoryBase {
 
   async findAll(...args: any) {
     try {
-      return await OrganizationMongoose.find().lean({ virtuals: true });
+      const orgs = await OrganizationMongoose.find();
+      return orgs.map(org => org.toObject({ getters: true, virtuals: true, versionKey: false }));
     } catch (err) {
       return [];
     }

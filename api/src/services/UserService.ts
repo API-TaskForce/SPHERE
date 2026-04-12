@@ -44,9 +44,18 @@ class UserService {
       return this._register(data, 'admin')
     }
 
+    async _ensurePersonalOrg (userId: string, username: string) {
+      const orgs = await this.organizationService.indexByUser(userId)
+      const hasPersonal = orgs.some((o: any) => o.isPersonal)
+      if (!hasPersonal) {
+        await this.organizationService.createPersonal(userId, username)
+      }
+    }
+
     async loginByToken (token: string) {
       const user = await this.userRepository.findByToken(token)
       if (user && user.tokenExpiration! > new Date()) {
+        await this._ensurePersonalOrg(user.id, user.username)
         processFileUris(user, ['avatar'])
         return user
       }
@@ -90,6 +99,7 @@ class UserService {
         throw new Error('Invalid credentials')
       }
       const updatedUser = await this.userRepository.updateToken(user.id, this._createUserTokenDTO())
+      await this._ensurePersonalOrg(updatedUser!.id, updatedUser!.username)
       processFileUris(updatedUser, ['avatar'])
       return updatedUser
     }
