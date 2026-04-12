@@ -1,16 +1,20 @@
+import crypto from 'node:crypto';
 import container from '../config/container';
 import { OrganizationRepository } from '../types/repositories/OrganizationRepository';
 import { OrganizationMembershipRepository } from '../types/repositories/OrganizationMembershipRepository';
+import { OrganizationInvitationRepository } from '../types/repositories/OrganizationInvitationRepository';
 import SpaceService from './SpaceService';
 
 class OrganizationService {
   private organizationRepository: OrganizationRepository;
   private organizationMembershipRepository: OrganizationMembershipRepository;
+  private organizationInvitationRepository: OrganizationInvitationRepository;
   private spaceService: SpaceService;
 
   constructor() {
     this.organizationRepository = container.resolve('organizationRepository');
     this.organizationMembershipRepository = container.resolve('organizationMembershipRepository');
+    this.organizationInvitationRepository = container.resolve('organizationInvitationRepository');
     this.spaceService = container.resolve('spaceService');
   }
 
@@ -85,7 +89,7 @@ class OrganizationService {
   }
 
   /**
-   * Deletes an organization and all its memberships.
+   * Deletes an organization and all its memberships and invitations.
    */
   async destroy(id: string) {
     const organization = await this.organizationRepository.findById(id);
@@ -94,6 +98,7 @@ class OrganizationService {
     }
 
     await this.organizationMembershipRepository.destroyByOrganizationId(id);
+    await this.organizationInvitationRepository.destroyByOrganizationId(id);
 
     const result = await this.organizationRepository.destroy(id);
     if (!result) {
@@ -154,6 +159,95 @@ class OrganizationService {
       throw new Error('Organization membership not found');
     }
     return true;
+  }
+
+  // ── Invitation management ───────────────────────────────────────────────────
+
+  async createInvitation(
+    organizationId: string,
+    userId: string,
+    options?: { expiresInDays?: number; maxUses?: number }
+  ) {
+    const code = crypto.randomBytes(5).toString('hex'); // 10-char hex code
+    const expiresInDays = options?.expiresInDays ?? 7;
+    const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
+
+    return await this.organizationInvitationRepository.create({
+      _organizationId: organizationId,
+      code,
+      createdBy: userId,
+      expiresAt,
+      maxUses: options?.maxUses ?? null,
+      useCount: 0,
+    });
+  }
+
+  async listInvitations(organizationId: string) {
+    return await this.organizationInvitationRepository.findByOrganizationId(organizationId);
+  }
+
+  async revokeInvitation(invitationId: string) {
+    const result = await this.organizationInvitationRepository.destroy(invitationId);
+    if (!result) {
+      throw new Error('Invitation not found');
+    }
+    return true;
+  }
+
+  async previewInvitation(code: string) {
+    const invitation = await this.organizationInvitationRepository.findByCode(code);
+    if (!invitation) {
+      throw new Error('Invitation not found or invalid');
+    }
+    if (invitation.expiresAt && new Date() > new Date(invitation.expiresAt)) {
+      throw new Error('Invitation has expired');
+    }
+    if (invitation.maxUses !== null && invitation.useCount >= invitation.maxUses) {
+      throw new Error('Invitation has reached its maximum number of uses');
+    }
+
+    const organization = await this.organizationRepository.findById(
+      invitation._organizationId.toString()
+    );
+    if (!organization) {
+      throw new Error('Organization not found');
+    }
+
+    return { invitation, organization };
+  }
+
+  async joinViaInvitation(code: string, userId: string) {
+    const invitation = await this.organizationInvitationRepository.findByCode(code);
+    if (!invitation) {
+      throw new Error('Invitation not found or invalid');
+    }
+    if (invitation.expiresAt && new Date() > new Date(invitation.expiresAt)) {
+      throw new Error('Invitation has expired');
+    }
+    if (invitation.maxUses !== null && invitation.useCount >= invitation.maxUses) {
+      throw new Error('Invitation has reached its maximum number of uses');
+    }
+
+    const orgId = invitation._organizationId.toString();
+
+    const existing = await this.organizationMembershipRepository.findByUserAndOrganization(
+      userId,
+      orgId
+    );
+    if (existing) {
+      throw new Error('You are already a member of this organization');
+    }
+
+    await this.organizationMembershipRepository.create({
+      _userId: userId,
+      _organizationId: orgId,
+      role: 'member',
+      joinedAt: new Date(),
+    });
+
+    await this.organizationInvitationRepository.incrementUseCount(invitation.id);
+
+    return await this.organizationRepository.findById(orgId);
   }
 }
 

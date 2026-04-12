@@ -11,6 +11,7 @@ import MongooseGroupRepository from "../repositories/mongoose/GroupRepository";
 import MongooseOrganizationMembershipRepository from "../repositories/mongoose/OrganizationMembershipRepository";
 import MongooseGroupMembershipRepository from "../repositories/mongoose/GroupMembershipRepository";
 import MongooseGroupCollectionRepository from "../repositories/mongoose/GroupCollectionRepository";
+import MongooseOrganizationInvitationRepository from "../repositories/mongoose/OrganizationInvitationRepository";
 
 import UserService from "../services/UserService";
 import PricingService from "../services/PricingService";
@@ -30,7 +31,7 @@ function initContainer(databaseType: string): AwilixContainer {
   const container: AwilixContainer = createContainer();
   let userRepository, pricingRepository, pricingCollectionRepository,
       organizationRepository, groupRepository, organizationMembershipRepository,
-      groupMembershipRepository, groupCollectionRepository;
+      groupMembershipRepository, groupCollectionRepository, organizationInvitationRepository;
   switch (databaseType) {
     case "mongoDB":
       userRepository = new MongooseUserRepository();
@@ -41,6 +42,7 @@ function initContainer(databaseType: string): AwilixContainer {
       organizationMembershipRepository = new MongooseOrganizationMembershipRepository();
       groupMembershipRepository = new MongooseGroupMembershipRepository();
       groupCollectionRepository = new MongooseGroupCollectionRepository();
+      organizationInvitationRepository = new MongooseOrganizationInvitationRepository();
       break;
     default:
       throw new Error(`Unsupported database type: ${databaseType}`);
@@ -54,6 +56,7 @@ function initContainer(databaseType: string): AwilixContainer {
     organizationMembershipRepository: asValue(organizationMembershipRepository),
     groupMembershipRepository: asValue(groupMembershipRepository),
     groupCollectionRepository: asValue(groupCollectionRepository),
+    organizationInvitationRepository: asValue(organizationInvitationRepository),
     userService: asClass(UserService).singleton(),
     pricingService: asClass(PricingService).singleton(),
     pricingCollectionService: asClass(PricingCollectionService).singleton(),

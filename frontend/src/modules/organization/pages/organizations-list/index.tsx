@@ -93,7 +93,8 @@ export default function OrganizationsListPage() {
           {memberships.map((m) => (
             <li
               key={m.id}
-              className="flex items-center gap-4 rounded-lg border border-sphere-grey-300 bg-white px-5 py-4 shadow-sm"
+              onClick={() => router.push(`/me/organizations/${m.organization.name}`)}
+              className="flex cursor-pointer items-center gap-4 rounded-lg border border-sphere-grey-300 bg-white px-5 py-4 shadow-sm transition-shadow hover:shadow-md"
             >
               <OrgAvatar org={m.organization} />
               <div className="min-w-0 flex-1">
@@ -107,6 +108,7 @@ export default function OrganizationsListPage() {
               >
                 {ROLE_LABELS[m.role] ?? m.role}
               </span>
+              <Iconify icon="mdi:chevron-right" width={18} className="text-sphere-grey-400" />
             </li>
           ))}
         </ul>

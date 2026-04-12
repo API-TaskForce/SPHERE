@@ -27,6 +27,15 @@ const loadFileRoutes = function (app: express.Application) {
 
   app.route(baseUrl + '/organizations/by-name/:name').get(organizationController.showByName);
 
+  // ── Invitation preview & join (static segments before :organizationId) ─────
+  app
+    .route(baseUrl + '/organizations/invitations/preview/:code')
+    .get(isLoggedIn, organizationController.previewInvitation);
+
+  app
+    .route(baseUrl + '/organizations/join/:code')
+    .post(isLoggedIn, organizationController.joinViaInvitation);
+
   app
     .route(baseUrl + '/organizations/:organizationId')
     .get(
@@ -38,7 +47,6 @@ const loadFileRoutes = function (app: express.Application) {
     .put(
       isLoggedIn,
       orgContextFromParam('organizationId'),
-      checkSpacePlan('organizationManagement'),
       checkCedar('updateOrganization', 'Organization', 'organizationId'),
       OrganizationValidation.update,
       handleValidation,
@@ -47,9 +55,7 @@ const loadFileRoutes = function (app: express.Application) {
     .delete(
       isLoggedIn,
       orgContextFromParam('organizationId'),
-      checkSpacePlan('organizationManagement'),
       checkCedar('deleteOrganization', 'Organization', 'organizationId'),
-      checkSpacePlan('organizationManagement'),
       organizationController.destroy
     );
 
@@ -65,7 +71,6 @@ const loadFileRoutes = function (app: express.Application) {
     .post(
       isLoggedIn,
       orgContextFromParam('organizationId'),
-      checkSpacePlan('organizationManagement'),
       checkSpacePlan('orgMembers', 1),
       checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
       OrganizationValidation.addMember,
@@ -78,7 +83,6 @@ const loadFileRoutes = function (app: express.Application) {
     .put(
       isLoggedIn,
       orgContextFromParam('organizationId'),
-      checkSpacePlan('organizationManagement'),
       checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
       OrganizationValidation.updateMemberRole,
       handleValidation,
@@ -87,9 +91,33 @@ const loadFileRoutes = function (app: express.Application) {
     .delete(
       isLoggedIn,
       orgContextFromParam('organizationId'),
-      checkSpacePlan('organizationManagement'),
       checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
       organizationController.removeMember
+    );
+
+  // ── Invitation management ──────────────────────────────────────────────────
+  app
+    .route(baseUrl + '/organizations/:organizationId/invitations')
+    .get(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
+      organizationController.listInvitations
+    )
+    .post(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
+      organizationController.createInvitation
+    );
+
+  app
+    .route(baseUrl + '/organizations/:organizationId/invitations/:invitationId')
+    .delete(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('manageOrganizationMembers', 'Organization', 'organizationId'),
+      organizationController.revokeInvitation
     );
 
   // ── User-scoped organization routes ───────────────────────────────────────

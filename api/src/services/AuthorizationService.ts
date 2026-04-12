@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { isAuthorized } from '@cedar-policy/cedar-wasm/nodejs';
-import type { EntityJson, EntityUidJson, CedarValueJson, Context } from '@cedar-policy/cedar-wasm/nodejs';
+import type { EntityJson, EntityUidJson, CedarValueJson, Context, SchemaJson } from '@cedar-policy/cedar-wasm/nodejs';
 import container from '../config/container.js';
 import type { OrganizationMembershipRepository } from '../types/repositories/OrganizationMembershipRepository.js';
 import type { GroupMembershipRepository } from '../types/repositories/GroupMembershipRepository.js';
@@ -67,7 +67,7 @@ export default class AuthorizationService {
 
   /** Contenido de policies.cedar y schema.cedarschema.json, cargados una sola vez */
   private readonly policiesText: string;
-  private readonly schemaText: string;
+  private readonly schema: SchemaJson<string>;
 
   constructor() {
     this.organizationMembershipRepository = container.resolve('organizationMembershipRepository');
@@ -77,7 +77,7 @@ export default class AuthorizationService {
 
     const cedarDir = join(dirname(fileURLToPath(import.meta.url)), '../cedar');
     this.policiesText = readFileSync(join(cedarDir, 'policies.cedar'), 'utf-8');
-    this.schemaText   = readFileSync(join(cedarDir, 'schema.cedarschema.json'), 'utf-8');
+    this.schema       = JSON.parse(readFileSync(join(cedarDir, 'schema.cedarschema.json'), 'utf-8'));
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ export default class AuthorizationService {
       context: context as Context,
       policies:  { staticPolicies: this.policiesText },
       entities,
-      schema:    this.schemaText,
+      schema:    this.schema,
       validateRequest: true,
     });
 

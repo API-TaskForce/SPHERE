@@ -39,9 +39,9 @@
         "shape": {
           "type": "Record",
           "attributes": {
-            "username": { "type": "String" },
-            "email":    { "type": "String" },
-            "userType": { "type": "String" }
+            "username": { "type": "String", "required": false },
+            "email":    { "type": "String", "required": false },
+            "userType": { "type": "String", "required": false }
           }
         }
       },
@@ -50,8 +50,8 @@
         "shape": {
           "type": "Record",
           "attributes": {
-            "name":       { "type": "String" },
-            "isPersonal": { "type": "Boolean" }
+            "name":       { "type": "String",  "required": false },
+            "isPersonal": { "type": "Boolean", "required": false }
           }
         }
       },
@@ -60,9 +60,9 @@
         "shape": {
           "type": "Record",
           "attributes": {
-            "role":         { "type": "String" },
-            "organization": { "type": "Entity", "name": "SPHERE::Organization" },
-            "user":         { "type": "Entity", "name": "SPHERE::User" }
+            "role":         { "type": "String",                                         "required": false },
+            "organization": { "type": "Entity", "name": "SPHERE::Organization",         "required": false },
+            "user":         { "type": "Entity", "name": "SPHERE::User",                 "required": false }
           }
         }
       },
@@ -72,9 +72,9 @@
         "shape": {
           "type": "Record",
           "attributes": {
-            "name":         { "type": "String" },
-            "organization": { "type": "Entity", "name": "SPHERE::Organization" },
-            "isRoot":       { "type": "Boolean" }
+            "name":         { "type": "String",                                         "required": false },
+            "organization": { "type": "Entity", "name": "SPHERE::Organization",         "required": false },
+            "isRoot":       { "type": "Boolean",                                        "required": false }
           }
         }
       },
@@ -83,10 +83,10 @@
         "shape": {
           "type": "Record",
           "attributes": {
-            "role":         { "type": "String" },
-            "group":        { "type": "Entity", "name": "SPHERE::Group" },
-            "organization": { "type": "Entity", "name": "SPHERE::Organization" },
-            "user":         { "type": "Entity", "name": "SPHERE::User" }
+            "role":         { "type": "String",                                         "required": false },
+            "group":        { "type": "Entity", "name": "SPHERE::Group",                "required": false },
+            "organization": { "type": "Entity", "name": "SPHERE::Organization",         "required": false },
+            "user":         { "type": "Entity", "name": "SPHERE::User",                 "required": false }
           }
         }
       },
@@ -95,8 +95,8 @@
         "shape": {
           "type": "Record",
           "attributes": {
-            "name":         { "type": "String" },
-            "organization": { "type": "Entity", "name": "SPHERE::Organization" }
+            "name":         { "type": "String",                                         "required": false },
+            "organization": { "type": "Entity", "name": "SPHERE::Organization",         "required": false }
           }
         }
       },
@@ -105,9 +105,9 @@
         "shape": {
           "type": "Record",
           "attributes": {
-            "name":       { "type": "String" },
-            "collection": { "type": "Entity", "name": "SPHERE::PricingCollection" },
-            "creator":    { "type": "Entity", "name": "SPHERE::User" }
+            "name":       { "type": "String",                                           "required": false },
+            "collection": { "type": "Entity", "name": "SPHERE::PricingCollection",      "required": false },
+            "creator":    { "type": "Entity", "name": "SPHERE::User",                   "required": false }
           }
         }
       }

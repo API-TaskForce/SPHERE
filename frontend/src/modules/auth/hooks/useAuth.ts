@@ -3,6 +3,11 @@ import { useLocalStorage } from '../../core/hooks/useLocalStorage'
 import { AuthContext } from '../contexts/authContext'
 import { USERS_BASE_PATH } from '../api/usersApi'
 
+// Module-level flag: shared across ALL useAuth instances in the same page session.
+// Resets on full page reload (module re-executes). Prevents multiple concurrent
+// tokenLogin calls when several components mount at the same time.
+let authInitialized = false;
+
 export interface AuthUserContext {
     user: AuthUser | null
     isAuthenticated: boolean
@@ -36,6 +41,7 @@ export const useAuth = () => {
     }
 
     const removeUser = () => {
+        authInitialized = false
         setAuthUser({
             user: null,
             isAuthenticated: false,
@@ -44,56 +50,62 @@ export const useAuth = () => {
             isLoading: false,
         })
         removeItem('token')
-        removeItem('firstAuthSent')
     }
 
     useEffect(() => {
+        // Guard: only one tokenLogin per page load, regardless of how many
+        // components mount and call useAuth().
+        if (authInitialized) return
+        authInitialized = true
+
         const token = getItem('token')
 
-        if (token) {
-            const firstAuthSent = getItem('firstAuthSent')
-            
-            if (firstAuthSent) {
-                return
-            }
-            setItem('firstAuthSent', "true")
-            fetch(`${USERS_BASE_PATH}/tokenLogin`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ token: token}),
-            })
-                .then((response: Response) => {
-                    if (response.ok) {
-                        response.json().then((dataResponse) => {
-                            const user = dataResponse
-                            
-                            let userData = {
+        if (!token) {
+            setAuthUser((prev) => ({
+                ...prev,
+                user: null,
+                isAuthenticated: false,
+                token: null,
+                tokenExpiration: null,
+                isLoading: false,
+            }))
+            removeItem('token')
+            return
+        }
+
+        fetch(`${USERS_BASE_PATH}/tokenLogin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+        })
+            .then((response: Response) => {
+                if (response.ok) {
+                    response.json().then((dataResponse) => {
+                        const user = dataResponse
+                        addUser(
+                            {
                                 id: user.id,
                                 firstName: user.firstName,
                                 lastName: user.lastName,
                                 username: user.username,
                                 email: user.email,
                                 avatar: user.avatar,
-                                // plan: user.plan,
-                            }
-                            addUser(userData, user.token, new Date(user.tokenExpiration))
-                        })
-                    } else {
-                        removeUser()
-                    }
-
-                    removeItem('firstAuthSent')
-                })
-                .catch((_error) => {
-                    setTimeout(() => {
-                        removeUser()
-                    }, 5000)
-                })
-        } else {
-            removeUser()
-        }
+                            },
+                            user.token,
+                            new Date(user.tokenExpiration)
+                        )
+                    })
+                } else {
+                    authInitialized = false
+                    removeUser()
+                }
+            })
+            .catch((_error) => {
+                setTimeout(() => {
+                    authInitialized = false
+                    removeUser()
+                }, 5000)
+            })
     }, [])
 
     const login = (user: AuthUser, token: string, tokenExpiration: Date) => {

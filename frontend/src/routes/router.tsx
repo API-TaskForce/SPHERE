@@ -25,6 +25,8 @@ import CollectionsListPage from '../modules/pricing/pages/collections-list';
 import PricingAssistantPage from '../modules/harvey/pages/pricing-assistant';
 import OrganizationsListPage from '../modules/organization/pages/organizations-list';
 import CreateOrganizationPage from '../modules/organization/pages/create-organization';
+import OrganizationDetailPage from '../modules/organization/pages/organization-detail';
+import OrganizationJoinPage from '../modules/organization/pages/organization-join';
 
 
 export default function Router() {
@@ -53,7 +55,9 @@ export default function Router() {
         { element: <CollectionCardPage />, path: "/pricings/collections/:ownerId/:collectionName" },
         { element: <MyPricingsPage />, path: "/me/pricings" },
         { element: <OrganizationsListPage />, path: "/me/organizations" },
+        { element: <OrganizationDetailPage />, path: "/me/organizations/:orgName" },
         { element: <CreateOrganizationPage />, path: "/organizations/new" },
+        { element: <OrganizationJoinPage />, path: "/organizations/join/:code" },
         {
           path: "/orgs/:orgName",
           element: (

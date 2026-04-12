@@ -10,6 +10,7 @@ class UserController {
     this.loginUser = this.loginUser.bind(this);
     this.loginByToken = this.loginByToken.bind(this);
     this.show = this.show.bind(this);
+    this.showByUsername = this.showByUsername.bind(this);
     this.registerUser = this.registerUser.bind(this);
     this.registerAdmin = this.registerAdmin.bind(this);
     this.destroy = this.destroy.bind(this);
@@ -101,6 +102,19 @@ class UserController {
       res.json(user);
     } catch (err: any) {
       res.status(500).send({error: err.message});
+    }
+  }
+
+  async showByUsername(req: any, res: any) {
+    try {
+      const user = await this.userService.findByUsername(req.params.username);
+      res.json(user);
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
     }
   }
 
