@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   Box,
   Card,
@@ -10,7 +11,7 @@ import {
   Typography,
   useTheme
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
+import { alpha, Theme } from '@mui/material/styles';
 import { motion } from 'framer-motion';
 import {
   DatasheetEndpoint,
@@ -74,6 +75,25 @@ function formatWorkloadText(workload?: DatasheetEndpoint['workload']) {
   return `${workload.min} - ${workload.max} ${String(workload.unit).toLowerCase()}`;
 }
 
+function resolveMetricKeys(value?: string | string[]): string[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function formatMetricList(keys: string[], store?: Record<string, DatasheetMetric>): React.ReactNode {
+  if (!store || keys.length === 0) return 'Not defined';
+  if (keys.length === 1) return formatMetric(store[keys[0]]);
+  return (
+    <>
+      {keys.map((key, i) => (
+        <Box key={i} component="span" sx={{ display: 'block' }}>
+          {formatMetric(store[key])}
+        </Box>
+      ))}
+    </>
+  );
+}
+
 function formatUnifiedRoute(endpoint: string, alias?: string) {
   const normalizedEndpoint = endpoint.replace(/^\/+|\/+$/g, '');
   if (!alias) return normalizedEndpoint;
@@ -95,6 +115,31 @@ function getPlanColor(index: number, theme: any) {
   ];
   return colors[index % colors.length] || theme.palette.primary.main;
 }
+
+const SharedBadge = ({ level, theme }: { level: 'plan' | 'endpoint'; theme: Theme }) => (
+  <Box
+    component="span"
+    sx={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      px: 0.75,
+      py: 0.15,
+      borderRadius: 0.8,
+      fontSize: '0.58rem',
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+      border: '1px solid',
+      borderColor: alpha(level === 'plan' ? theme.palette.info.main : theme.palette.warning.main, 0.5),
+      color: level === 'plan' ? theme.palette.info.main : theme.palette.warning.main,
+      bgcolor: alpha(level === 'plan' ? theme.palette.info.main : theme.palette.warning.main, 0.08),
+      whiteSpace: 'nowrap',
+      verticalAlign: 'middle',
+    }}
+  >
+    SHARED: {level} level
+  </Box>
+);
 
 const MetricRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <Box
@@ -191,22 +236,22 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                       </Box>
                       
                       <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        {datasheet.plans[planKey].quota && (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {resolveMetricKeys(datasheet.plans[planKey].quota).map((key, i) => (
+                          <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'text.secondary' }} />
                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                              Quota: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatMetric(datasheet.capacity?.[datasheet.plans[planKey].quota])}</Box>
+                              Quota: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatMetric(datasheet.capacity?.[key])}</Box>
                             </Typography>
                           </Box>
-                        )}
-                        {datasheet.plans[planKey].rate && (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        ))}
+                        {resolveMetricKeys(datasheet.plans[planKey].rate).map((key, i) => (
+                          <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'text.secondary' }} />
                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                              Rate: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatMetric(datasheet.maxPower?.[datasheet.plans[planKey].rate])}</Box>
+                              Rate: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatMetric(datasheet.maxPower?.[key])}</Box>
                             </Typography>
                           </Box>
-                        )}
+                        ))}
                       </Box>
                     </Card>
                   </TableCell>
@@ -225,10 +270,12 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
               >
                 {planKeys.map((planKey, idx) => {
                   const plan = datasheet.plans[planKey];
-                  const endpointDef = plan?.endpoints?.[endpoint] as DatasheetEndpoint | undefined;
+                  const endpointExists = plan?.endpoints != null && endpoint in plan.endpoints;
+                  const rawEndpointDef = endpointExists ? plan.endpoints[endpoint] : undefined;
+                  const endpointDef = (rawEndpointDef ?? {}) as DatasheetEndpoint;
                   const planColor = getPlanColor(idx, theme);
 
-                  if (!endpointDef) {
+                  if (!endpointExists) {
                     return (
                       <TableCell key={planKey} sx={{ borderBottom: 'none', px: 0, py: 1 }}>
                         <Card elevation={0} sx={{ border: '1px dashed', borderColor: 'divider', bgcolor: 'transparent', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 80 }}>
@@ -238,8 +285,19 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                     );
                   }
 
+                  const endpointRateKeys = resolveMetricKeys(endpointDef.rate);
+                  const endpointQuotaKeys = resolveMetricKeys(endpointDef.quota);
+                  const planRateKeys = resolveMetricKeys(plan.rate);
+                  const planQuotaKeys = resolveMetricKeys(plan.quota);
+
+                  const effectiveRateKeys = endpointRateKeys.length > 0 ? endpointRateKeys : planRateKeys;
+                  const effectiveQuotaKeys = endpointQuotaKeys.length > 0 ? endpointQuotaKeys : planQuotaKeys;
+                  const rateSource: 'plan' | null = endpointRateKeys.length === 0 && planRateKeys.length > 0 ? 'plan' : null;
+                  const quotaSource: 'plan' | null = endpointQuotaKeys.length === 0 && planQuotaKeys.length > 0 ? 'plan' : null;
+
                   const aliases = extractAliases(endpointDef);
                   const hasAliases = aliases.length > 0;
+                  const hasEffectiveMetrics = effectiveRateKeys.length > 0 || effectiveQuotaKeys.length > 0 || endpointDef.workload != null;
 
                   return (
                     <TableCell key={planKey} sx={{ borderBottom: 'none', px: 0, py: 1, verticalAlign: 'top' }}>
@@ -262,7 +320,7 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                       >
                         {/* Subtle left accent bar */}
                         <Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, bgcolor: alpha(planColor, 0.6) }} />
-                        
+
                         <Box sx={{ p: 2.5, pl: 3 }}>
                           <Box sx={{ mb: 2 }}>
                             <Typography sx={{ display: 'inline-block', fontFamily: 'monospace', fontWeight: 600, fontSize: '0.8rem', color: planColor, bgcolor: alpha(planColor, 0.1), borderRadius: 1.5, px: 1.5, py: 0.5, wordBreak: 'break-all' }}>
@@ -270,13 +328,37 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                             </Typography>
                           </Box>
 
-                          {(endpointDef.rate || endpointDef.quota || endpointDef.workload) && (
+                          {hasEffectiveMetrics && (
                             <Box sx={{ display: 'flex', flexDirection: 'column', mb: hasAliases ? 2 : 0 }}>
-                              {endpointDef.rate && <MetricRow label="Rate Limit" value={formatMetric(datasheet.maxPower[endpointDef.rate])} />}
-                              {endpointDef.quota && <MetricRow label="Quota" value={formatMetric(datasheet.capacity[endpointDef.quota])} />}
+                              {effectiveRateKeys.length > 0 && (
+                                <MetricRow
+                                  label="Rate Limit"
+                                  value={
+                                    rateSource ? (
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                        <span>{formatMetricList(effectiveRateKeys, datasheet.maxPower)}</span>
+                                        <SharedBadge level={rateSource} theme={theme} />
+                                      </Box>
+                                    ) : formatMetricList(effectiveRateKeys, datasheet.maxPower)
+                                  }
+                                />
+                              )}
+                              {effectiveQuotaKeys.length > 0 && (
+                                <MetricRow
+                                  label="Quota"
+                                  value={
+                                    quotaSource ? (
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                        <span>{formatMetricList(effectiveQuotaKeys, datasheet.capacity)}</span>
+                                        <SharedBadge level={quotaSource} theme={theme} />
+                                      </Box>
+                                    ) : formatMetricList(effectiveQuotaKeys, datasheet.capacity)
+                                  }
+                                />
+                              )}
                               {endpointDef.workload && (
-                                <MetricRow 
-                                  label="Workload" 
+                                <MetricRow
+                                  label="Workload"
                                   value={
                                     <Box>
                                       {formatWorkloadText(endpointDef.workload)}
@@ -286,16 +368,30 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                                         </Typography>
                                       )}
                                     </Box>
-                                  } 
+                                  }
                                 />
                               )}
                             </Box>
                           )}
 
                           {hasAliases && (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: (endpointDef.rate || endpointDef.quota || endpointDef.workload) ? 2 : 0, borderTop: (endpointDef.rate || endpointDef.quota || endpointDef.workload) ? '1px dashed' : 'none', borderColor: 'divider' }}>
-                              {aliases.map(([aliasName, aliasValues], aliasIdx) => {
-                                const hasAliasMetrics = aliasValues.rate || aliasValues.quota || aliasValues.workload;
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: hasEffectiveMetrics ? 2 : 0, borderTop: hasEffectiveMetrics ? '1px dashed' : 'none', borderColor: 'divider' }}>
+                              {aliases.map(([aliasName, aliasValues]) => {
+                                const aliasRateKeys = resolveMetricKeys(aliasValues.rate);
+                                const aliasQuotaKeys = resolveMetricKeys(aliasValues.quota);
+
+                                const aliasEffectiveRateKeys = aliasRateKeys.length > 0 ? aliasRateKeys : effectiveRateKeys;
+                                const aliasEffectiveQuotaKeys = aliasQuotaKeys.length > 0 ? aliasQuotaKeys : effectiveQuotaKeys;
+                                const aliasRateSource: 'endpoint' | 'plan' | null =
+                                  aliasRateKeys.length > 0 ? null :
+                                  endpointRateKeys.length > 0 ? 'endpoint' :
+                                  planRateKeys.length > 0 ? 'plan' : null;
+                                const aliasQuotaSource: 'endpoint' | 'plan' | null =
+                                  aliasQuotaKeys.length > 0 ? null :
+                                  endpointQuotaKeys.length > 0 ? 'endpoint' :
+                                  planQuotaKeys.length > 0 ? 'plan' : null;
+
+                                const hasAliasMetrics = aliasEffectiveRateKeys.length > 0 || aliasEffectiveQuotaKeys.length > 0 || aliasValues.workload;
                                 return (
                                   <Box key={aliasName} sx={{ pl: 1.5, borderLeft: '2px solid', borderColor: alpha(planColor, 0.3) }}>
                                     <Box sx={{ mb: hasAliasMetrics ? 1.5 : 0 }}>
@@ -303,18 +399,38 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                                         {aliasName}
                                       </Typography>
                                     </Box>
-                                    
+
                                     {hasAliasMetrics && (
                                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                        {aliasValues.rate && (
-                                          <MetricRow label="Rate Limit" value={formatMetric(datasheet.maxPower[aliasValues.rate as string])} />
+                                        {aliasEffectiveRateKeys.length > 0 && (
+                                          <MetricRow
+                                            label="Rate Limit"
+                                            value={
+                                              aliasRateSource ? (
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                                  <span>{formatMetricList(aliasEffectiveRateKeys, datasheet.maxPower)}</span>
+                                                  <SharedBadge level={aliasRateSource} theme={theme} />
+                                                </Box>
+                                              ) : formatMetricList(aliasEffectiveRateKeys, datasheet.maxPower)
+                                            }
+                                          />
                                         )}
-                                        {aliasValues.quota && (
-                                          <MetricRow label="Quota" value={formatMetric(datasheet.capacity[aliasValues.quota as string])} />
+                                        {aliasEffectiveQuotaKeys.length > 0 && (
+                                          <MetricRow
+                                            label="Quota"
+                                            value={
+                                              aliasQuotaSource ? (
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                                  <span>{formatMetricList(aliasEffectiveQuotaKeys, datasheet.capacity)}</span>
+                                                  <SharedBadge level={aliasQuotaSource} theme={theme} />
+                                                </Box>
+                                              ) : formatMetricList(aliasEffectiveQuotaKeys, datasheet.capacity)
+                                            }
+                                          />
                                         )}
                                         {aliasValues.workload && (
-                                          <MetricRow 
-                                            label="Workload" 
+                                          <MetricRow
+                                            label="Workload"
                                             value={
                                               <Box>
                                                 {formatWorkloadText(aliasValues.workload)}
@@ -324,7 +440,7 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                                                   </Typography>
                                                 )}
                                               </Box>
-                                            } 
+                                            }
                                           />
                                         )}
                                       </Box>

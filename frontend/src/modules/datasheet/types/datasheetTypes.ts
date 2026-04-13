@@ -15,8 +15,8 @@ export type DatasheetMetric = {
 };
 
 export type DatasheetPlanAlias = {
-  rate?: string;
-  quota?: string;
+  rate?: string | string[];
+  quota?: string | string[];
   workload?: DatasheetWorkload;
 };
 
@@ -28,8 +28,8 @@ export type DatasheetWorkload = {
 };
 
 export type DatasheetEndpoint = {
-  quota?: string;
-  rate?: string;
+  quota?: string | string[];
+  rate?: string | string[];
   workload?: DatasheetWorkload;
 } & Record<string, unknown>;
 
@@ -42,8 +42,8 @@ export type DatasheetPlan = {
   price: number | string;
   period?: DatasheetPlanPeriod;
   billingPeriod?: string;
-  quota?: string;
-  rate?: string;
+  quota?: string | string[];
+  rate?: string | string[];
   endpoints: Record<string, DatasheetEndpoint>;
 };
 
