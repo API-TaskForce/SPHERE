@@ -1,6 +1,5 @@
 import { Helmet } from 'react-helmet';
 import { useEffect, useState } from 'react';
-import { Pricing, retrievePricingFromYaml } from 'pricing4ts';
 import DatasheetFileExplorer from '../../components/file-explorer';
 import { AnalyticsDataEntry } from '../../../../assets/data/analytics';
 import { usePathname } from '../../../core/hooks/usePathname';
@@ -62,7 +61,7 @@ export default function DatasheetCardPage() {
   const [fullDatasheetData, setFullDatasheetData] = useState<AnalyticsDataEntry[] | null>(null);
   const [datasheetData, setDatasheetData] = useState<AnalyticsDataEntry[] | null>(null);
   const [currentDatasheet, setCurrentDatasheet] = useState<AnalyticsDataEntry | null>(null);
-  const [datasheet, setDatasheet] = useState<Pricing | DatasheetModel | null>(null);
+  const [datasheet, setDatasheet] = useState<DatasheetModel | null>(null);
   const [datasheetError, setDatasheetError] = useState<string | null>(null);
   const [oldestDatasheetDate, setOldestDatasheetDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -169,17 +168,13 @@ export default function DatasheetCardPage() {
         if (!response.ok) throw new Error('Could not fetch datasheet YAML');
         const rawYaml = await response.text();
         try {
-          setDatasheet(retrievePricingFromYaml(rawYaml));
-        } catch {
-          try {
-            const YAMLModule = await import('yaml');
-            const parseYaml = (YAMLModule.parse as ((text: string) => Record<string, unknown>) | undefined) ||
-              (YAMLModule.default?.parse as ((text: string) => Record<string, unknown>) | undefined);
-            if (!parseYaml) throw new Error('YAML parser is not available');
-            setDatasheet(normalizeDatasheetShape(parseYaml(rawYaml)));
-          } catch (yamlError: unknown) {
-            setDatasheetError(`Could not parse datasheet: ${yamlError instanceof Error ? yamlError.message : String(yamlError)}`);
-          }
+          const YAMLModule = await import('yaml');
+          const parseYaml = (YAMLModule.parse as ((text: string) => Record<string, unknown>) | undefined) ||
+            (YAMLModule.default?.parse as ((text: string) => Record<string, unknown>) | undefined);
+          if (!parseYaml) throw new Error('YAML parser is not available');
+          setDatasheet(normalizeDatasheetShape(parseYaml(rawYaml)));
+        } catch (yamlError: unknown) {
+          setDatasheetError(`Could not parse datasheet: ${yamlError instanceof Error ? yamlError.message : String(yamlError)}`);
         }
       } catch (error: unknown) {
         setDatasheetError(error instanceof Error ? error.message : String(error));
@@ -294,10 +289,8 @@ export default function DatasheetCardPage() {
                   ? new Date(currentDatasheet.extractionDate).toLocaleDateString()
                   : 'unknown date'}.
               </p>
-              {datasheet && (datasheet as Record<string, unknown>).plans ? (
-                <DatasheetRenderer datasheet={datasheet as DatasheetModel} />
-              ) : datasheet ? (
-                <p>Pricing datasheet format detected</p>
+              {datasheet ? (
+                <DatasheetRenderer datasheet={datasheet} />
               ) : (
                 <p className="text-red-500">{datasheetError || 'Could not parse datasheet'}</p>
               )}
