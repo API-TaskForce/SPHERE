@@ -128,6 +128,15 @@ const loadFileRoutes = function (app: express.Application) {
     );
 
   app
+    .route(baseUrl + '/organizations/:organizationId/groups/:groupId/available-collections')
+    .get(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('manageGroupCollections', 'Group', 'groupId'),
+      groupController.listAvailableCollections
+    );
+
+  app
     .route(baseUrl + '/organizations/:organizationId/groups/:groupId/collections')
     .post(
       isLoggedIn,

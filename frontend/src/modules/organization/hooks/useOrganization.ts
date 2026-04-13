@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { OrganizationContext } from '../contexts/organizationContext';
 import { Organization, useOrganizationsApi } from '../api/organizationsApi';
 import { useAuth } from '../../auth/hooks/useAuth';
@@ -73,22 +73,22 @@ export const useOrgFetch = () => {
   const { activeOrganization } = useOrganization();
   const { fetchWithInterceptor, authUser } = useAuth();
 
-  const fetchWithOrgContext = (
-    url: RequestInfo | URL,
-    options?: RequestInit
-  ): Promise<Response> => {
-    const orgHeader = activeOrganization?.id
-      ? { 'X-Organization-Id': activeOrganization.id }
-      : {};
+  const fetchWithOrgContext = useCallback(
+    (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
+      const orgHeader = activeOrganization?.id
+        ? { 'X-Organization-Id': activeOrganization.id }
+        : {};
 
-    return fetchWithInterceptor(url, {
-      ...options,
-      headers: {
-        ...(options?.headers as Record<string, string>),
-        ...orgHeader,
-      },
-    });
-  };
+      return fetchWithInterceptor(url, {
+        ...options,
+        headers: {
+          ...(options?.headers as Record<string, string>),
+          ...orgHeader,
+        },
+      });
+    },
+    [activeOrganization?.id, fetchWithInterceptor]
+  );
 
   return { fetchWithOrgContext, authUser };
 };

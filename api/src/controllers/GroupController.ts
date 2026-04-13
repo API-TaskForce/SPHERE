@@ -17,6 +17,7 @@ class GroupController {
     this.updateMemberRole = this.updateMemberRole.bind(this);
     this.removeMember = this.removeMember.bind(this);
     this.listCollections = this.listCollections.bind(this);
+    this.listAvailableCollections = this.listAvailableCollections.bind(this);
     this.addCollection = this.addCollection.bind(this);
     this.updateCollectionAccess = this.updateCollectionAccess.bind(this);
     this.removeCollection = this.removeCollection.bind(this);
@@ -167,6 +168,25 @@ class GroupController {
       res.json(collections);
     } catch (err: any) {
       res.status(500).send({ error: err.message });
+    }
+  }
+
+  async listAvailableCollections(req: any, res: any) {
+    try {
+      const collections = await this.groupService.listAvailableCollections(
+        req.params.groupId,
+        req.params.organizationId
+      );
+      res.json(collections);
+    } catch (err: any) {
+      if (
+        err.message.toLowerCase().includes('not found') ||
+        err.message.toLowerCase().includes('does not belong')
+      ) {
+        res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
     }
   }
 

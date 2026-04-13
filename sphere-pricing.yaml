@@ -1,6 +1,6 @@
-saasName: sphere
+saasName: SPHERE
 syntaxVersion: "3.0"
-version: "2.0"
+version: "3.0"
 createdAt: "2026-04-02"
 currency: EUR
 
@@ -22,8 +22,8 @@ features:
       Gated by the maxPricings usage limit.
     valueType: BOOLEAN
     defaultValue: true
-    expression: subscriptionContext['pricings'] < pricingContext['usageLimits']['maxPricings']
-    serverExpression: subscriptionContext['pricings'] <= pricingContext['usageLimits']['maxPricings']
+    expression: subscriptionContext['maxPricings'] < pricingContext['usageLimits']['maxPricings']
+    serverExpression: subscriptionContext['maxPricings'] <= pricingContext['usageLimits']['maxPricings']
     type: DOMAIN
 
   pricingVersioning:
@@ -68,8 +68,8 @@ features:
       Gated by the maxCollections usage limit.
     valueType: BOOLEAN
     defaultValue: true
-    expression: subscriptionContext['collections'] < pricingContext['usageLimits']['maxCollections']
-    serverExpression: subscriptionContext['collections'] <= pricingContext['usageLimits']['maxCollections']
+    expression: subscriptionContext['maxCollections'] < pricingContext['usageLimits']['maxCollections']
+    serverExpression: subscriptionContext['maxCollections'] <= pricingContext['usageLimits']['maxCollections']
     type: DOMAIN
 
   bulkImport:
@@ -139,8 +139,8 @@ features:
       Gated by the maxOrgMembers usage limit.
     valueType: BOOLEAN
     defaultValue: true
-    expression: subscriptionContext['orgMembers'] < pricingContext['usageLimits']['maxOrgMembers']
-    serverExpression: subscriptionContext['orgMembers'] <= pricingContext['usageLimits']['maxOrgMembers']
+    expression: subscriptionContext['maxOrgMembers'] < pricingContext['usageLimits']['maxOrgMembers']
+    serverExpression: subscriptionContext['maxOrgMembers'] <= pricingContext['usageLimits']['maxOrgMembers']
     type: MANAGEMENT
 
   groupManagement:
@@ -159,8 +159,8 @@ features:
       Gated by the maxGroups usage limit.
     valueType: BOOLEAN
     defaultValue: false
-    expression: subscriptionContext['groups'] < pricingContext['usageLimits']['maxGroups']
-    serverExpression: subscriptionContext['groups'] <= pricingContext['usageLimits']['maxGroups']
+    expression: subscriptionContext['maxGroups'] < pricingContext['usageLimits']['maxGroups']
+    serverExpression: subscriptionContext['maxGroups'] <= pricingContext['usageLimits']['maxGroups']
     type: MANAGEMENT
 
   groupMembers:
@@ -169,8 +169,8 @@ features:
       Gated by the maxGroupMembers usage limit.
     valueType: BOOLEAN
     defaultValue: false
-    expression: subscriptionContext['groupMembers'] < pricingContext['usageLimits']['maxGroupMembers']
-    serverExpression: subscriptionContext['groupMembers'] <= pricingContext['usageLimits']['maxGroupMembers']
+    expression: subscriptionContext['maxGroupMembers'] < pricingContext['usageLimits']['maxGroupMembers']
+    serverExpression: subscriptionContext['maxGroupMembers'] <= pricingContext['usageLimits']['maxGroupMembers']
     type: MANAGEMENT
 
   sharedCollections:

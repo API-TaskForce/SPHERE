@@ -14,7 +14,8 @@ class GroupRepository extends RepositoryBase {
 
   async findAll(...args: any) {
     try {
-      return await GroupMongoose.find().lean({ virtuals: true });
+      const docs = await GroupMongoose.find().exec();
+      return docs.map(doc => doc.toObject({ getters: true, virtuals: true, versionKey: false }));
     } catch (err) {
       return [];
     }
@@ -22,9 +23,10 @@ class GroupRepository extends RepositoryBase {
 
   async findByOrganizationId(organizationId: string, ...args: any) {
     try {
-      return await GroupMongoose.find({
+      const docs = await GroupMongoose.find({
         _organizationId: new mongoose.Types.ObjectId(organizationId),
-      }).lean({ virtuals: true });
+      }).exec();
+      return docs.map(doc => doc.toObject({ getters: true, virtuals: true, versionKey: false }));
     } catch (err) {
       return [];
     }
@@ -32,9 +34,10 @@ class GroupRepository extends RepositoryBase {
 
   async findByParentGroupId(parentGroupId: string, ...args: any) {
     try {
-      return await GroupMongoose.find({
+      const docs = await GroupMongoose.find({
         _parentGroupId: new mongoose.Types.ObjectId(parentGroupId),
-      }).lean({ virtuals: true });
+      }).exec();
+      return docs.map(doc => doc.toObject({ getters: true, virtuals: true, versionKey: false }));
     } catch (err) {
       return [];
     }

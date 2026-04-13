@@ -3,18 +3,21 @@ import { GroupRepository } from '../types/repositories/GroupRepository';
 import { GroupMembershipRepository } from '../types/repositories/GroupMembershipRepository';
 import { GroupCollectionRepository } from '../types/repositories/GroupCollectionRepository';
 import { OrganizationMembershipRepository } from '../types/repositories/OrganizationMembershipRepository';
+import PricingCollectionRepository from '../repositories/mongoose/PricingCollectionRepository';
 
 class GroupService {
   private groupRepository: GroupRepository;
   private groupMembershipRepository: GroupMembershipRepository;
   private groupCollectionRepository: GroupCollectionRepository;
   private organizationMembershipRepository: OrganizationMembershipRepository;
+  private pricingCollectionRepository: PricingCollectionRepository;
 
   constructor() {
     this.groupRepository = container.resolve('groupRepository');
     this.groupMembershipRepository = container.resolve('groupMembershipRepository');
     this.groupCollectionRepository = container.resolve('groupCollectionRepository');
     this.organizationMembershipRepository = container.resolve('organizationMembershipRepository');
+    this.pricingCollectionRepository = container.resolve('pricingCollectionRepository');
   }
 
   // ── Group CRUD ──────────────────────────────────────────────────────────────
@@ -152,6 +155,30 @@ class GroupService {
     return await this.groupCollectionRepository.findByGroupId(groupId);
   }
 
+  async listAvailableCollections(groupId: string, organizationId: string) {
+    const group = await this.groupRepository.findById(groupId);
+    if (!group) {
+      throw new Error('Group not found');
+    }
+
+    if (group._organizationId.toString() !== organizationId) {
+      throw new Error('Group does not belong to the specified organization');
+    }
+
+    const [associatedCollections, organizationCollections] = await Promise.all([
+      this.groupCollectionRepository.findByGroupId(groupId),
+      this.pricingCollectionRepository.findByOrganizationId(organizationId),
+    ]);
+
+    const associatedIds = new Set(
+      associatedCollections.map((collection: any) => collection._pricingCollectionId?.toString())
+    );
+
+    return organizationCollections.filter(
+      (collection: any) => !associatedIds.has(collection.id)
+    );
+  }
+
   /**
    * Associates a pricing collection with a group.
    * Validates that the group belongs to the given organization.
@@ -160,7 +187,7 @@ class GroupService {
     groupId: string,
     pricingCollectionId: string,
     organizationId: string,
-    accessRole: 'editor' | 'viewer'
+    accessRole?: 'editor' | 'viewer' | null
   ) {
     const group = await this.groupRepository.findById(groupId);
     if (!group) {
@@ -183,14 +210,14 @@ class GroupService {
       _groupId: groupId,
       _pricingCollectionId: pricingCollectionId,
       _organizationId: organizationId,
-      accessRole,
+      accessRole: accessRole ?? null,
     });
   }
 
   async updateCollectionAccess(
     groupId: string,
     pricingCollectionId: string,
-    accessRole: 'editor' | 'viewer'
+    accessRole: 'editor' | 'viewer' | null
   ) {
     const gc = await this.groupCollectionRepository.updateByGroupAndCollection(
       groupId,

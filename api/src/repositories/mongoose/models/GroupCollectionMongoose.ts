@@ -5,7 +5,7 @@ const groupCollectionSchema = new Schema(
     _groupId: { type: Schema.Types.ObjectId, ref: 'Group', required: true },
     _pricingCollectionId: { type: Schema.Types.ObjectId, ref: 'PricingCollection', required: true },
     _organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
-    accessRole: { type: String, required: true, enum: ['editor', 'viewer'] },
+    accessRole: { type: String, required: false, default: null, enum: ['editor', 'viewer', null] },
     createdAt: { type: Date, required: true, default: Date.now },
   },
   {

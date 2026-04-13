@@ -3,9 +3,10 @@ import process from 'node:process';
 
 const SPACE_URL = process.env.SPACE_URL || 'http://localhost:5403/';
 const SPACE_API_KEY = process.env.SPACE_API_KEY || '';
-const SPACE_SERVICE_NAME = process.env.SPACE_SERVICE_NAME || 'sphere';
+const SPACE_SERVICE_NAME = process.env.SPACE_SERVICE_NAME || 'SPHERE';
 const SPACE_SERVICE_VERSION = process.env.SPACE_SERVICE_VERSION || '2.0';
 const FREE_PLAN = 'FREE';
+const ENTERPRISE_PLAN = 'ENTERPRISE';
 
 class SpaceService {
 
@@ -44,7 +45,14 @@ class SpaceService {
     expectedConsumption?: number
   ): Promise<{ eval: boolean; used?: number; limit?: number }> {
     const featureId = `${SPACE_SERVICE_NAME}-${featureName}`;
-    return this.spaceClient.features.evaluate(organizationId, featureId, expectedConsumption);
+    let consumptionBody: Record<string, number> = {};
+
+    if (expectedConsumption !== undefined) {
+      const usageLimitName = `max${featureName.charAt(0).toUpperCase()}${featureName.slice(1)}`;
+      consumptionBody = { [`${SPACE_SERVICE_NAME}-${usageLimitName}`]: expectedConsumption };
+    }
+
+    return this.spaceClient.features.evaluate(organizationId, featureId, consumptionBody);
   }
 
   /**
@@ -86,6 +94,64 @@ class SpaceService {
   }
 
   /**
+   * Ensures a contract exists in SPACE for the given organization under
+   * the requested plan. If the contract already exists, it is updated.
+   * Errors are swallowed to avoid blocking local seed/bootstrap flows.
+   */
+  async ensureContract(
+    organizationId: string,
+    organizationName: string,
+    plan: string,
+    addOns: Record<string, number> = {}
+  ): Promise<void> {
+    let contractExists = false;
+
+    try {
+      await this.spaceClient.contracts.getContract(organizationId);
+      contractExists = true;
+    } catch (error: any) {
+      const isNotFound =
+        error?.message?.includes('not found') ||
+        error?.response?.status === 404 ||
+        error?.status === 404;
+
+      if (!isNotFound) {
+        console.error(
+          `[SpaceService] Error checking contract for organization ${organizationId}:`,
+          error?.message
+        );
+      }
+    }
+
+    if (contractExists) {
+      try {
+        await this.updateContract(organizationId, plan, addOns);
+        return;
+      } catch (updateError: any) {
+        console.error(
+          `[SpaceService] Error updating ${plan} contract for organization ${organizationId}:`,
+          updateError?.message
+        );
+      }
+    }
+
+    try {
+      await this.spaceClient.contracts.addContract({
+        userContact: { userId: organizationId, username: organizationName },
+        billingPeriod: { autoRenew: true, renewalDays: 30 },
+        contractedServices: { [SPACE_SERVICE_NAME]: SPACE_SERVICE_VERSION },
+        subscriptionPlans: { [SPACE_SERVICE_NAME]: plan },
+        subscriptionAddOns: { [SPACE_SERVICE_NAME]: addOns },
+      });
+    } catch (createError: any) {
+      console.error(
+        `[SpaceService] Error creating ${plan} contract for organization ${organizationId}:`,
+        createError?.message
+      );
+    }
+  }
+
+  /**
    * Permanently removes the organization's contract from SPACE.
    * Use this when an organization is deleted.
    *
@@ -115,33 +181,15 @@ class SpaceService {
    * Errors are swallowed to avoid blocking organization creation.
    */
   async ensureFreeContract(organizationId: string, organizationName: string): Promise<void> {
-    try {
-      await this.spaceClient.contracts.getContract(organizationId);
-      // Contract already exists — nothing to do
-    } catch (error: any) {
-      const isNotFound =
-        error?.message?.includes('not found') ||
-        error?.response?.status === 404 ||
-        error?.status === 404;
+    await this.ensureContract(organizationId, organizationName, FREE_PLAN);
+  }
 
-      if (!isNotFound) {
-        console.error(`[SpaceService] Error checking contract for organization ${organizationId}:`, error?.message);
-        return;
-      }
-
-      // No contract found — create a FREE one
-      try {
-        await this.spaceClient.contracts.addContract({
-          userContact: { userId: organizationId, username: organizationName },
-          billingPeriod: { autoRenew: true, renewalDays: 30 },
-          contractedServices: { [SPACE_SERVICE_NAME]: SPACE_SERVICE_VERSION },
-          subscriptionPlans: { [SPACE_SERVICE_NAME]: FREE_PLAN },
-          subscriptionAddOns: {},
-        });
-      } catch (createError: any) {
-        console.error(`[SpaceService] Error creating FREE contract for organization ${organizationId}:`, createError?.message);
-      }
-    }
+  /**
+   * Helper for seeded/demo organizations that need all SPACE-gated
+   * functionality enabled during development and testing.
+   */
+  async ensureEnterpriseContract(organizationId: string, organizationName: string): Promise<void> {
+    await this.ensureContract(organizationId, organizationName, ENTERPRISE_PLAN);
   }
 }
 
