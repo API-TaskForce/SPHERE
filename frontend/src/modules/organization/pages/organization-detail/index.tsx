@@ -819,6 +819,14 @@ export default function OrganizationDetailPage() {
                   <p className="mt-0.5 text-xs text-sphere-grey-400">{group.description}</p>
                 )}
               </div>
+              <button
+                type="button"
+                onClick={() => router.push(`/me/organizations/${org.name}/groups/${group.id}`)}
+                className="flex items-center gap-1 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-xs font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+              >
+                Open
+                <Iconify icon="mdi:chevron-right" width={16} />
+              </button>
             </div>
           ))}
         </div>

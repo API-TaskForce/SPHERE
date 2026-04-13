@@ -27,6 +27,7 @@ import OrganizationsListPage from '../modules/organization/pages/organizations-l
 import CreateOrganizationPage from '../modules/organization/pages/create-organization';
 import OrganizationDetailPage from '../modules/organization/pages/organization-detail';
 import OrganizationJoinPage from '../modules/organization/pages/organization-join';
+import GroupDetailPage from '../modules/organization/pages/group-detail';
 
 
 export default function Router() {
@@ -55,9 +56,20 @@ export default function Router() {
         { element: <CollectionCardPage />, path: "/pricings/collections/:ownerId/:collectionName" },
         { element: <MyPricingsPage />, path: "/me/pricings" },
         { element: <OrganizationsListPage />, path: "/me/organizations" },
-        { element: <OrganizationDetailPage />, path: "/me/organizations/:orgName" },
         { element: <CreateOrganizationPage />, path: "/organizations/new" },
         { element: <OrganizationJoinPage />, path: "/organizations/join/:code" },
+        {
+          path: "/me/organizations/:orgName",
+          element: (
+            <OrgScopeProvider>
+              <Outlet />
+            </OrgScopeProvider>
+          ),
+          children: [
+            { element: <OrganizationDetailPage />, index: true },
+            { element: <GroupDetailPage />, path: "groups/:groupId" },
+          ],
+        },
         {
           path: "/orgs/:orgName",
           element: (

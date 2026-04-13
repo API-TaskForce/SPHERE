@@ -221,6 +221,50 @@ class PricingCollectionRepository extends RepositoryBase {
     }
   }
 
+  async findByOrganizationId(organizationId: string, ...args: any) {
+    try {
+      const collections = await PricingCollectionMongoose.aggregate([
+        {
+          $match: {
+            _organizationId: new mongoose.Types.ObjectId(organizationId),
+          },
+        },
+        ...addNumberOfPricingsAggregator(),
+        ...addOwnerToCollectionAggregator(),
+        {
+          $addFields: {
+            id: { $toString: '$_id' },
+          },
+        },
+        {
+          $project: {
+            id: 1,
+            _id: 0,
+            owner: {
+              username: 1,
+              avatar: 1,
+              id: { $toString: '$owner._id' },
+            },
+            name: 1,
+            description: 1,
+            private: 1,
+            numberOfPricings: 1,
+          },
+        },
+        {
+          $sort: {
+            name: 1,
+          },
+        },
+      ]);
+
+      collections.forEach((c: any) => processFileUris(c.owner, ['avatar']));
+      return collections;
+    } catch (err) {
+      return [];
+    }
+  }
+
   async findByNameAndUserId(name: string, userId: string, organizationId?: string, ...args: any) {
     try {
       const match: any = {
