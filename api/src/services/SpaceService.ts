@@ -44,7 +44,14 @@ class SpaceService {
     expectedConsumption?: number
   ): Promise<{ eval: boolean; used?: number; limit?: number }> {
     const featureId = `${SPACE_SERVICE_NAME}-${featureName}`;
-    return this.spaceClient.features.evaluate(organizationId, featureId, expectedConsumption);
+    let consumptionBody: Record<string, number> = {};
+
+    if (expectedConsumption !== undefined) {
+      const usageLimitName = `max${featureName.charAt(0).toUpperCase()}${featureName.slice(1)}`;
+      consumptionBody = { [`${SPACE_SERVICE_NAME}-${usageLimitName}`]: expectedConsumption };
+    }
+
+    return this.spaceClient.features.evaluate(organizationId, featureId, consumptionBody);
   }
 
   /**
