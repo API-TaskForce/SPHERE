@@ -18,7 +18,7 @@ class GroupCollectionRepository extends RepositoryBase {
         { $match: { _groupId: new mongoose.Types.ObjectId(groupId) } },
         {
           $lookup: {
-            from: 'pricingcollections',
+            from: 'pricingCollections',
             localField: '_pricingCollectionId',
             foreignField: '_id',
             as: 'pricingCollection',
@@ -29,6 +29,7 @@ class GroupCollectionRepository extends RepositoryBase {
           $addFields: {
             id: { $toString: '$_id' },
             'pricingCollection.id': { $toString: '$pricingCollection._id' },
+            'pricingCollection.ownerId': { $toString: '$pricingCollection._ownerId' },
           },
         },
         {
@@ -40,7 +41,7 @@ class GroupCollectionRepository extends RepositoryBase {
             _organizationId: 1,
             accessRole: 1,
             createdAt: 1,
-            pricingCollection: { id: 1, name: 1, description: 1 },
+            pricingCollection: { id: 1, name: 1, description: 1, ownerId: 1 },
           },
         },
       ]);

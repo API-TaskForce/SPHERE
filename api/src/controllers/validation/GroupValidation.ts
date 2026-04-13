@@ -70,16 +70,14 @@ const addCollection = [
     .isString()
     .withMessage('The pricingCollectionId field must be a string'),
   check('accessRole')
-    .exists()
-    .withMessage('An accessRole must be provided')
+    .optional({ nullable: true })
     .isIn(['editor', 'viewer'])
     .withMessage('The accessRole must be one of: editor, viewer'),
 ];
 
 const updateCollectionAccess = [
   check('accessRole')
-    .exists()
-    .withMessage('An accessRole must be provided')
+    .optional({ nullable: true })
     .isIn(['editor', 'viewer'])
     .withMessage('The accessRole must be one of: editor, viewer'),
 ];
