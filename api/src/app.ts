@@ -6,6 +6,7 @@ import type { Server } from "http";
 import type { AddressInfo } from "net";
 import { disconnectMongoose, initMongoose } from "./config/mongoose";
 import { seedDatabase } from "./database/seeders/mongo/seeder";
+import { provisionEnterpriseContractsForSeededOrgs } from "./database/seeders/mongo/provision-space-contracts";
 import { initRedis } from "./config/redis";
 import container from "./config/container";
 
@@ -49,20 +50,6 @@ const initializeServer = async (): Promise<{
   return { server, app };
 };
 
-const provisionSpaceContractsForSeededOrgs = async () => {
-  try {
-    const organizationRepository = container.resolve('organizationRepository');
-    const spaceService = container.resolve('spaceService');
-    const orgs = await organizationRepository.findAll();
-    await Promise.all(
-      orgs.map((org: any) => spaceService.ensureFreeContract(org.id, org.name))
-    );
-    console.log(`  ${green}➜${reset}  ${bold}SPACE:${reset}   contracts provisioned for ${orgs.length} organizations`);
-  } catch (err) {
-    console.error('Failed to provision SPACE contracts for seeded orgs:', err);
-  }
-};
-
 const initializeDatabase = async () => {
   let connection;
   try {
@@ -71,7 +58,8 @@ const initializeDatabase = async () => {
         connection = await initMongoose();
         if (process.env.ENVIRONMENT === "development") {
           await seedDatabase();
-          await provisionSpaceContractsForSeededOrgs();
+          const provisionedOrgs = await provisionEnterpriseContractsForSeededOrgs();
+          console.log(`  ${green}➜${reset}  ${bold}SPACE:${reset}   ENTERPRISE contracts provisioned for ${provisionedOrgs} organizations`);
         }
         break
       default:

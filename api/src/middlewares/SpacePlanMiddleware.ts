@@ -40,7 +40,29 @@ const checkSpacePlan = (featureName: string, expectedConsumption?: number) =>
 
     try {
       const spaceService = container.resolve('spaceService');
-      const result = await spaceService.evaluateFeature(organizationId, featureName, expectedConsumption);
+      let result = await spaceService.evaluateFeature(
+        organizationId,
+        featureName,
+        expectedConsumption
+      );
+
+      // In local development, seeded organizations are expected to have unrestricted
+      // access. If a stale FREE/PRO contract is still present in SPACE, repair it
+      // once on-demand and re-evaluate the feature before denying the request.
+      if (!result.eval && process.env.ENVIRONMENT === 'development') {
+        try {
+          const organizationService = container.resolve('organizationService');
+          const organization = await organizationService.show(organizationId);
+          await spaceService.ensureEnterpriseContract(organizationId, organization.name);
+          result = await spaceService.evaluateFeature(
+            organizationId,
+            featureName,
+            expectedConsumption
+          );
+        } catch {
+          // If the repair attempt fails, fall through and return the original denial shape.
+        }
+      }
 
       if (!result.eval) {
         return res.status(403).json({

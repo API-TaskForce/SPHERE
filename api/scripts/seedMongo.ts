@@ -1,3 +1,5 @@
 import {seedDatabase} from '../src/database/seeders/mongo/seeder';
+import { provisionEnterpriseContractsForSeededOrgs } from '../src/database/seeders/mongo/provision-space-contracts';
 
-seedDatabase();
+await seedDatabase();
+await provisionEnterpriseContractsForSeededOrgs();
