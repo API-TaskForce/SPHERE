@@ -1,23 +1,10 @@
-import { Box, styled } from '@mui/material';
 import { Helmet } from 'react-helmet';
 import { useEffect, useState } from 'react';
 import SearchBar from '../../../pricing/components/search-bar';
-import { flex } from '../../../core/theme/css';
-import { grey } from '../../../core/theme/palette';
 import PricingsPagination from '../../../pricing/components/pricings-pagination';
 import PricingsListContainer from '../../../pricing/components/pricings-list-container';
 import DatasheetListCard from '../../components/datasheet-list-card';
 import { useDatasheetsApi } from '../../api/datasheetsApi';
-
-export const DatasheetsGrid = styled(Box)(() => ({
-  display: 'flex',
-  flexWrap: 'wrap',
-  width: '100%',
-  justifyContent: 'space-evenly',
-  gap: '3rem',
-  marginTop: '50px',
-  padding: '0 10px',
-}));
 
 export type DatasheetEntry = {
   name: string;
@@ -36,10 +23,7 @@ export type DatasheetEntry = {
 export type FilterValues = {
   max: number;
   min: number;
-  data: {
-    value: string;
-    count: number;
-  }[];
+  data: { value: string; count: number }[];
 };
 
 export default function DatasheetListPage() {
@@ -61,15 +45,10 @@ export default function DatasheetListPage() {
     getDatsheets({ ...filters, limit, offset })
       .then(data => {
         setDatasheetsList(data.datasheets || []);
-        if (typeof data.total === 'number') {
-          setTotalCount(data.total);
-        } else if (Array.isArray(data.datasheets)) {
-          setTotalCount(offset + data.datasheets.length);
-        }
+        if (typeof data.total === 'number') setTotalCount(data.total);
+        else if (Array.isArray(data.datasheets)) setTotalCount(offset + data.datasheets.length);
       })
-      .catch(error => {
-        console.error('Error:', error);
-      });
+      .catch(error => console.error('Error:', error));
   }, [textFilterValue, filterValues, limit, offset, getDatsheets]);
 
   return (
@@ -77,41 +56,16 @@ export default function DatasheetListPage() {
       <Helmet>
         <title> SPHERE - Datasheets </title>
       </Helmet>
-      <Box
-        sx={{
-          ...flex({}),
-          width: '100vw',
-          maxWidth: '2000px',
-          height: '100%',
-        }}
-      >
-        <Box
-          component="div"
-          sx={{
-            ...flex({ direction: 'column', justify: 'start' }),
-            maxWidth: '600px',
-            height: '100%',
-            margin: 'auto',
-            backgroundColor: grey[200],
-            borderRight: '1px solid',
-            borderRightColor: grey[300],
-          }}
-        >
-          <Box component="div" width="20vw"></Box>
-        </Box>
-        <Box
-          component="div"
-          sx={{
-            ...flex({ direction: 'column' }),
-            marginTop: '50px',
-            flexGrow: 1,
-          }}
-        >
+      <div className="flex w-screen max-w-[2000px] h-full items-center justify-center">
+        <div className="flex flex-col items-center justify-start max-w-[600px] h-full m-auto bg-sphere-grey-200 border-r border-sphere-grey-300">
+          <div className="w-[20vw]" />
+        </div>
+        <div className="flex flex-col items-center justify-center mt-[50px] flex-1">
           <SearchBar setTextFilterValue={setTextFilterValue} />
           <PricingsListContainer>
-            <DatasheetsGrid sx={{ marginBottom: '50px' }}>
+            <div className="flex flex-wrap w-full justify-evenly gap-12 mt-[50px] px-[10px] mb-[50px]">
               {datasheetsList.length > 0 ? (
-                Object.values(datasheetsList).map(datasheet => (
+                datasheetsList.map(datasheet => (
                   <DatasheetListCard
                     key={`datasheet-${datasheet.owner}-${datasheet.collectionName}-${datasheet.name}`}
                     name={datasheet.name}
@@ -120,10 +74,9 @@ export default function DatasheetListPage() {
                   />
                 ))
               ) : (
-                <Box>No datasheets found</Box>
+                <div>No datasheets found</div>
               )}
-            </DatasheetsGrid>
-
+            </div>
             <PricingsPagination
               limit={limit}
               offset={offset}
@@ -134,8 +87,8 @@ export default function DatasheetListPage() {
               }}
             />
           </PricingsListContainer>
-        </Box>
-      </Box>
+        </div>
+      </div>
     </>
   );
 }

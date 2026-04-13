@@ -1,6 +1,5 @@
 import { Helmet } from 'react-helmet';
 import { useEffect, useState } from 'react';
-import { Box, Container, Tab, Tabs, TextField, Typography } from '@mui/material';
 import { Pricing, retrievePricingFromYaml } from 'pricing4ts';
 import DatasheetFileExplorer from '../../components/file-explorer';
 import { AnalyticsDataEntry } from '../../../../assets/data/analytics';
@@ -34,50 +33,26 @@ function resolveDatasheetYamlUrl(yamlPath: string) {
         parsedUrl.pathname = parsedUrl.pathname.replace('/public/', '/');
       }
       return parsedUrl.toString();
-    } catch {
-      return yamlPath;
-    }
+    } catch { return yamlPath; }
   }
-
   const normalizedYamlPath = yamlPath.startsWith('/public/')
     ? yamlPath.replace('/public/', '/')
-    : yamlPath.startsWith('public/')
-    ? yamlPath.replace('public/', '')
-    : yamlPath;
-
-  if (normalizedYamlPath.startsWith('/')) {
-    return `${import.meta.env.VITE_API_URL}${normalizedYamlPath}`;
-  }
-
+    : yamlPath.startsWith('public/') ? yamlPath.replace('public/', '') : yamlPath;
+  if (normalizedYamlPath.startsWith('/')) return `${import.meta.env.VITE_API_URL}${normalizedYamlPath}`;
   return `${import.meta.env.VITE_API_URL}/${normalizedYamlPath}`;
 }
 
 function normalizeDatasheetShape(parsedYaml: Record<string, unknown>): DatasheetModel {
   return {
-    saasName:
-      (parsedYaml.saasName as string | undefined) ||
-      (parsedYaml.associated_saas as string | undefined) ||
-      'Unknown SaaS',
+    saasName: (parsedYaml.saasName as string | undefined) || (parsedYaml.associated_saas as string | undefined) || 'Unknown SaaS',
     type: (parsedYaml.type as string | undefined) || 'partial_saas',
-    sourceUrl:
-      (parsedYaml.sourceUrl as string | undefined) ||
-      (parsedYaml.source_url as string | undefined) ||
-      (parsedYaml.url as string | undefined) ||
-      '',
-    syntaxVersion:
-      (parsedYaml.syntaxVersion as string | undefined) ||
-      (parsedYaml.syntax_version as string | undefined) ||
-      '',
+    sourceUrl: (parsedYaml.sourceUrl as string | undefined) || (parsedYaml.source_url as string | undefined) || (parsedYaml.url as string | undefined) || '',
+    syntaxVersion: (parsedYaml.syntaxVersion as string | undefined) || (parsedYaml.syntax_version as string | undefined) || '',
     date: (parsedYaml.date as string | undefined) || '',
     currency: parsedYaml.currency as string | undefined,
-    consumptionUnits:
-      (parsedYaml.consumptionUnits as string[] | undefined) ||
-      (parsedYaml.consumption_units as string[] | undefined),
+    consumptionUnits: (parsedYaml.consumptionUnits as string[] | undefined) || (parsedYaml.consumption_units as string[] | undefined),
     capacity: (parsedYaml.capacity as Record<string, unknown>) || {},
-    maxPower:
-      (parsedYaml.maxPower as Record<string, unknown>) ||
-      (parsedYaml.max_power as Record<string, unknown>) ||
-      {},
+    maxPower: (parsedYaml.maxPower as Record<string, unknown>) || (parsedYaml.max_power as Record<string, unknown>) || {},
     plans: (parsedYaml.plans as Record<string, unknown>) || {},
   } as DatasheetModel;
 }
@@ -103,31 +78,22 @@ export default function DatasheetCardPage() {
       try {
         setLoading(true);
         const collectionName = queryParams.get('collectionName');
-        const collectionQuery =
-          collectionName && collectionName !== 'undefined'
-            ? `?collectionName=${encodeURIComponent(collectionName)}`
-            : '';
+        const collectionQuery = collectionName && collectionName !== 'undefined'
+          ? `?collectionName=${encodeURIComponent(collectionName)}` : '';
 
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/datasheets/${datasheetOwner}/${datasheetName}${collectionQuery}`
         );
-        
-        if (!response.ok) {
-          throw new Error('Datasheet not found');
-        }
+        if (!response.ok) throw new Error('Datasheet not found');
 
         const data = (await response.json()) as DatasheetResponse;
-        
         if (data.versions && data.versions.length > 0) {
           const transformedVersions = data.versions.map((v, idx) => {
             const apiAnalytics = v.analytics as Record<string, unknown> | undefined;
-            const entry = {
+            return {
               id: v._id || `${datasheetName}-v${idx}`,
               name: data.name,
-              owner: {
-                id: v.owner || 'unknown',
-                username: datasheetOwner,
-              },
+              owner: { id: v.owner || 'unknown', username: datasheetOwner },
               collectionName: v.collectionName || '',
               private: v.private || false,
               _collectionId: v._collectionId || '',
@@ -171,227 +137,174 @@ export default function DatasheetCardPage() {
                 minSubscriptionPrice: (apiAnalytics?.minSubscriptionPrice as number) || 0,
                 maxSubscriptionPrice: (apiAnalytics?.maxSubscriptionPrice as number) || 0,
               },
-            };
-            return entry as AnalyticsDataEntry;
+            } as AnalyticsDataEntry;
           });
 
-          const latestVersion = transformedVersions[0];
-          const oldestVersion = transformedVersions[transformedVersions.length - 1];
-          
           setFullDatasheetData(transformedVersions);
           setDatasheetData(transformedVersions);
-          setCurrentDatasheet(latestVersion);
-          setOldestDatasheetDate(oldestVersion.extractionDate);
+          setCurrentDatasheet(transformedVersions[0]);
+          setOldestDatasheetDate(transformedVersions[transformedVersions.length - 1].extractionDate);
         } else {
           throw new Error('No datasheet versions found');
         }
       } catch (error: unknown) {
-        const errorMsg = error instanceof Error ? error.message : 'Error loading datasheet';
-        customAlert(errorMsg);
+        customAlert(error instanceof Error ? error.message : 'Error loading datasheet');
         setFullDatasheetData([]);
         setDatasheetData([]);
       } finally {
         setLoading(false);
       }
     };
-
     fetchDatasheet();
   }, [datasheetName, datasheetOwner, queryParams]);
 
   useEffect(() => {
-    if (!currentDatasheet) {
-      return;
-    }
-
+    if (!currentDatasheet) return;
     const fetchYaml = async () => {
       setDatasheet(null);
       setDatasheetError(null);
-
       try {
         const yamlUrl = resolveDatasheetYamlUrl(currentDatasheet.yaml);
         const response = await fetch(yamlUrl);
-        
-        if (!response.ok) {
-          throw new Error('Could not fetch datasheet YAML');
-        }
-
+        if (!response.ok) throw new Error('Could not fetch datasheet YAML');
         const rawYaml = await response.text();
-
         try {
-          const parsed = retrievePricingFromYaml(rawYaml);
-          setDatasheet(parsed);
+          setDatasheet(retrievePricingFromYaml(rawYaml));
         } catch {
           try {
             const YAMLModule = await import('yaml');
-            const parseYaml =
-              (YAMLModule.parse as ((text: string) => Record<string, unknown>) | undefined) ||
-              (YAMLModule.default?.parse as
-                | ((text: string) => Record<string, unknown>)
-                | undefined);
-
-            if (!parseYaml) {
-              throw new Error('YAML parser is not available');
-            }
-
-            const parsedYaml = parseYaml(rawYaml);
-            setDatasheet(normalizeDatasheetShape(parsedYaml));
+            const parseYaml = (YAMLModule.parse as ((text: string) => Record<string, unknown>) | undefined) ||
+              (YAMLModule.default?.parse as ((text: string) => Record<string, unknown>) | undefined);
+            if (!parseYaml) throw new Error('YAML parser is not available');
+            setDatasheet(normalizeDatasheetShape(parseYaml(rawYaml)));
           } catch (yamlError: unknown) {
-            const err = yamlError instanceof Error ? yamlError.message : String(yamlError);
-            setDatasheetError(`Could not parse datasheet: ${err}`);
+            setDatasheetError(`Could not parse datasheet: ${yamlError instanceof Error ? yamlError.message : String(yamlError)}`);
           }
         }
       } catch (error: unknown) {
-        const err = error instanceof Error ? error.message : String(error);
-        setDatasheetError(err);
+        setDatasheetError(error instanceof Error ? error.message : String(error));
       }
     };
-
     fetchYaml();
   }, [currentDatasheet]);
 
   const handleInputDate = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newData = fullDatasheetData?.filter(
-      entry => new Date(entry.extractionDate) >= new Date(e.target.value)
-    );
-
-    if (newData) {
-      setDatasheetData(newData);
-    } else {
-      setDatasheetData([]);
-    }
+    setDatasheetData(fullDatasheetData?.filter(entry => new Date(entry.extractionDate) >= new Date(e.target.value)) || []);
   };
-
   const handleOutputDate = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newData = fullDatasheetData?.filter(
-      entry => new Date(entry.extractionDate) <= new Date(e.target.value)
-    );
-
-    if (newData) {
-      setDatasheetData(newData);
-    } else {
-      setDatasheetData([]);
-    }
+    setDatasheetData(fullDatasheetData?.filter(entry => new Date(entry.extractionDate) <= new Date(e.target.value)) || []);
+  };
+  const handleVersionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = datasheetData?.find(entry => entry.yaml === e.target.value);
+    if (selected) setCurrentDatasheet(selected);
   };
 
-  const handleVersionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedVersion = datasheetData?.find(entry => entry.yaml === e.target.value);
-    if (selectedVersion) {
-      setCurrentDatasheet(selectedVersion);
-    }
-  };
+  const datasheetNameDisplay = ((datasheet as Record<string, unknown> | undefined)?.saasName as string) || datasheetName;
 
   if (loading) {
     return (
-      <Container maxWidth="xl">
-        <Box sx={{ my: 4 }}>
-          <Typography>Loading datasheet...</Typography>
-        </Box>
-      </Container>
+      <div className="max-w-[1536px] mx-auto px-4">
+        <div className="my-8">
+          <p>Loading datasheet...</p>
+        </div>
+      </div>
     );
   }
-
-  const datasheetNameDisplay = ((datasheet as Record<string, unknown> | undefined)?.saasName as string) || datasheetName;
 
   return (
     <>
       <Helmet>
         <title>{`SPHERE - ${datasheetNameDisplay} Datasheet`}</title>
       </Helmet>
+      <div className="max-w-[1536px] mx-auto px-4">
+        <div className="my-8">
+          <div className="flex justify-between items-center">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-4 mb-4">
+                <h2 className="text-2xl tracking-wide">{datasheetNameDisplay}</h2>
+              </div>
+              <div className="border-b border-[#DFE3E8]">
+                <div className="flex">
+                  {['Datasheet card', 'Files and versions'].map((label, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setTabValue(i)}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        tabValue === i
+                          ? 'border-sphere-primary-600 text-sphere-primary-600'
+                          : 'border-transparent text-[#637381] hover:text-[#212B36]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
 
-      <Container maxWidth="xl">
-        <Box sx={{ my: 4 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Box display="flex" flexDirection="column">
-              <Box display="flex" alignItems="center" gap={2} mb={2}>
-                <Typography variant="h5" letterSpacing={1}>
-                  {datasheetNameDisplay}
-                </Typography>
-              </Box>
-
-              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                <Tabs value={tabValue} onChange={(_event, value) => setTabValue(value)}>
-                  <Tab label="Datasheet card" />
-                  <Tab label="Files and versions" />
-                </Tabs>
-              </Box>
-            </Box>
-
-            <Box display="flex" flexDirection="column" gap={2}>
-              <Box display="flex" gap={2}>
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-4">
                 {oldestDatasheetDate && (
                   <>
-                    <TextField
-                      label="Start Date"
-                      type="date"
-                      fullWidth
-                      defaultValue={new Date(oldestDatasheetDate).toISOString().split('T')[0]}
-                      slotProps={{ inputLabel: { shrink: true } }}
-                      onChange={handleInputDate}
-                    />
-                    <TextField
-                      label="End Date"
-                      type="date"
-                      fullWidth
-                      slotProps={{ inputLabel: { shrink: true } }}
-                      onChange={handleOutputDate}
-                    />
+                    <div className="flex flex-col">
+                      <label className="text-xs text-[#637381] mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        defaultValue={new Date(oldestDatasheetDate).toISOString().split('T')[0]}
+                        onChange={handleInputDate}
+                        className="border border-[#DFE3E8] rounded px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-xs text-[#637381] mb-1">End Date</label>
+                      <input
+                        type="date"
+                        onChange={handleOutputDate}
+                        className="border border-[#DFE3E8] rounded px-3 py-2 text-sm"
+                      />
+                    </div>
                   </>
                 )}
-              </Box>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-xs text-[#637381] mb-1">Version</label>
+                <select
+                  onChange={handleVersionChange}
+                  className="border border-[#DFE3E8] rounded px-3 py-2 text-sm"
+                >
+                  {datasheetData?.map((entry, index) => {
+                    const yamlParts = entry.yaml.split('/');
+                    const yamlFileName = yamlParts[yamlParts.length - 1].replace('.yaml', '').replace('.yml', '');
+                    return <option key={index} value={entry.yaml}>{yamlFileName}</option>;
+                  })}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
 
-              <TextField
-                label="Version"
-                select
-                fullWidth
-                slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}
-                onChange={handleVersionChange}
-              >
-                {datasheetData?.map((entry, index) => {
-                  const yamlParts = entry.yaml.split('/');
-                  const yamlFileName = yamlParts[yamlParts.length - 1]
-                    .replace('.yaml', '')
-                    .replace('.yml', '');
-                  return (
-                    <option key={index} value={entry.yaml}>
-                      {yamlFileName}
-                    </option>
-                  );
-                })}
-              </TextField>
-            </Box>
-          </Box>
-        </Box>
-
-        <Box sx={{ mb: 4 }}>
-          {tabValue === 1 && datasheetData && (
-            <DatasheetFileExplorer datasheetData={datasheetData} />
-          )}
-
+        <div className="mb-8">
+          {tabValue === 1 && datasheetData && <DatasheetFileExplorer datasheetData={datasheetData} />}
           {tabValue === 0 && (
-            <Box flex={1}>
-              <Typography variant="h6" gutterBottom>
-                Datasheet information
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 4 }}>
-                This is the datasheet information for {datasheetNameDisplay}. The version currently
-                displayed is from{' '}
+            <div className="flex-1">
+              <h6 className="text-lg font-semibold mb-2">Datasheet information</h6>
+              <p className="mb-8">
+                This is the datasheet information for {datasheetNameDisplay}. The version currently displayed is from{' '}
                 {currentDatasheet?.extractionDate
                   ? new Date(currentDatasheet.extractionDate).toLocaleDateString()
-                  : 'unknown date'}
-                .
-              </Typography>
-
+                  : 'unknown date'}.
+              </p>
               {datasheet && (datasheet as Record<string, unknown>).plans ? (
                 <DatasheetRenderer datasheet={datasheet as DatasheetModel} />
               ) : datasheet ? (
-                <Typography>Pricing datasheet format detected</Typography>
+                <p>Pricing datasheet format detected</p>
               ) : (
-                <Typography color="error">{datasheetError || 'Could not parse datasheet'}</Typography>
+                <p className="text-red-500">{datasheetError || 'Could not parse datasheet'}</p>
               )}
-            </Box>
+            </div>
           )}
-        </Box>
-      </Container>
+        </div>
+      </div>
     </>
   );
 }

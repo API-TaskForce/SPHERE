@@ -1,17 +1,4 @@
 import React from 'react';
-import {
-  Box,
-  Card,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-  useTheme
-} from '@mui/material';
-import { alpha, Theme } from '@mui/material/styles';
 import { motion } from 'framer-motion';
 import {
   DatasheetEndpoint,
@@ -20,6 +7,31 @@ import {
   DatasheetPlanAlias,
   DatasheetPeriod,
 } from '../../types/datasheetTypes';
+
+// palette colors used throughout
+const PLAN_COLORS = [
+  '#00b4d8', // primary-500
+  '#8E33FF', // secondary
+  '#00A76F', // success
+  '#FFAB00', // warning
+  '#FF5630', // error
+  '#E91E63',
+  '#9C27B0',
+  '#673AB7',
+];
+
+function alpha(hex: string, opacity: number): string {
+  const n = hex.replace('#', '');
+  const bigint = parseInt(n, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
+function getPlanColor(index: number): string {
+  return PLAN_COLORS[index % PLAN_COLORS.length];
+}
 
 function formatMetric(metric?: DatasheetMetric) {
   if (!metric) return 'Not defined';
@@ -35,29 +47,19 @@ function formatMetric(metric?: DatasheetMetric) {
 }
 
 function formatPrice(value: string | number) {
-  if (typeof value === 'number') {
-    return value === 0 ? '$0' : `$${value}`;
-  }
-
-  const normalizedNumber = Number(value);
-  if (!Number.isNaN(normalizedNumber)) {
-    return normalizedNumber === 0 ? '$0' : `$${normalizedNumber}`;
-  }
-
+  if (typeof value === 'number') return value === 0 ? '$0' : `$${value}`;
+  const n = Number(value);
+  if (!Number.isNaN(n)) return n === 0 ? '$0' : `$${n}`;
   return String(value).toUpperCase();
 }
 
 function formatPlanPeriod(period?: DatasheetPeriod, legacyBillingPeriod?: string) {
   if (period) {
-    if (period.value === 1 && String(period.unit).toUpperCase() === 'MONTH') {
-      return 'month';
-    }
+    if (period.value === 1 && String(period.unit).toUpperCase() === 'MONTH') return 'month';
     return period.value === 1 ? String(period.unit).toLowerCase() : `${period.value} ${String(period.unit).toLowerCase()}`;
   }
   if (legacyBillingPeriod) {
-    if (legacyBillingPeriod.trim().toUpperCase() === '1 MONTH') {
-      return 'month';
-    }
+    if (legacyBillingPeriod.trim().toUpperCase() === '1 MONTH') return 'month';
     return legacyBillingPeriod.toLowerCase();
   }
   return 'Not defined';
@@ -86,9 +88,7 @@ function formatMetricList(keys: string[], store?: Record<string, DatasheetMetric
   return (
     <>
       {keys.map((key, i) => (
-        <Box key={i} component="span" sx={{ display: 'block' }}>
-          {formatMetric(store[key])}
-        </Box>
+        <span key={i} className="block">{formatMetric(store[key])}</span>
       ))}
     </>
   );
@@ -101,165 +101,127 @@ function formatUnifiedRoute(endpoint: string, alias?: string) {
   if (!normalizedEndpoint) return normalizedAlias;
   return `${normalizedEndpoint}/${normalizedAlias}`;
 }
+void formatUnifiedRoute;
 
-function getPlanColor(index: number, theme: any) {
-  const colors = [
-    theme.palette.primary.main,
-    theme.palette.secondary.main,
-    theme.palette.success.main,
-    theme.palette.warning.main,
-    theme.palette.error.main,
-    '#E91E63', // Pink
-    '#9C27B0', // Deep Purple
-    '#673AB7', // Indigo
-  ];
-  return colors[index % colors.length] || theme.palette.primary.main;
-}
-
-const SharedBadge = ({ level, theme }: { level: 'plan' | 'endpoint'; theme: Theme }) => (
-  <Box
-    component="span"
-    sx={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      px: 0.75,
-      py: 0.15,
-      borderRadius: 0.8,
-      fontSize: '0.58rem',
-      fontWeight: 700,
-      textTransform: 'uppercase',
-      letterSpacing: 0.4,
-      border: '1px solid',
-      borderColor: alpha(level === 'plan' ? theme.palette.info.main : theme.palette.warning.main, 0.5),
-      color: level === 'plan' ? theme.palette.info.main : theme.palette.warning.main,
-      bgcolor: alpha(level === 'plan' ? theme.palette.info.main : theme.palette.warning.main, 0.08),
-      whiteSpace: 'nowrap',
-      verticalAlign: 'middle',
+const SharedBadge = ({ level, color }: { level: 'plan' | 'endpoint'; color: string }) => (
+  <span
+    className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.58rem] font-bold uppercase tracking-wider border whitespace-nowrap align-middle"
+    style={{
+      borderColor: alpha(color, 0.5),
+      color,
+      backgroundColor: alpha(color, 0.08),
     }}
   >
     SHARED: {level} level
-  </Box>
+  </span>
 );
 
 const MetricRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <Box
-    sx={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 0.2,
-      py: 0.8,
-      borderBottom: '1px dashed',
-      borderColor: 'divider',
-      '&:last-child': { borderBottom: 'none' },
-    }}
-  >
-    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>
-      {label}
-    </Typography>
-    <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary', fontSize: '0.85rem' }}>
-      {value}
-    </Typography>
-  </Box>
+  <div className="flex flex-col gap-0.5 py-1.5 border-b border-dashed border-[#DFE3E8] last:border-b-0">
+    <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-[#637381]">{label}</span>
+    <span className="text-[0.85rem] font-medium text-[#212B36]">{value}</span>
+  </div>
 );
 
 export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetModel }) {
-  const theme = useTheme();
   const planKeys = Object.keys(datasheet.plans);
-  
-  // Collect all unique endpoint paths across all plans
+
   const allEndpoints = new Set<string>();
   planKeys.forEach(planKey => {
     const planEndpoints = datasheet.plans[planKey]?.endpoints || {};
-    Object.keys(planEndpoints).forEach(endpoint => {
-      allEndpoints.add(endpoint);
-    });
+    Object.keys(planEndpoints).forEach(ep => allEndpoints.add(ep));
   });
   const endpointList = Array.from(allEndpoints).sort();
 
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-        <Typography variant="h5" fontWeight={800} color="text.primary">
-          {datasheet.saasName}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            Source: <a href={datasheet.sourceUrl || '#'} target="_blank" rel="noreferrer" style={{ color: theme.palette.primary.main, textDecoration: 'none' }}>{datasheet.sourceUrl || 'Not defined'}</a>
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            v{datasheet.syntaxVersion} · {datasheet.date}
-          </Typography>
-        </Box>
-      </Box>
+  // Colors for info/warning badges
+  const infoColor = '#00B8D9';
+  const warningColor = '#FFAB00';
 
-      <Box sx={{ overflowX: 'auto', pb: 2 }}>
-        <Table sx={{ minWidth: 800, borderCollapse: 'separate', borderSpacing: '12px 0' }}>
-          <TableHead>
-            <TableRow>
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-2xl font-extrabold text-[#212B36]">{datasheet.saasName}</h2>
+        <div className="flex gap-4 items-center">
+          <p className="text-sm text-[#637381]">
+            Source:{' '}
+            <a
+              href={datasheet.sourceUrl || '#'}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sphere-primary-500 no-underline hover:underline"
+            >
+              {datasheet.sourceUrl || 'Not defined'}
+            </a>
+          </p>
+          <p className="text-sm text-[#637381]">v{datasheet.syntaxVersion} · {datasheet.date}</p>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto pb-4">
+        <table className="border-separate" style={{ borderSpacing: '12px 0', minWidth: 800 }}>
+          <thead>
+            <tr>
               {planKeys.map((planKey, idx) => {
-                const planColor = getPlanColor(idx, theme);
+                const planColor = getPlanColor(idx);
                 return (
-                  <TableCell
+                  <td
                     key={planKey}
-                    align="left"
-                    sx={{
-                      borderBottom: 'none',
-                      p: 0,
-                      width: `${100 / planKeys.length}%`,
-                      minWidth: 260,
-                      verticalAlign: 'top'
-                    }}
+                    className="p-0 align-top"
+                    style={{ width: `${100 / planKeys.length}%`, minWidth: 260 }}
                   >
-                    <Card
-                      elevation={0}
-                      sx={{
-                        border: '1px solid',
+                    <div
+                      className="rounded-lg p-6 mb-4 h-full border"
+                      style={{
                         borderColor: alpha(planColor, 0.3),
                         borderTop: `4px solid ${planColor}`,
-                        bgcolor: alpha(planColor, 0.02),
-                        borderRadius: 2,
-                        p: 3,
-                        mb: 2,
-                        height: '100%'
+                        backgroundColor: alpha(planColor, 0.02),
                       }}
                     >
-                      <Typography sx={{ fontWeight: 800, fontSize: '1.25rem', color: planColor, textTransform: 'capitalize', mb: 1 }}>
+                      <p
+                        className="font-extrabold text-xl capitalize mb-2"
+                        style={{ color: planColor }}
+                      >
                         {planKey}
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mb: 0.5 }}>
-                        <Typography sx={{ fontWeight: 800, fontSize: '2rem', lineHeight: 1 }}>
+                      </p>
+                      <div className="flex items-baseline gap-1 mb-1">
+                        <span className="font-extrabold text-4xl leading-none">
                           {formatPrice(datasheet.plans[planKey].price)}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                        </span>
+                        <span className="text-sm text-[#637381] font-medium">
                           / {formatPlanPeriod(datasheet.plans[planKey].period, datasheet.plans[planKey].billingPeriod)}
-                        </Typography>
-                      </Box>
-                      
-                      <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        </span>
+                      </div>
+                      <div className="mt-4 flex flex-col gap-2">
                         {resolveMetricKeys(datasheet.plans[planKey].quota).map((key, i) => (
-                          <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'text.secondary' }} />
-                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                              Quota: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatMetric(datasheet.capacity?.[key])}</Box>
-                            </Typography>
-                          </Box>
+                          <div key={i} className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#637381]" />
+                            <span className="text-xs text-[#637381] font-medium">
+                              Quota:{' '}
+                              <span className="text-[#212B36] font-semibold">
+                                {formatMetric(datasheet.capacity?.[key])}
+                              </span>
+                            </span>
+                          </div>
                         ))}
                         {resolveMetricKeys(datasheet.plans[planKey].rate).map((key, i) => (
-                          <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'text.secondary' }} />
-                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                              Rate: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatMetric(datasheet.maxPower?.[key])}</Box>
-                            </Typography>
-                          </Box>
+                          <div key={i} className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#637381]" />
+                            <span className="text-xs text-[#637381] font-medium">
+                              Rate:{' '}
+                              <span className="text-[#212B36] font-semibold">
+                                {formatMetric(datasheet.maxPower?.[key])}
+                              </span>
+                            </span>
+                          </div>
                         ))}
-                      </Box>
-                    </Card>
-                  </TableCell>
+                      </div>
+                    </div>
+                  </td>
                 );
               })}
-            </TableRow>
-          </TableHead>
-          <TableBody>
+            </tr>
+          </thead>
+          <tbody>
             {endpointList.map((endpoint, endIdx) => (
               <motion.tr
                 key={endpoint}
@@ -273,15 +235,18 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                   const endpointExists = plan?.endpoints != null && endpoint in plan.endpoints;
                   const rawEndpointDef = endpointExists ? plan.endpoints[endpoint] : undefined;
                   const endpointDef = (rawEndpointDef ?? {}) as DatasheetEndpoint;
-                  const planColor = getPlanColor(idx, theme);
+                  const planColor = getPlanColor(idx);
 
                   if (!endpointExists) {
                     return (
-                      <TableCell key={planKey} sx={{ borderBottom: 'none', px: 0, py: 1 }}>
-                        <Card elevation={0} sx={{ border: '1px dashed', borderColor: 'divider', bgcolor: 'transparent', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 80 }}>
-                          <Typography sx={{ color: 'text.disabled', fontWeight: 500 }}>Not available</Typography>
-                        </Card>
-                      </TableCell>
+                      <td key={planKey} className="p-0 py-1 align-top">
+                        <div
+                          className="border border-dashed rounded-lg h-full flex items-center justify-center"
+                          style={{ minHeight: 80, borderColor: '#DFE3E8' }}
+                        >
+                          <span className="text-[#919EAB] font-medium">Not available</span>
+                        </div>
+                      </td>
                     );
                   }
 
@@ -300,45 +265,46 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                   const hasEffectiveMetrics = effectiveRateKeys.length > 0 || effectiveQuotaKeys.length > 0 || endpointDef.workload != null;
 
                   return (
-                    <TableCell key={planKey} sx={{ borderBottom: 'none', px: 0, py: 1, verticalAlign: 'top' }}>
-                      <Card
-                        elevation={0}
-                        sx={{
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          borderRadius: 2,
-                          height: '100%',
-                          transition: 'all 0.2s ease-in-out',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          '&:hover': {
-                            borderColor: alpha(planColor, 0.5),
-                            boxShadow: `0 4px 20px ${alpha(planColor, 0.08)}`,
-                            transform: 'translateY(-2px)'
-                          }
+                    <td key={planKey} className="p-0 py-1 align-top">
+                      <div
+                        className="border rounded-lg h-full relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+                        style={{
+                          borderColor: '#DFE3E8',
+                        }}
+                        onMouseEnter={e => {
+                          (e.currentTarget as HTMLElement).style.borderColor = alpha(planColor, 0.5);
+                          (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 20px ${alpha(planColor, 0.08)}`;
+                        }}
+                        onMouseLeave={e => {
+                          (e.currentTarget as HTMLElement).style.borderColor = '#DFE3E8';
+                          (e.currentTarget as HTMLElement).style.boxShadow = '';
                         }}
                       >
-                        {/* Subtle left accent bar */}
-                        <Box sx={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, bgcolor: alpha(planColor, 0.6) }} />
-
-                        <Box sx={{ p: 2.5, pl: 3 }}>
-                          <Box sx={{ mb: 2 }}>
-                            <Typography sx={{ display: 'inline-block', fontFamily: 'monospace', fontWeight: 600, fontSize: '0.8rem', color: planColor, bgcolor: alpha(planColor, 0.1), borderRadius: 1.5, px: 1.5, py: 0.5, wordBreak: 'break-all' }}>
+                        <div
+                          className="absolute left-0 top-0 bottom-0 w-[3px]"
+                          style={{ backgroundColor: alpha(planColor, 0.6) }}
+                        />
+                        <div className="p-5 pl-6">
+                          <div className="mb-4">
+                            <span
+                              className="inline-block font-mono font-semibold text-[0.8rem] rounded-xl px-3 py-1 break-all"
+                              style={{ color: planColor, backgroundColor: alpha(planColor, 0.1) }}
+                            >
                               {endpoint}
-                            </Typography>
-                          </Box>
+                            </span>
+                          </div>
 
                           {hasEffectiveMetrics && (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', mb: hasAliases ? 2 : 0 }}>
+                            <div className={`flex flex-col ${hasAliases ? 'mb-4' : ''}`}>
                               {effectiveRateKeys.length > 0 && (
                                 <MetricRow
                                   label="Rate Limit"
                                   value={
                                     rateSource ? (
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                      <div className="flex items-center gap-1.5 flex-wrap">
                                         <span>{formatMetricList(effectiveRateKeys, datasheet.maxPower)}</span>
-                                        <SharedBadge level={rateSource} theme={theme} />
-                                      </Box>
+                                        <SharedBadge level={rateSource} color={warningColor} />
+                                      </div>
                                     ) : formatMetricList(effectiveRateKeys, datasheet.maxPower)
                                   }
                                 />
@@ -348,10 +314,10 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                                   label="Quota"
                                   value={
                                     quotaSource ? (
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                      <div className="flex items-center gap-1.5 flex-wrap">
                                         <span>{formatMetricList(effectiveQuotaKeys, datasheet.capacity)}</span>
-                                        <SharedBadge level={quotaSource} theme={theme} />
-                                      </Box>
+                                        <SharedBadge level={quotaSource} color={infoColor} />
+                                      </div>
                                     ) : formatMetricList(effectiveQuotaKeys, datasheet.capacity)
                                   }
                                 />
@@ -360,26 +326,27 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                                 <MetricRow
                                   label="Workload"
                                   value={
-                                    <Box>
+                                    <div>
                                       {formatWorkloadText(endpointDef.workload)}
                                       {endpointDef.workload.description && (
-                                        <Typography sx={{ display: 'block', fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}>
+                                        <span className="block text-xs text-[#637381] mt-1">
                                           {endpointDef.workload.description}
-                                        </Typography>
+                                        </span>
                                       )}
-                                    </Box>
+                                    </div>
                                   }
                                 />
                               )}
-                            </Box>
+                            </div>
                           )}
 
                           {hasAliases && (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: hasEffectiveMetrics ? 2 : 0, borderTop: hasEffectiveMetrics ? '1px dashed' : 'none', borderColor: 'divider' }}>
+                            <div
+                              className={`flex flex-col gap-4 ${hasEffectiveMetrics ? 'pt-4 border-t border-dashed border-[#DFE3E8]' : ''}`}
+                            >
                               {aliases.map(([aliasName, aliasValues]) => {
                                 const aliasRateKeys = resolveMetricKeys(aliasValues.rate);
                                 const aliasQuotaKeys = resolveMetricKeys(aliasValues.quota);
-
                                 const aliasEffectiveRateKeys = aliasRateKeys.length > 0 ? aliasRateKeys : effectiveRateKeys;
                                 const aliasEffectiveQuotaKeys = aliasQuotaKeys.length > 0 ? aliasQuotaKeys : effectiveQuotaKeys;
                                 const aliasRateSource: 'endpoint' | 'plan' | null =
@@ -390,27 +357,33 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                                   aliasQuotaKeys.length > 0 ? null :
                                   endpointQuotaKeys.length > 0 ? 'endpoint' :
                                   planQuotaKeys.length > 0 ? 'plan' : null;
-
                                 const hasAliasMetrics = aliasEffectiveRateKeys.length > 0 || aliasEffectiveQuotaKeys.length > 0 || aliasValues.workload;
-                                return (
-                                  <Box key={aliasName} sx={{ pl: 1.5, borderLeft: '2px solid', borderColor: alpha(planColor, 0.3) }}>
-                                    <Box sx={{ mb: hasAliasMetrics ? 1.5 : 0 }}>
-                                      <Typography sx={{ display: 'inline-block', fontFamily: 'monospace', fontWeight: 600, fontSize: '0.75rem', color: 'text.secondary', bgcolor: alpha(theme.palette.text.secondary, 0.08), borderRadius: 1, px: 1, py: 0.3, wordBreak: 'break-all' }}>
-                                        {aliasName}
-                                      </Typography>
-                                    </Box>
 
+                                return (
+                                  <div
+                                    key={aliasName}
+                                    className="pl-3 border-l-2"
+                                    style={{ borderColor: alpha(planColor, 0.3) }}
+                                  >
+                                    <div className={hasAliasMetrics ? 'mb-3' : ''}>
+                                      <span
+                                        className="inline-block font-mono font-semibold text-[0.75rem] rounded px-2 py-0.5 break-all text-[#637381]"
+                                        style={{ backgroundColor: alpha('#637381', 0.08) }}
+                                      >
+                                        {aliasName}
+                                      </span>
+                                    </div>
                                     {hasAliasMetrics && (
-                                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                      <div className="flex flex-col">
                                         {aliasEffectiveRateKeys.length > 0 && (
                                           <MetricRow
                                             label="Rate Limit"
                                             value={
                                               aliasRateSource ? (
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                                <div className="flex items-center gap-1.5 flex-wrap">
                                                   <span>{formatMetricList(aliasEffectiveRateKeys, datasheet.maxPower)}</span>
-                                                  <SharedBadge level={aliasRateSource} theme={theme} />
-                                                </Box>
+                                                  <SharedBadge level={aliasRateSource} color={warningColor} />
+                                                </div>
                                               ) : formatMetricList(aliasEffectiveRateKeys, datasheet.maxPower)
                                             }
                                           />
@@ -420,10 +393,10 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                                             label="Quota"
                                             value={
                                               aliasQuotaSource ? (
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                                <div className="flex items-center gap-1.5 flex-wrap">
                                                   <span>{formatMetricList(aliasEffectiveQuotaKeys, datasheet.capacity)}</span>
-                                                  <SharedBadge level={aliasQuotaSource} theme={theme} />
-                                                </Box>
+                                                  <SharedBadge level={aliasQuotaSource} color={infoColor} />
+                                                </div>
                                               ) : formatMetricList(aliasEffectiveQuotaKeys, datasheet.capacity)
                                             }
                                           />
@@ -432,34 +405,34 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                                           <MetricRow
                                             label="Workload"
                                             value={
-                                              <Box>
+                                              <div>
                                                 {formatWorkloadText(aliasValues.workload)}
                                                 {aliasValues.workload.description && (
-                                                  <Typography sx={{ display: 'block', fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}>
+                                                  <span className="block text-xs text-[#637381] mt-1">
                                                     {aliasValues.workload.description}
-                                                  </Typography>
+                                                  </span>
                                                 )}
-                                              </Box>
+                                              </div>
                                             }
                                           />
                                         )}
-                                      </Box>
+                                      </div>
                                     )}
-                                  </Box>
+                                  </div>
                                 );
                               })}
-                            </Box>
+                            </div>
                           )}
-                        </Box>
-                      </Card>
-                    </TableCell>
+                        </div>
+                      </div>
+                    </td>
                   );
                 })}
               </motion.tr>
             ))}
-          </TableBody>
-        </Table>
-      </Box>
-    </Box>
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

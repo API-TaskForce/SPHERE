@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import Grid from '@mui/material/Grid2';
 import Editor, { Monaco } from '@monaco-editor/react';
-import { Box, Typography, Modal, Paper, Tab, Tabs } from '@mui/material';
 import { Helmet } from 'react-helmet';
 import monaco from 'monaco-editor';
 import { parse as yamlParse } from 'yaml';
@@ -10,8 +8,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { useMode } from '../../../core/hooks/useTheme';
 import { default as GithubDarkTheme } from '../../../core/theme/editor-themes/GitHub-Dark.json';
 import { default as TextmateTheme } from '../../../core/theme/editor-themes/Textmate.json';
-import { flex } from '../../../core/theme/css';
-import { grey } from '../../../core/theme/palette';
 import customAlert from '../../../core/utils/custom-alert';
 
 import { useCacheApi } from '../../../pricing-editor/components/pricing-renderer/api/cacheApi';
@@ -215,7 +211,7 @@ plans:
           rate: rate_1_min
 
   starter:
-    price: 28.00 
+    price: 28.00
     period:
       value: 1
       unit: MONTH
@@ -298,30 +294,15 @@ plans:
 
 function normalizeDatasheetShape(parsedYaml: Record<string, unknown>): DatasheetModel {
   return {
-    saasName:
-      (parsedYaml.saasName as string | undefined) ||
-      (parsedYaml.associated_saas as string | undefined) ||
-      'Unknown SaaS',
+    saasName: (parsedYaml.saasName as string | undefined) || (parsedYaml.associated_saas as string | undefined) || 'Unknown SaaS',
     type: (parsedYaml.type as string | undefined) || 'partial_saas',
-    sourceUrl:
-      (parsedYaml.sourceUrl as string | undefined) ||
-      (parsedYaml.source_url as string | undefined) ||
-      (parsedYaml.url as string | undefined) ||
-      '',
-    syntaxVersion:
-      (parsedYaml.syntaxVersion as string | undefined) ||
-      (parsedYaml.syntax_version as string | undefined) ||
-      '',
+    sourceUrl: (parsedYaml.sourceUrl as string | undefined) || (parsedYaml.source_url as string | undefined) || (parsedYaml.url as string | undefined) || '',
+    syntaxVersion: (parsedYaml.syntaxVersion as string | undefined) || (parsedYaml.syntax_version as string | undefined) || '',
     date: (parsedYaml.date as string | undefined) || '',
     currency: parsedYaml.currency as string | undefined,
-    consumptionUnits:
-      (parsedYaml.consumptionUnits as string[] | undefined) ||
-      (parsedYaml.consumption_units as string[] | undefined),
+    consumptionUnits: (parsedYaml.consumptionUnits as string[] | undefined) || (parsedYaml.consumption_units as string[] | undefined),
     capacity: (parsedYaml.capacity as Record<string, unknown>) || {},
-    maxPower:
-      (parsedYaml.maxPower as Record<string, unknown>) ||
-      (parsedYaml.max_power as Record<string, unknown>) ||
-      {},
+    maxPower: (parsedYaml.maxPower as Record<string, unknown>) || (parsedYaml.max_power as Record<string, unknown>) || {},
     plans: (parsedYaml.plans as Record<string, any>) || {},
   } as DatasheetModel;
 }
@@ -339,33 +320,18 @@ export default function DatasheetEditorPage() {
 
   const { setInCache, getFromCache } = useCacheApi();
 
-  const renderSharedLink = () => setSharedLinkModalOpen(true);
   const handleSharedLinkClose = () => setSharedLinkModalOpen(false);
-  const renderYamlImport = () => setImportLinkModalOpen(true);
   const handleYamlImportClose = () => setImportLinkModalOpen(false);
 
   const handleCopyToClipboard = () => {
-    if (sharedLinkModalOpen) {
-      if (tabValue === 1) { // Full export
-        const encodedDatasheet = parseStringYamlToEncodedYaml(editorValue);
-        const baseUrl = window.location.href.split('?')[0];
-        return `${baseUrl}?datasheet=${encodedDatasheet}`;
-      } else {
-        const urlParams = new URLSearchParams(window.location.search);
-        const assignedId = urlParams.get('datasheet') ?? uuidv4();
-        const encodedDatasheet = parseStringYamlToEncodedYaml(editorValue);
-
-        setInCache(assignedId, encodedDatasheet, 24 * 60 * 60) // 24h
-          .catch(error => {
-            customAlert(`Error saving link in cache: ${error}`);
-          });
-
-        const baseUrl = window.location.href.split('?')[0];
-        return `${baseUrl}?datasheet=${assignedId}`;
-      }
-    } else {
-      return '';
+    if (!sharedLinkModalOpen) return '';
+    if (tabValue === 1) {
+      return `${window.location.href.split('?')[0]}?datasheet=${parseStringYamlToEncodedYaml(editorValue)}`;
     }
+    const assignedId = new URLSearchParams(window.location.search).get('datasheet') ?? uuidv4();
+    setInCache(assignedId, parseStringYamlToEncodedYaml(editorValue), 24 * 60 * 60)
+      .catch(error => customAlert(`Error saving link in cache: ${error}`));
+    return `${window.location.href.split('?')[0]}?datasheet=${assignedId}`;
   };
 
   const onSubmitImport = (file: File) => {
@@ -386,55 +352,40 @@ export default function DatasheetEditorPage() {
   function handleEditorChange(value: string | undefined) {
     if (value !== undefined) {
       setEditorValue(value);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         try {
           const parsedYaml = yamlParse(value) as Record<string, unknown>;
-          if (typeof parsedYaml !== 'object' || parsedYaml === null) {
-            throw new Error('Invalid YAML format');
-          }
-          const normalizedDatasheet = normalizeDatasheetShape(parsedYaml);
-          setDatasheet(normalizedDatasheet);
+          if (typeof parsedYaml !== 'object' || parsedYaml === null) throw new Error('Invalid YAML format');
+          setDatasheet(normalizeDatasheetShape(parsedYaml));
           setErrors([]);
         } catch (err) {
-          const errorMessage = (err as Error).message || 'Error parsing YAML';
-          setErrors([errorMessage]);
+          setErrors([(err as Error).message || 'Error parsing YAML']);
         }
       }, 500);
     }
   }
 
   function handleEditorDidMount(editorInstance: Monaco) {
-    editorInstance.editor.defineTheme(
-      'github-dark',
-      GithubDarkTheme as monaco.editor.IStandaloneThemeData
-    );
-    editorInstance.editor.defineTheme(
-      'textmate',
-      TextmateTheme as monaco.editor.IStandaloneThemeData
-    );
+    editorInstance.editor.defineTheme('github-dark', GithubDarkTheme as monaco.editor.IStandaloneThemeData);
+    editorInstance.editor.defineTheme('textmate', TextmateTheme as monaco.editor.IStandaloneThemeData);
   }
 
   useEffect(() => {
     const fetchDatasheet = async () => {
       const queryParams = new URLSearchParams(globalThis.location.search);
       const datasheetParam = queryParams.get('datasheet');
-      
       let templateDatasheet = DEFAULT_DATASHEET_YAML;
 
       if (datasheetParam) {
-        if (datasheetParam.length > 36){ // It is greater that UUID          
+        if (datasheetParam.length > 36) {
           templateDatasheet = parseEncodedYamlToStringYaml(datasheetParam);
         } else {
           try {
             const cachedDatasheet = await getFromCache(datasheetParam);
-            if (cachedDatasheet) {
-              templateDatasheet = parseEncodedYamlToStringYaml(cachedDatasheet);
-            }
-          } catch(e) {
-             console.error("Failed to load datasheet from cache", e);
+            if (cachedDatasheet) templateDatasheet = parseEncodedYamlToStringYaml(cachedDatasheet);
+          } catch (e) {
+            console.error('Failed to load datasheet from cache', e);
           }
         }
       }
@@ -452,25 +403,15 @@ export default function DatasheetEditorPage() {
       <Helmet>
         <title>SPHERE - Datasheet Editor</title>
       </Helmet>
-      <Box sx={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="w-full h-screen flex flex-col">
         <DatasheetHeader
           editorValue={editorValue}
-          setEditorValue={(val) => {
-            setEditorValue(val);
-            handleEditorChange(val);
-          }}
-          renderSharedLink={renderSharedLink}
-          renderYamlImport={renderYamlImport}
+          setEditorValue={(val) => { setEditorValue(val); handleEditorChange(val); }}
+          renderSharedLink={() => setSharedLinkModalOpen(true)}
+          renderYamlImport={() => setImportLinkModalOpen(true)}
         />
-        <Grid
-          container
-          sx={{
-            flexGrow: 1,
-            backgroundColor: grey[400],
-            overflow: 'hidden'
-          }}
-        >
-          <Grid size={6} sx={{ height: '100%', overflow: 'hidden' }}>
+        <div className="flex flex-1 overflow-hidden" style={{ backgroundColor: '#C4CDD5' }}>
+          <div className="w-1/2 h-full overflow-hidden">
             <Editor
               height="100%"
               defaultLanguage="yaml"
@@ -478,136 +419,96 @@ export default function DatasheetEditorPage() {
               value={editorValue}
               theme={mode === 'light' ? 'textmate' : 'github-dark'}
               beforeMount={handleEditorDidMount}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 16,
-              }}
+              options={{ minimap: { enabled: false }, fontSize: 16 }}
             />
-          </Grid>
-          <Grid
-            size={6}
-            sx={{
-              height: '100%',
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              backgroundColor: mode === 'light' ? grey[100] : grey[800],
-              boxSizing: 'border-box',
-              p: 4,
-            }}
+          </div>
+          <div
+            className="w-1/2 h-full overflow-y-auto overflow-x-hidden p-8 box-border"
+            style={{ backgroundColor: mode === 'light' ? '#F9FAFB' : '#212B36' }}
           >
             {errors.length > 0 && (
-              <Box sx={{ mb: 2, p: 2, bgcolor: 'error.light', color: 'error.contrastText', borderRadius: 1 }}>
-                <Typography variant="subtitle2">Parse Errors:</Typography>
-                {errors.map((err, i) => (
-                  <Typography key={i} variant="body2">{err}</Typography>
-                ))}
-              </Box>
+              <div className="mb-4 p-4 bg-red-100 text-red-800 rounded">
+                <p className="text-sm font-semibold">Parse Errors:</p>
+                {errors.map((err, i) => <p key={i} className="text-sm">{err}</p>)}
+              </div>
             )}
             {datasheet ? (
-              <Box sx={{ width: '100%', bgcolor: 'background.paper', p: 3, borderRadius: 2 }}>
+              <div className="w-full bg-white p-6 rounded-xl">
                 <DatasheetRenderer datasheet={datasheet} />
-              </Box>
+              </div>
             ) : (
-              <Typography color="text.secondary">Awaiting valid YAML...</Typography>
+              <p className="text-[#637381]">Awaiting valid YAML...</p>
             )}
-          </Grid>
-        </Grid>
-      </Box>
-      <Modal
-        open={sharedLinkModalOpen}
-        onClose={handleSharedLinkClose}
-        aria-labelledby="modal-shared-link-title"
-        aria-describedby="modal-shared-link-description"
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            maxWidth: 600,
-            width: '90vw',
-            mx: 'auto',
-            mt: 4,
-            p: 4,
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translateX(-50%) translateY(-50%)',
-            borderRadius: '20px',
-          }}
+          </div>
+        </div>
+      </div>
+
+      {/* Shared Link Modal */}
+      {sharedLinkModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={handleSharedLinkClose}
         >
-          <Typography
-            variant="h6"
-            component="h2"
-            gutterBottom
-            sx={{
-              textAlign: 'center',
-              fontWeight: 'bold',
-            }}
+          <div
+            className="bg-white rounded-[20px] p-8 max-w-[600px] w-[90vw] shadow-xl"
+            onClick={e => e.stopPropagation()}
           >
-            Your datasheet is a step away from the world
-          </Typography>
-          <Typography sx={{ mt: 2, mb: 3, textAlign: 'center' }}>
-            Share this link to allow other users to see and edit their own version of your datasheet
-          </Typography>
+            <h2 className="text-xl font-bold text-center mb-4">
+              Your datasheet is a step away from the world
+            </h2>
+            <p className="text-center mt-4 mb-6">
+              Share this link to allow other users to see and edit their own version of your datasheet
+            </p>
 
-          <Box sx={{ ...flex({justify: "center"}), mb: 2 }}>
-            <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
-              <Tab label="Short encoding" />
-              <Tab label="Full encoding" />
-            </Tabs>
-          </Box>
+            <div className="flex justify-center mb-4">
+              <div className="flex border-b border-[#DFE3E8]">
+                {['Short encoding', 'Full encoding'].map((label, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setTabValue(i)}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                      tabValue === i
+                        ? 'border-sphere-primary-600 text-sphere-primary-600'
+                        : 'border-transparent text-[#637381] hover:text-[#212B36]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {
-            tabValue === 1 ? (
-              <Typography
-                variant="body2"
-                color="error"
-                sx={{ textAlign: 'center', mb: 2 }}
-              >
+            {tabValue === 1 ? (
+              <p className="text-sm text-red-500 text-center mb-4">
                 <strong>WARNING:</strong> If the YAML is too large, the URL might not be processed correctly.
-              </Typography>
-            )
-            :
-            (
-              <Typography
-                variant="body2"
-                color="info"
-                sx={{ textAlign: 'center', mb: 2 }}
-              >
+              </p>
+            ) : (
+              <p className="text-sm text-blue-600 text-center mb-4">
                 <strong>INFO:</strong> The generated URL will only be available for 24h.
-              </Typography>
-            )
-          }
+              </p>
+            )}
 
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <CopyToClipboardIcon value={handleCopyToClipboard()} />
-          </Box>
-        </Paper>
-      </Modal>
-      <Modal
-        open={importModalOpen}
-        onClose={handleYamlImportClose}
-        aria-labelledby="modal-import-title"
-        aria-describedby="modal-import-description"
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            maxWidth: 500,
-            width: '90dvw',
-            mx: 'auto',
-            mt: 4,
-            p: 4,
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translateX(-50%) translateY(-50%)',
-            borderRadius: '20px',
-            ...flex({ direction: 'column' }),
-          }}
+            <div className="flex items-center">
+              <CopyToClipboardIcon value={handleCopyToClipboard()} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {importModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={handleYamlImportClose}
         >
-          <FileUpload onSubmit={onSubmitImport} />
-        </Paper>
-      </Modal>
+          <div
+            className="bg-white rounded-[20px] p-8 max-w-[500px] w-[90dvw] shadow-xl flex flex-col items-center"
+            onClick={e => e.stopPropagation()}
+          >
+            <FileUpload onSubmit={onSubmitImport} />
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -1,4 +1,3 @@
-import { Box, IconButton, Typography } from '@mui/material';
 import { IoMdAddCircleOutline } from 'react-icons/io';
 import { FaSortAlphaDown, FaSortAlphaUpAlt } from 'react-icons/fa';
 import { useEffect, useMemo, useState } from 'react';
@@ -42,20 +41,13 @@ export default function DatasheetCollectionSection({
   };
 
   useEffect(() => {
-    if (!authUser.isAuthenticated) {
-      return;
-    }
+    if (!authUser.isAuthenticated) return;
     getLoggedUserCollections()
       .then(data => {
-        if (data.error) {
-          throw new Error(data.error);
-        } else if (data.collections) {
-          setCollections(data.collections);
-        }
+        if (data.error) throw new Error(data.error);
+        else if (data.collections) setCollections(data.collections);
       })
-      .catch(error => {
-        console.error('Cannot GET datasheet collections. Error:', error);
-      });
+      .catch(error => console.error('Cannot GET datasheet collections. Error:', error));
   }, [renderFlag, authUser]);
 
   const sortedCollections = useMemo(() => {
@@ -68,30 +60,23 @@ export default function DatasheetCollectionSection({
 
   return (
     <>
-      <Box sx={{ mb: 4 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 1,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="h6">
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-1">
+          <div className="flex items-center">
+            <h6 className="text-lg font-semibold">
               Collections {collections.length > 0 && `(${collections.length})`}
-            </Typography>
-            <IconButton onClick={toggleSortOrder} size="medium">
+            </h6>
+            <button onClick={toggleSortOrder} className="ml-2 p-1 rounded hover:bg-sphere-grey-200">
               {sortOrder === 'asc' ? <FaSortAlphaDown /> : <FaSortAlphaUpAlt />}
-            </IconButton>
-          </Box>
-          <IconButton size="large" onClick={handleAddCollection}>
+            </button>
+          </div>
+          <button onClick={handleAddCollection} className="p-2 rounded-full hover:bg-sphere-grey-200 text-2xl">
             <IoMdAddCircleOutline />
-          </IconButton>
-        </Box>
+          </button>
+        </div>
 
         <DatasheetCollectionsGrid collections={sortedCollections} />
-      </Box>
+      </div>
       <AddDatasheetToCollectionModal
         datasheetName={datasheetToAdd}
         modalState={addDatasheetToCollectionModalOpen}

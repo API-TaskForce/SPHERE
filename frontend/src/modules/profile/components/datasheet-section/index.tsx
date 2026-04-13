@@ -1,4 +1,3 @@
-import { Box, Typography, IconButton } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { FaSortAlphaDown, FaSortAlphaUpAlt } from 'react-icons/fa';
 import { useAuth } from '../../../auth/hooks/useAuth';
@@ -39,23 +38,15 @@ export default function DatasheetSection({
   };
 
   useEffect(() => {
-    if (!authUser.isAuthenticated) {
-      return;
-    }
+    if (!authUser.isAuthenticated) return;
 
     getLoggedUserDatasheets()
       .then(data => {
-        if (data.error) {
-          throw new Error(data.error);
-        } else if (data.datasheets?.datasheets) {
-          setDatasheets(data.datasheets.datasheets);
-        } else {
-          setDatasheets([]);
-        }
+        if (data.error) throw new Error(data.error);
+        else if (data.datasheets?.datasheets) setDatasheets(data.datasheets.datasheets);
+        else setDatasheets([]);
       })
-      .catch(error => {
-        console.error('Cannot GET datasheets. Error:', error);
-      });
+      .catch(error => console.error('Cannot GET datasheets. Error:', error));
   }, [renderFlag, authUser]);
 
   const sortedDatasheets = useMemo(() => {
@@ -67,27 +58,18 @@ export default function DatasheetSection({
   }, [datasheets, sortOrder]);
 
   return (
-    <Box>
-      {sortedDatasheets && sortedDatasheets.length > 0 && (
+    <div>
+      {sortedDatasheets.length > 0 && (
         <>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Typography variant="h6">
+          <div className="flex items-center mb-1">
+            <h6 className="text-lg font-semibold">
               Unassigned {sortedDatasheets.length > 0 && `(${sortedDatasheets.length})`}
-            </Typography>
-            <IconButton onClick={toggleSortOrder} size="medium">
+            </h6>
+            <button onClick={toggleSortOrder} className="ml-2 p-1 rounded hover:bg-sphere-grey-200">
               {sortOrder === 'asc' ? <FaSortAlphaDown /> : <FaSortAlphaUpAlt />}
-            </IconButton>
-          </Box>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: 2,
-              marginTop: '30px',
-            }}
-          >
+            </button>
+          </div>
+          <div className="flex flex-col items-center justify-center gap-4 mt-8">
             {sortedDatasheets.map(datasheet => (
               <DatasheetListCard
                 name={datasheet.name}
@@ -99,9 +81,9 @@ export default function DatasheetSection({
                 key={`datasheet-${datasheet.name}`}
               />
             ))}
-          </Box>
+          </div>
         </>
       )}
-    </Box>
+    </div>
   );
 }

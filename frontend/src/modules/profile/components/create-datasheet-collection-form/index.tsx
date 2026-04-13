@@ -1,12 +1,9 @@
 import { useState } from 'react';
-import { Box, Button, Tab, Tabs, Typography } from '@mui/material';
 import VisibilityOptions from '../../../pricing/components/visibility-options';
 import CollectionNameInput from '../collection-name-input';
 import CollectionDescriptionInput from '../collection-description-input';
 import { useRouter } from '../../../core/hooks/useRouter';
 import FileUpload from '../../../core/components/file-upload-input';
-import { grey, primary } from '../../../core/theme/palette';
-import { flex } from '../../../core/theme/css';
 import customAlert from '../../../core/utils/custom-alert';
 import customConfirm from '../../../core/utils/custom-confirm';
 import DatasheetSelector from '../datasheets-selector';
@@ -32,27 +29,19 @@ export default function CreateDatasheetCollectionForm({
     const fileToUpload = file instanceof File ? file : null;
 
     if (!fileToUpload) {
-      const collectionToCreate = {
+      createCollection({
         name: collectionName,
         description: collectionDescription,
         private: visibility === 'Private',
         datasheets: selectedDatasheets,
-      };
-
-      createCollection(collectionToCreate)
-        .then(() => {
-          router.push('/me/datasheets');
-        })
+      })
+        .then(() => router.push('/me/datasheets'))
         .catch(error => {
-          if (error instanceof Error) {
-            customAlert(error.message);
-            return;
-          }
+          if (error instanceof Error) { customAlert(error.message); return; }
           alert(error instanceof Error ? error.message : String(error));
         });
     } else {
       const formData = new FormData();
-
       formData.append('zip', fileToUpload);
       formData.append('collectionData', JSON.stringify({
         name: collectionName,
@@ -61,12 +50,8 @@ export default function CreateDatasheetCollectionForm({
       }));
 
       setShowLoading(true);
-
       createBulkCollection(formData)
-        .then(data => {
-          setShowLoading(false);
-          handleBulkSuccess(data);
-        })
+        .then(data => { setShowLoading(false); handleBulkSuccess(data); })
         .catch(error => {
           setShowLoading(false);
           if (error instanceof Error && (error as unknown as { status?: number }).status === 409) {
@@ -85,58 +70,54 @@ export default function CreateDatasheetCollectionForm({
           .map((d: { name: string; error: string }) => d.name)
           .join(' | ')}. Do you still want to save the collection and add them again manually?`
       )
-        .then(() => {
-          router.push('/me/datasheets');
-        })
-        .catch(() => {
-          deleteCollection(collectionName, true).then(() => {
-            router.push('/me/datasheets');
-          });
-        });
+        .then(() => router.push('/me/datasheets'))
+        .catch(() => deleteCollection(collectionName, true).then(() => router.push('/me/datasheets')));
     } else {
       router.push('/me/datasheets');
     }
   }
 
-  function handleAddCollectionClick() {
-    handleSubmit();
-  }
-
   return (
-    <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Typography variant="h5" align="center" marginBottom={5} fontWeight="bold">
+    <form className="flex flex-col gap-6">
+      <h2 className="text-2xl font-bold text-center mb-5">
         Create a collection to store your datasheets
-      </Typography>
+      </h2>
       <CollectionNameInput value={collectionName} onChange={setCollectionName} />
       <CollectionDescriptionInput value={collectionDescription} onChange={setCollectionDescription} />
       <VisibilityOptions value={visibility} onChange={setVisibility} />
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
-          <Tab label="Select unassigned datasheets" />
-          <Tab label="Upload collection" />
-        </Tabs>
-      </Box>
+
+      {/* Tabs */}
+      <div className="border-b border-[#DFE3E8]">
+        <div className="flex">
+          {['Select unassigned datasheets', 'Upload collection'].map((label, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setTabValue(i)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                tabValue === i
+                  ? 'border-sphere-primary-600 text-sphere-primary-600'
+                  : 'border-transparent text-[#637381] hover:text-[#212B36]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {tabValue === 0 ? (
         <>
           <DatasheetSelector value={selectedDatasheets} onChange={setSelectedDatasheets} />
-          <Box sx={{ ...flex({}) }}>
-            <Button
-              sx={{
-                backgroundColor: primary[700],
-                color: grey[100],
-                fontWeight: 'bold',
-                fontSize: 16,
-                px: 5,
-                py: 2,
-                mt: 5,
-                borderRadius: 3,
-                width: 400,
-              }}
-              onClick={handleAddCollectionClick}
+          <div className="flex justify-center">
+            <button
+              type="button"
+              className="bg-sphere-primary-700 text-sphere-grey-100 font-bold text-base px-10 py-4 mt-5 rounded-xl w-[400px] hover:bg-sphere-primary-800 transition-colors"
+              onClick={handleSubmit}
             >
               Add Collection
-            </Button>
-          </Box>
+            </button>
+          </div>
         </>
       ) : (
         <FileUpload
@@ -148,6 +129,6 @@ export default function CreateDatasheetCollectionForm({
           accept={{ 'application/zip': ['.zip'] }}
         />
       )}
-    </Box>
+    </form>
   );
 }

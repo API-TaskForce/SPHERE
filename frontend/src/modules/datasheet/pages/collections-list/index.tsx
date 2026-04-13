@@ -1,9 +1,6 @@
-import { Box, styled } from '@mui/material';
 import { Helmet } from 'react-helmet';
 import { useEffect, useState } from 'react';
 import SearchBar from '../../../pricing/components/search-bar';
-import { flex } from '../../../core/theme/css';
-import { grey } from '../../../core/theme/palette';
 import PricingsPagination from '../../../pricing/components/pricings-pagination';
 import PricingsListContainer from '../../../pricing/components/pricings-list-container';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,24 +10,10 @@ import DatasheetCollectionFilters from '../../components/collection-filters';
 type DatasheetCollectionEntry = {
   id: string;
   name: string;
-  owner: {
-    id: string;
-    username: string;
-    avatar: string;
-  };
+  owner: { id: string; username: string; avatar: string };
   numberOfDatasheets?: number;
   numberOfPricings?: number;
 };
-
-export const DatasheetCollectionsGrid = styled(Box)(() => ({
-  display: 'flex',
-  flexWrap: 'wrap',
-  width: '100%',
-  justifyContent: 'space-evenly',
-  gap: '3rem',
-  marginTop: '50px',
-  padding: '0 10px',
-}));
 
 export default function DatasheetCollectionsListPage() {
   const [collectionsList, setCollectionsList] = useState<DatasheetCollectionEntry[]>([]);
@@ -44,32 +27,21 @@ export default function DatasheetCollectionsListPage() {
     const filterParams = new URLSearchParams();
     filterParams.append('limit', String(limit));
     filterParams.append('offset', String(offset));
-
-    if (textFilterValue.trim()) {
-      filterParams.append('name', textFilterValue.trim());
-    }
-
+    if (textFilterValue.trim()) filterParams.append('name', textFilterValue.trim());
     Object.entries(filterValues as Record<string, string>).forEach(([key, value]) => {
-      if (value && value.trim().length > 0) {
-        filterParams.append(key, value);
-      }
+      if (value && value.trim().length > 0) filterParams.append(key, value);
     });
 
     fetch(`${import.meta.env.VITE_API_URL}/datasheets/collections?${filterParams.toString()}`)
       .then(response => {
-        if (!response.ok) {
-          return Promise.reject(response);
-        }
+        if (!response.ok) return Promise.reject(response);
         return response.json();
       })
       .then(data => {
-        const retrievedCollections = data.collections ?? [];
-        setCollectionsList(retrievedCollections);
+        setCollectionsList(data.collections ?? []);
         setTotalCount(data.total || 0);
       })
-      .catch(error => {
-        console.error('Error:', error);
-      });
+      .catch(error => console.error('Error:', error));
   }, [textFilterValue, filterValues, limit, offset]);
 
   return (
@@ -77,58 +49,32 @@ export default function DatasheetCollectionsListPage() {
       <Helmet>
         <title> SPHERE - Datasheet Collections </title>
       </Helmet>
-      <Box
-        sx={{
-          ...flex({}),
-          width: '100vw',
-          maxWidth: '2000px',
-          height: '100%',
-        }}
-      >
-        <Box
-          component="div"
-          sx={{
-            ...flex({ direction: 'column', justify: 'start' }),
-            maxWidth: '600px',
-            height: '100%',
-            margin: 'auto',
-            backgroundColor: grey[200],
-            borderRight: '1px solid',
-            borderRightColor: grey[300],
-          }}
-        >
-          <Box component="div" width="20vw"></Box>
+      <div className="flex w-screen max-w-[2000px] h-full items-center justify-center">
+        <div className="flex flex-col items-center justify-start max-w-[600px] h-full m-auto bg-sphere-grey-200 border-r border-sphere-grey-300">
+          <div className="w-[20vw]" />
           {collectionsList.length > 0 && (
             <DatasheetCollectionFilters
-              receivedOwners={collectionsList.reduce((acc, collection) => {
-                acc[collection.owner.username] = (acc[collection.owner.username] || 0) + 1;
+              receivedOwners={collectionsList.reduce((acc, c) => {
+                acc[c.owner.username] = (acc[c.owner.username] || 0) + 1;
                 return acc;
               }, {} as Record<string, number>)}
               textFilterValue={textFilterValue}
               setFilterValues={setFilterValues}
             />
           )}
-        </Box>
-        <Box
-          component="div"
-          sx={{
-            ...flex({ direction: 'column' }),
-            marginTop: '50px',
-            flexGrow: 1,
-          }}
-        >
+        </div>
+        <div className="flex flex-col items-center justify-center mt-[50px] flex-1">
           <SearchBar setTextFilterValue={setTextFilterValue} />
           <PricingsListContainer>
-            <DatasheetCollectionsGrid sx={{ marginBottom: '50px' }}>
+            <div className="flex flex-wrap w-full justify-evenly gap-12 mt-[50px] px-[10px] mb-[50px]">
               {collectionsList.length > 0 ? (
-                Object.values(collectionsList).map(collection => (
+                collectionsList.map(collection => (
                   <DatasheetCollectionListCard key={uuidv4()} collection={collection} />
                 ))
               ) : (
-                <Box>No datasheet collections found</Box>
+                <div>No datasheet collections found</div>
               )}
-            </DatasheetCollectionsGrid>
-
+            </div>
             <PricingsPagination
               limit={limit}
               offset={offset}
@@ -139,8 +85,8 @@ export default function DatasheetCollectionsListPage() {
               }}
             />
           </PricingsListContainer>
-        </Box>
-      </Box>
+        </div>
+      </div>
     </>
   );
 }

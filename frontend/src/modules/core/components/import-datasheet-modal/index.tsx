@@ -1,5 +1,3 @@
-import { Modal, Paper } from '@mui/material';
-import { flex } from '../../theme/css';
 import FileUpload from '../file-upload-input';
 
 export default function ImportDatasheetModal({
@@ -11,28 +9,16 @@ export default function ImportDatasheetModal({
   handleClose: () => void;
   onSubmit: (file: File) => void;
 }) {
+  if (!modalState) return null;
+
   return (
-    <Modal
-      open={modalState}
-      onClose={handleClose}
-      aria-labelledby="modal-import-datasheet-title"
-      aria-describedby="modal-import-datasheet-description"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={handleClose}
     >
-      <Paper
-        elevation={3}
-        sx={{
-          maxWidth: 500,
-          width: '90dvw',
-          mx: 'auto',
-          mt: 4,
-          p: 4,
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translateX(-50%) translateY(-50%)',
-          borderRadius: '20px',
-          ...flex({ direction: 'column' }),
-        }}
+      <div
+        className="bg-white rounded-[20px] p-8 max-w-[500px] w-[90dvw] shadow-xl flex flex-col items-center"
+        onClick={e => e.stopPropagation()}
       >
         <FileUpload
           onSubmit={onSubmit}
@@ -40,7 +26,7 @@ export default function ImportDatasheetModal({
           isDragActiveText="Drop the datasheet file here"
           isNotDragActiveText="Drag and drop a datasheet file here"
         />
-      </Paper>
-    </Modal>
+      </div>
+    </div>
   );
 }
