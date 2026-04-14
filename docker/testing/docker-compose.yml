@@ -81,7 +81,7 @@ services:
       - testing-network
   prime4api:
     image: rgavira123/prime4api
-    container_name: prime4api
+    container_name: prime4api-sphere
     ports:
       - '8003:8000'
     environment:
