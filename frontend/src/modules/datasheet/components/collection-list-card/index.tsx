@@ -1,8 +1,5 @@
-import { Box, Typography } from '@mui/material';
 import { FaFolder } from 'react-icons/fa';
 import { useRouter } from '../../../core/hooks/useRouter';
-import { flex } from '../../../core/theme/css';
-import { primary } from '../../../core/theme/palette';
 
 type DatasheetCollectionEntry = {
   id: string;
@@ -26,31 +23,22 @@ export default function DatasheetCollectionListCard({
   handleCustomClick?: () => void;
 }) {
   const router = useRouter();
-
   const itemsCount = collection.numberOfDatasheets ?? collection.numberOfPricings ?? 0;
 
   return (
-    <Box
-      sx={{
-        border: selected ? `2px solid ${primary[400]}` : '1px solid #ddd',
-        borderRadius: 2,
-        p: 2,
-        ...flex({ direction: 'column' }),
-        width: '220px',
-        cursor: 'pointer',
-      }}
-      key={`collection-${collection.name}`}
+    <div
+      className={`flex flex-col items-center justify-center w-[220px] p-4 rounded-lg cursor-pointer border transition-colors ${
+        selected ? 'border-[#48cae4] border-2' : 'border-[#ddd] border'
+      }`}
       onClick={
         handleCustomClick
           ? handleCustomClick
           : () => router.push(`/datasheets/collections/${collection.owner.id}/${collection.name}`)
       }
     >
-      <FaFolder fontSize={100} />
-      <Typography variant="subtitle1">{collection.name}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {itemsCount} datasheets
-      </Typography>
-    </Box>
+      <FaFolder size={100} />
+      <p className="text-base font-medium mt-2">{collection.name}</p>
+      <p className="text-sm text-[#637381]">{itemsCount} datasheets</p>
+    </div>
   );
 }

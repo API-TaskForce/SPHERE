@@ -1,6 +1,5 @@
-import { Box } from '@mui/material';
-import ProfileSidebar from '../../components/sidebar';
 import { useState } from 'react';
+import ProfileSidebar from '../../components/sidebar';
 import DatasheetCollectionSection from '../../components/datasheet-collection-section';
 import DatasheetSection from '../../components/datasheet-section';
 
@@ -12,17 +11,12 @@ export default function MyDatasheetsPage() {
   const [renderFlag, setRenderFlag] = useState(false);
 
   return (
-    <Box sx={{ display: 'flex', height: '100%', width: '95vw', maxWidth: '1300px' }}>
-      <Box
-        sx={{
-          width: SIDEBAR_WIDTH + 100,
-          borderRight: '1px solid #ddd',
-        }}
-      >
+    <div className="flex h-full w-[95vw] max-w-[1300px]">
+      <div style={{ width: SIDEBAR_WIDTH + 100 }} className="border-r border-[#ddd]">
         <ProfileSidebar sidebarWidth={SIDEBAR_WIDTH} />
-      </Box>
+      </div>
 
-      <Box sx={{ flexGrow: 1, p: 2 }}>
+      <div className="flex-1 p-2">
         <DatasheetCollectionSection
           datasheetToAdd={datasheetToAdd}
           addDatasheetToCollectionModalOpen={addDatasheetToCollectionModalOpen}
@@ -35,7 +29,7 @@ export default function MyDatasheetsPage() {
           setDatasheetToAdd={setDatasheetToAdd}
           renderFlag={renderFlag}
         />
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

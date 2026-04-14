@@ -1,4 +1,3 @@
-import { Container, Toolbar, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useMode } from '../../../core/hooks/useTheme';
 import { primary } from '../../../core/theme/palette';
@@ -23,31 +22,26 @@ const DatasheetHeader = ({
   renderYamlImport,
 }: DatasheetHeaderProps) => {
   const [errors, setErrors] = useState<string[]>([]);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [isMobile, setIsMobile] = useState(false);
   const { mode } = useMode();
   const [originalEditorValue, setOriginalEditorValue] = useState<string>('');
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 899px)');
+    setIsMobile(mq.matches);
+    const listener = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', listener);
+    return () => mq.removeEventListener('change', listener);
+  }, []);
 
   const menuItems: MenuItems[] = [
     {
       name: 'File',
       disabled: false,
       children: [
-        {
-          name: 'New',
-          disabled: false,
-          onClick: () => {
-            setEditorValue(originalEditorValue);
-          },
-        },
+        { name: 'New', disabled: false, onClick: () => setEditorValue(originalEditorValue) },
         { name: 'Import from YAML', disabled: false, onClick: renderYamlImport },
-        {
-          name: 'Clear Editor',
-          disabled: false,
-          onClick: () => {
-            setEditorValue(''); // For datasheets we can just clear it or provide a basic template
-          },
-        },
+        { name: 'Clear Editor', disabled: false, onClick: () => setEditorValue('') },
       ],
     },
     {
@@ -63,9 +57,7 @@ const DatasheetHeader = ({
               const url = URL.createObjectURL(blob);
               let fileName = 'datasheet.yml';
               const match = editorValue.match(/associated_saas:\s*(.+)/);
-              if (match && match[1]) {
-                fileName = match[1].trim() + '-datasheet.yml';
-              }
+              if (match && match[1]) fileName = match[1].trim() + '-datasheet.yml';
               const a = document.createElement('a');
               a.href = url;
               a.download = fileName;
@@ -75,9 +67,7 @@ const DatasheetHeader = ({
               document.body.removeChild(a);
             } catch (e) {
               setErrors([...errors, (e as Error).message]);
-              setTimeout(() => {
-                setErrors([]);
-              }, 3000);
+              setTimeout(() => setErrors([]), 3000);
             }
           },
         },
@@ -89,7 +79,7 @@ const DatasheetHeader = ({
       disabled: false,
       onClick: () =>
         window.open(
-          'https://pricing4saas-docs.vercel.app/docs/2.0.1/api/pricing-description-languages/Pricing2Yaml/pricing2yaml-v30-specification' // Add datasheet link here if available
+          'https://pricing4saas-docs.vercel.app/docs/2.0.1/api/pricing-description-languages/Pricing2Yaml/pricing2yaml-v30-specification'
         ),
     },
   ];
@@ -103,17 +93,16 @@ const DatasheetHeader = ({
   return (
     <>
       <StyledAppBar position="sticky" mode={mode}>
-        <Container maxWidth={false} sx={{ marginLeft: 0 }}>
-          <Toolbar disableGutters>
+        <div style={{ marginLeft: 0 }} className="w-full px-4">
+          <div className="flex items-center min-h-[64px]">
             <ShortLogo sx={{ fill: mode === 'light' ? primary[800] : primary[100] }} />
-
             {isMobile ? (
               <MobileHeaderItems menuItems={menuItems} />
             ) : (
               <DesktopHeaderItems menuItems={menuItems} />
             )}
-          </Toolbar>
-        </Container>
+          </div>
+        </div>
       </StyledAppBar>
       <Alerts messages={errors} />
     </>

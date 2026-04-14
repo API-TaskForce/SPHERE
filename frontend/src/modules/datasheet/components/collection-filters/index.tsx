@@ -1,15 +1,3 @@
-import {
-  Box,
-  Button,
-  Checkbox,
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
-  Select,
-  Typography,
-} from '@mui/material';
-import { palette, primary } from '../../../core/theme/palette';
 import { useEffect, useState } from 'react';
 
 export default function DatasheetCollectionFilters({
@@ -23,7 +11,6 @@ export default function DatasheetCollectionFilters({
 }) {
   const [sort, setSort] = useState<string>('asc');
   const [sortBy, setSortBy] = useState<string>('');
-
   const [owners, setOwners] = useState<Record<string, number>>({});
   const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
 
@@ -34,14 +21,7 @@ export default function DatasheetCollectionFilters({
   };
 
   const handleFilter = () => {
-    const owners = selectedOwners.join(',');
-
-    const filterValues = {
-      sort,
-      sortBy,
-      owners,
-    };
-    setFilterValues(filterValues);
+    setFilterValues({ sort, sortBy, owners: selectedOwners.join(',') });
   };
 
   const handleClear = () => {
@@ -50,96 +30,75 @@ export default function DatasheetCollectionFilters({
   };
 
   useEffect(() => {
-    if (textFilterValue) {
-      setOwners(receivedOwners);
-    } else {
-      setOwners({});
-      setSelectedOwners([]);
-    }
+    if (textFilterValue) setOwners(receivedOwners);
+    else { setOwners({}); setSelectedOwners([]); }
   }, [textFilterValue, receivedOwners]);
 
   return (
-    <Box
-      sx={{
-        width: '100%',
-        marginTop: '50px',
-        padding: '16px',
-      }}
-    >
-      <Typography variant="h4" gutterBottom textAlign="center" marginBottom={5}>
-        Filters
-      </Typography>
+    <div className="w-full mt-[50px] p-4">
+      <h4 className="text-3xl font-semibold text-center mb-10">Filters</h4>
 
-      <FormControl fullWidth sx={{ mb: 3 }}>
-        <InputLabel
-          id="sort-by-label"
-          sx={{
-            backgroundColor: `${palette().background.neutral}`,
-            padding: '0 5px',
-          }}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-[#454F5B] mb-1">Sort By</label>
+        <select
+          className="w-full border border-[#DFE3E8] rounded px-3 py-2 bg-sphere-grey-200 text-[#212B36]"
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value)}
         >
-          Sort By
-        </InputLabel>
-        <Select labelId="sort-by-label" value={sortBy} onChange={e => setSortBy(e.target.value)}>
-          <MenuItem value="">None</MenuItem>
-          <MenuItem value="numberOfPricings">Number of Datasheets</MenuItem>
-          <MenuItem value="configurationSpaceSize">Configuration Space Size</MenuItem>
-          <MenuItem value="numberOfFeatures">Number of Features</MenuItem>
-          <MenuItem value="numberOfPlans">Number of Plans</MenuItem>
-          <MenuItem value="numberOfAddOns">Number of Add-Ons</MenuItem>
-        </Select>
-      </FormControl>
+          <option value="">None</option>
+          <option value="numberOfPricings">Number of Datasheets</option>
+          <option value="configurationSpaceSize">Configuration Space Size</option>
+          <option value="numberOfFeatures">Number of Features</option>
+          <option value="numberOfPlans">Number of Plans</option>
+          <option value="numberOfAddOns">Number of Add-Ons</option>
+        </select>
+      </div>
 
       {sortBy !== '' && (
-        <FormControl fullWidth sx={{ mb: 3 }}>
-          <InputLabel
-            id="sort-order-label"
-            sx={{
-              backgroundColor: `${palette().background.neutral}`,
-              padding: '0 5px',
-            }}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-[#454F5B] mb-1">Sort Order</label>
+          <select
+            className="w-full border border-[#DFE3E8] rounded px-3 py-2 bg-sphere-grey-200 text-[#212B36]"
+            value={sort}
+            onChange={e => setSort(e.target.value)}
           >
-            Sort Order
-          </InputLabel>
-          <Select labelId="sort-order-label" value={sort} onChange={e => setSort(e.target.value)}>
-            <MenuItem value="asc">Ascending</MenuItem>
-            <MenuItem value="desc">Descending</MenuItem>
-          </Select>
-        </FormControl>
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </div>
       )}
 
       {textFilterValue !== '' && (
-        <Box sx={{ width: '100%', padding: '16px', maxWidth: '500px', margin: 'auto' }}>
-          <Typography variant="h6" gutterBottom>
-            Owner
-          </Typography>
+        <div className="w-full p-4 max-w-[500px] mx-auto">
+          <h6 className="text-lg font-semibold mb-2">Owner</h6>
           {Object.entries(owners).map(([owner, count]) => (
-            <FormControlLabel
-              key={owner}
-              control={
-                <Checkbox
-                  checked={selectedOwners.includes(owner)}
-                  onChange={() => handleOwnerChange(owner)}
-                />
-              }
-              label={`${owner} (${count})`}
-            />
+            <label key={owner} className="flex items-center gap-2 mb-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedOwners.includes(owner)}
+                onChange={() => handleOwnerChange(owner)}
+                className="accent-sphere-primary-500"
+              />
+              <span className="text-sm">{`${owner} (${count})`}</span>
+            </label>
           ))}
-        </Box>
+        </div>
       )}
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-evenly', marginTop: '16px' }}>
-        <Button variant="outlined" color="primary" onClick={handleClear}>
+      <div className="flex justify-evenly mt-4">
+        <button
+          className="px-4 py-2 border border-sphere-primary-600 text-sphere-primary-600 rounded hover:bg-sphere-primary-100 transition-colors"
+          onClick={handleClear}
+        >
           Clear
-        </Button>
-        <Button
-          variant="contained"
-          sx={{ backgroundColor: primary[300], '&:hover': { backgroundColor: primary[500] } }}
+        </button>
+        <button
+          className="px-4 py-2 bg-sphere-primary-300 text-white rounded hover:bg-sphere-primary-500 transition-colors"
           onClick={handleFilter}
         >
           Filter
-        </Button>
-      </Box>
-    </Box>
+        </button>
+      </div>
+    </div>
   );
 }

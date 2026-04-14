@@ -1,9 +1,6 @@
-import { Box, Button, Typography } from '@mui/material';
 import { CollectionEntry } from '../../types/profile-types';
 import DatasheetCollectionListCard from '../../../datasheet/components/collection-list-card';
-import { flex } from '../../../core/theme/css';
 import { useRouter } from '../../../core/hooks/useRouter';
-import { primary } from '../../../core/theme/palette';
 import { forwardRef, useImperativeHandle, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -20,11 +17,7 @@ const DatasheetCollectionsGrid = forwardRef(
   ) => {
     const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
 
-    useImperativeHandle(ref, () => {
-      return {
-        selectedCollection,
-      };
-    });
+    useImperativeHandle(ref, () => ({ selectedCollection }));
 
     function handleSelect(collectionId: string) {
       setSelectedCollection(collectionId);
@@ -33,21 +26,9 @@ const DatasheetCollectionsGrid = forwardRef(
     const router = useRouter();
 
     return (
-      <Box
-        sx={{
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-        }}
-      >
+      <div className="w-full flex justify-center">
         {collections && collections.length > 0 ? (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 5,
-            }}
-          >
+          <div className="grid grid-cols-3 gap-10">
             {collections.map((collection: CollectionEntry) => (
               <DatasheetCollectionListCard
                 key={uuidv4()}
@@ -56,22 +37,19 @@ const DatasheetCollectionsGrid = forwardRef(
                 handleCustomClick={selector ? () => handleSelect(collection.id) : undefined}
               />
             ))}
-          </Box>
+          </div>
         ) : (
-          <Box sx={{ marginTop: '20px', ...flex({ direction: 'column' }) }}>
-            <Typography variant="body2" gutterBottom>
-              You have no datasheet collections
-            </Typography>
-            <Button
-              variant="contained"
-              sx={{ backgroundColor: `${primary[300]}` }}
+          <div className="mt-5 flex flex-col items-center justify-center">
+            <p className="text-sm mb-2">You have no datasheet collections</p>
+            <button
+              className="px-4 py-2 bg-sphere-primary-300 text-white rounded hover:bg-sphere-primary-400 transition-colors"
               onClick={() => router.push('/datasheets/collections/new')}
             >
               Create one!
-            </Button>
-          </Box>
+            </button>
+          </div>
         )}
-      </Box>
+      </div>
     );
   }
 );

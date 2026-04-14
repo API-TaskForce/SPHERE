@@ -1,19 +1,8 @@
 import { Helmet } from 'react-helmet';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Box,
-  Button,
-  Container,
-  IconButton,
-  Tab,
-  Tabs,
-  TextField,
-  Typography,
-} from '@mui/material';
 import { usePathname } from '../../../core/hooks/usePathname';
 import { useRouter } from '../../../core/hooks/useRouter';
 import { FaSortAlphaDown, FaSortAlphaUpAlt } from 'react-icons/fa';
-import { primary } from '../../../core/theme/palette';
 import { PricingsGrid } from '../../../pricing/pages/list';
 import DatasheetListCard from '../../components/datasheet-list-card';
 import { useDatasheetCollectionsApi } from '../../../profile/api/datasheetCollectionsApi';
@@ -25,19 +14,10 @@ type DatasheetCollection = {
   name: string;
   description?: string;
   private?: boolean;
-  owner: {
-    id: string;
-    username: string;
-    avatar: string;
-  };
-  analytics?: {
-    evolutionOfPlans?: { dates: string[] };
-  };
+  owner: { id: string; username: string; avatar: string };
+  analytics?: { evolutionOfPlans?: { dates: string[] } };
   datasheets?: any[];
-  pricings?: Array<{
-    datasheets?: any[];
-    pricings?: any[];
-  }>;
+  pricings?: Array<{ datasheets?: any[]; pricings?: any[] }>;
 };
 
 export default function DatasheetCollectionCardPage() {
@@ -52,20 +32,11 @@ export default function DatasheetCollectionCardPage() {
   const { authUser } = useAuth();
 
   const isCollectionOwner = useMemo(() => {
-    if (!collection || !authUser?.user) {
-      return false;
-    }
-
-    const sameId =
-      collection.owner?.id && authUser.user.id
-        ? collection.owner.id === authUser.user.id
-        : false;
-
-    const sameUsername =
-      collection.owner?.username && authUser.user.username
-        ? collection.owner.username.toLowerCase() === authUser.user.username.toLowerCase()
-        : false;
-
+    if (!collection || !authUser?.user) return false;
+    const sameId = collection.owner?.id && authUser.user.id ? collection.owner.id === authUser.user.id : false;
+    const sameUsername = collection.owner?.username && authUser.user.username
+      ? collection.owner.username.toLowerCase() === authUser.user.username.toLowerCase()
+      : false;
     return sameId || sameUsername;
   }, [collection, authUser]);
 
@@ -73,47 +44,24 @@ export default function DatasheetCollectionCardPage() {
     const segments = pathname.split('/');
     const name = segments.pop() as string;
     const ownerId = segments[segments.length - 1];
-
     const currentCollectionKey = `${ownerId}/${name}`;
-    if (lastRequestedCollectionKeyRef.current === currentCollectionKey) {
-      return;
-    }
+    if (lastRequestedCollectionKeyRef.current === currentCollectionKey) return;
     lastRequestedCollectionKeyRef.current = currentCollectionKey;
 
     getCollectionByOwnerAndName(ownerId, name)
-      .then(collectionData => {
-        if (collectionData) {
-          setCollection(collectionData);
-        } else {
-          router.push('/error');
-        }
-      })
-      .catch(() => {
-        router.push('/error');
-      });
+      .then(data => { if (data) setCollection(data); else router.push('/error'); })
+      .catch(() => router.push('/error'));
   }, [pathname, router, getCollectionByOwnerAndName]);
 
-
-
-  const toggleSortOrder = () => {
-    setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
-  };
+  const toggleSortOrder = () => setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
 
   const sortedDatasheets = useMemo(() => {
-    if (!collection) {
-      return [];
-    }
-
+    if (!collection) return [];
     const datasheetArray =
-      Array.isArray(collection.datasheets?.[0]?.datasheets)
-        ? (collection.datasheets?.[0]?.datasheets as any[])
-        : Array.isArray(collection.datasheets)
-        ? collection.datasheets
-        : Array.isArray(collection.pricings?.[0]?.datasheets)
-        ? (collection.pricings?.[0]?.datasheets as any[])
-        : Array.isArray(collection.pricings?.[0]?.pricings)
-        ? (collection.pricings?.[0]?.pricings as any[])
-        : [];
+      Array.isArray(collection.datasheets?.[0]?.datasheets) ? (collection.datasheets?.[0]?.datasheets as any[]) :
+      Array.isArray(collection.datasheets) ? collection.datasheets :
+      Array.isArray(collection.pricings?.[0]?.datasheets) ? (collection.pricings?.[0]?.datasheets as any[]) :
+      Array.isArray(collection.pricings?.[0]?.pricings) ? (collection.pricings?.[0]?.pricings as any[]) : [];
 
     return [...datasheetArray].sort((a, b) => {
       const nameA = a.name?.toLowerCase() || '';
@@ -122,105 +70,88 @@ export default function DatasheetCollectionCardPage() {
     });
   }, [collection, sortOrder]);
 
+  const tabs = ['Collection card', ...(isCollectionOwner ? ['Settings'] : [])];
+
   return (
     <>
       <Helmet>
         <title>{`SPHERE - ${collection?.name} Datasheet Collection`}</title>
       </Helmet>
-      <Container maxWidth="xl">
-        <Box sx={{ my: 4 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Box display="flex" flexDirection="column">
-              <Box display="flex" alignItems="center" gap={2} mb={2}>
-                <Typography variant="h5" letterSpacing={1}>
-                  {collection?.name}
-                </Typography>
-              </Box>
-
-              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
-                  <Tab label="Collection card" />
-                  {isCollectionOwner && <Tab label="Settings" />}
-                </Tabs>
-              </Box>
-            </Box>
-            <Box display="flex" flexDirection="column" gap={2}>
-              <Box display="flex" gap={2}>
-                {collection && collection.analytics?.evolutionOfPlans?.dates?.length ? (
-                  <>
-                    <TextField
-                      label="Start Date"
+      <div className="max-w-[1536px] mx-auto px-4">
+        <div className="my-8">
+          <div className="flex justify-between items-center">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-4 mb-4">
+                <h2 className="text-2xl tracking-wide">{collection?.name}</h2>
+              </div>
+              <div className="border-b border-[#DFE3E8]">
+                <div className="flex">
+                  {tabs.map((label, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setTabValue(i)}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        tabValue === i
+                          ? 'border-sphere-primary-600 text-sphere-primary-600'
+                          : 'border-transparent text-[#637381] hover:text-[#212B36]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-4">
+              {collection?.analytics?.evolutionOfPlans?.dates?.length ? (
+                <div className="flex gap-4">
+                  <div className="flex flex-col">
+                    <label className="text-xs text-[#637381] mb-1">Start Date</label>
+                    <input
                       type="date"
-                      fullWidth
-                      defaultValue={
-                        new Date(collection.analytics.evolutionOfPlans.dates[0])
-                          .toISOString()
-                          .split('T')[0]
-                      }
-                      slotProps={{ inputLabel: { shrink: true } }}
+                      defaultValue={new Date(collection.analytics.evolutionOfPlans.dates[0]).toISOString().split('T')[0]}
                       disabled
+                      className="border border-[#DFE3E8] rounded px-3 py-2 text-sm"
                     />
-                    <TextField
-                      label="End Date"
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-xs text-[#637381] mb-1">End Date</label>
+                    <input
                       type="date"
-                      fullWidth
                       defaultValue={new Date().toISOString().split('T')[0]}
-                      slotProps={{ inputLabel: { shrink: true } }}
                       disabled
+                      className="border border-[#DFE3E8] rounded px-3 py-2 text-sm"
                     />
-                  </>
-                ) : null}
-              </Box>
-            </Box>
-          </Box>
-        </Box>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
 
-        <Box display="flex" gap={4} sx={{ mb: 4 }}>
+        <div className="flex gap-8 mb-8">
           {tabValue === 1 && collection && (
-            <DatasheetCollectionSettings
-              collection={collection}
-              updateCollectionMethod={setCollection}
-            />
+            <DatasheetCollectionSettings collection={collection} updateCollectionMethod={setCollection} />
           )}
           {tabValue === 0 && (
-            <Box flex={1}>
-              <Typography variant="h6" gutterBottom fontWeight="bold">
-                Description
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 4 }}>
-                {collection?.description || 'This collection has no description.'}
-              </Typography>
+            <div className="flex-1">
+              <h6 className="text-lg font-bold mb-2">Description</h6>
+              <p className="mb-8">{collection?.description || 'This collection has no description.'}</p>
 
-              <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Box display="flex" alignItems="center" mb={-2}>
-                  <Typography variant="h6" fontWeight="bold">
-                    Datasheets in Collection
-                  </Typography>
-                  <IconButton onClick={toggleSortOrder} size="medium">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center -mb-4">
+                  <h6 className="text-lg font-bold">Datasheets in Collection</h6>
+                  <button onClick={toggleSortOrder} className="ml-2 p-1 rounded hover:bg-sphere-grey-200">
                     {sortOrder === 'asc' ? <FaSortAlphaDown /> : <FaSortAlphaUpAlt />}
-                  </IconButton>
-                </Box>
-                <Button
-                  sx={{
-                    border: `1px solid ${primary[400]}`,
-                    color: `${primary[400]}`,
-                    width: 150,
-                    height: 40,
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                    marginBottom: -2,
-                    '&:hover': {
-                      backgroundColor: primary[400],
-                      color: 'white',
-                    },
-                  }}
-                  onClick={() =>
-                    downloadCollection(collection?.owner.id as string, collection?.name as string)
-                  }
+                  </button>
+                </div>
+                <button
+                  className="border border-sphere-primary-400 text-sphere-primary-400 w-[150px] h-10 text-base font-bold -mb-4 rounded hover:bg-sphere-primary-400 hover:text-white transition-colors"
+                  onClick={() => downloadCollection(collection?.owner.id as string, collection?.name as string)}
                 >
                   DOWNLOAD
-                </Button>
-              </Box>
+                </button>
+              </div>
 
               <PricingsGrid
                 sx={{
@@ -235,10 +166,7 @@ export default function DatasheetCollectionCardPage() {
                 {sortedDatasheets.length > 0 ? (
                   sortedDatasheets.map((datasheet: any) => {
                     const ownerName =
-                      typeof datasheet.owner === 'string'
-                        ? datasheet.owner
-                        : datasheet.owner?.username || '';
-
+                      typeof datasheet.owner === 'string' ? datasheet.owner : datasheet.owner?.username || '';
                     return (
                       <DatasheetListCard
                         key={`${ownerName}-${datasheet.name}`}
@@ -250,27 +178,21 @@ export default function DatasheetCollectionCardPage() {
                     );
                   })
                 ) : (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      gap: 2,
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      height: '100%',
-                    }}
-                  >
+                  <div className="flex flex-col gap-4 items-center justify-center h-full">
                     NO DATASHEETS FOUND
-                    <Button variant="outlined" color="primary" onClick={() => router.push('/me/datasheets')}>
+                    <button
+                      className="px-4 py-2 border border-sphere-primary-600 text-sphere-primary-600 rounded hover:bg-sphere-primary-100 transition-colors"
+                      onClick={() => router.push('/me/datasheets')}
+                    >
                       Add
-                    </Button>
-                  </Box>
+                    </button>
+                  </div>
                 )}
               </PricingsGrid>
-            </Box>
+            </div>
           )}
-        </Box>
-      </Container>
+        </div>
+      </div>
     </>
   );
 }
