@@ -130,7 +130,8 @@ class DatasheetController {
       const result = await this.datasheetService.destroy(
         req.params.datasheetName,
         req.user.username,
-        queryParams
+        queryParams,
+        req.user.id
       );
       if (!result) {
         res.status(404).send({ error: 'Datasheet not found' });

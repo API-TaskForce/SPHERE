@@ -227,13 +227,13 @@ class DatasheetService {
     }
   }
 
-  async destroy(datasheetName: string, owner: string, queryParams?: { collectionName?: string }) {
+  async destroy(datasheetName: string, owner: string, queryParams?: { collectionName?: string }, userId?: string) {
     let collectionId;
 
     if (queryParams?.collectionName) {
       const collection = await this.datasheetCollectionService.showByNameAndUserId(
         queryParams.collectionName,
-        owner
+        userId || owner
       );
       if (!collection) {
         throw new Error('Collection not found');
