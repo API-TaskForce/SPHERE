@@ -141,9 +141,9 @@ export default function VariablesEditor({ open, onClose, variables, onApply }: P
                                     if (raw === '') return setLocal(s => ({ ...s, [k]: '' }));
                                     const n = Number(raw);
                                     if (Number.isNaN(n)) return;
-                                    setLocal(s => ({ ...s, [k]: decimalsAllowed[k] ? Number(n.toFixed(2)) : Math.round(n) }));
+                                    setLocal(s => ({ ...s, [k]: decimalsAllowed[k] ? n : Math.round(n) }));
                                   }}
-                                  step={decimalsAllowed[k] ? 0.01 : 1}
+                                  step={decimalsAllowed[k] ? 0.001 : 1}
                                   className="w-32 rounded-md border border-slate-300 px-3 py-2 text-sm"
                                 />
 
@@ -168,7 +168,7 @@ export default function VariablesEditor({ open, onClose, variables, onApply }: P
                                     const log = ((s - 50) / 100) * maxLog;
                                     const mult = Math.pow(10, log);
                                     const newVal = base * mult;
-                                    const fixed = decimalsAllowed[k] ? Number(newVal.toFixed(2)) : Math.round(newVal);
+                                    const fixed = decimalsAllowed[k] ? newVal : Math.round(newVal);
                                     setLocal(st => ({ ...st, [k]: fixed }));
                                   }}
                                   className="w-full accent-sky-600"
@@ -181,7 +181,7 @@ export default function VariablesEditor({ open, onClose, variables, onApply }: P
                                       checked={decimalsAllowed[k] === true}
                                       onChange={(e) => setDecimalsAllowed(s => ({ ...s, [k]: e.target.checked }))}
                                     />
-                                    {decimalsAllowed[k] ? 'Allow 2 decimals' : 'Integers'}
+                                    {decimalsAllowed[k] ? 'Allow decimals' : 'Integers'}
                                   </span>
                                   <span>Base: {String(original)}</span>
                                 </label>
