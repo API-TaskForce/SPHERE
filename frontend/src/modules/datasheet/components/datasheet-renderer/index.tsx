@@ -137,17 +137,55 @@ function renderMetricValue(metric?: DatasheetMetric, compact = false): React.Rea
   );
 }
 
-function formatMetricList(
-  keys: string[],
-  store?: Record<string, DatasheetMetric>,
-  compact = false
+type MetricEntry = {
+  key: string;
+  source: 'local' | 'plan';
+};
+
+function resolveMetricEntries(
+  localValue?: string | string[],
+  planValue?: string | string[]
+): MetricEntry[] {
+  const localKeys = resolveMetricKeys(localValue);
+  const planKeys = resolveMetricKeys(planValue);
+  const seen = new Set<string>();
+  const entries: MetricEntry[] = [];
+
+  localKeys.forEach(key => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    entries.push({ key, source: 'local' });
+  });
+
+  planKeys.forEach(key => {
+    if (seen.has(key)) return;
+    seen.add(key);
+    entries.push({ key, source: 'plan' });
+  });
+
+  return entries;
+}
+
+function renderMetricEntries(
+  entries: MetricEntry[],
+  store: Record<string, DatasheetMetric> | undefined,
+  compact = false,
+  badgeColor?: string
 ): React.ReactNode {
-  if (!store || keys.length === 0) return 'Not defined';
-  if (keys.length === 1) return renderMetricValue(store[keys[0]], compact);
+  if (!store || entries.length === 0) return 'Not defined';
+  if (entries.length === 1 && entries[0].source === 'local') {
+    return renderMetricValue(store[entries[0].key], compact);
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      {keys.map((key, i) => (
-        <div key={i}>{renderMetricValue(store[key], compact)}</div>
+      {entries.map((entry, i) => (
+        <div key={`${entry.key}-${entry.source}-${i}`} className="flex items-start gap-2 flex-wrap">
+          <span>{renderMetricValue(store[entry.key], compact)}</span>
+          {entry.source === 'plan' && badgeColor && (
+            <SharedBadge level="plan" color={badgeColor} />
+          )}
+        </div>
       ))}
     </div>
   );
@@ -161,19 +199,6 @@ function formatUnifiedRoute(endpoint: string, alias?: string) {
   return `${normalizedEndpoint}/${normalizedAlias}`;
 }
 void formatUnifiedRoute;
-
-function resolveEffectiveMetricKeys(
-  endpointValue?: string | string[],
-  planValue?: string | string[]
-): { keys: string[]; source: 'plan' | null } {
-  const endpointKeys = resolveMetricKeys(endpointValue);
-  if (endpointKeys.length > 0) return { keys: endpointKeys, source: null };
-
-  const planKeys = resolveMetricKeys(planValue);
-  if (planKeys.length > 0) return { keys: planKeys, source: 'plan' };
-
-  return { keys: [], source: null };
-}
 
 function resolveEffectiveWorkload(endpointWorkload?: DatasheetEndpoint['workload']) {
   return endpointWorkload;
@@ -196,6 +221,19 @@ const MetricRow = ({ label, value }: { label: string; value: React.ReactNode }) 
   <div className="flex flex-col gap-0.5 py-1.5 border-b border-dashed border-[#DFE3E8] last:border-b-0">
     <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-[#637381]">{label}</span>
     <span className="text-[0.85rem] font-medium text-[#212B36]">{value}</span>
+  </div>
+);
+
+const PlanMetricItem = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) => (
+  <div className="rounded-md border border-[#DFE3E8] px-3 py-2 bg-white/70">
+    <span className="block text-[0.62rem] font-semibold uppercase tracking-wide text-[#637381]">{label}</span>
+    <div className="mt-1 text-[0.82rem] font-semibold text-[#212B36]">{value}</div>
   </div>
 );
 
@@ -267,28 +305,20 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                           / {formatPlanPeriod(datasheet.plans[planKey].period, datasheet.plans[planKey].billingPeriod)}
                         </span>
                       </div>
-                      <div className="mt-4 flex flex-col gap-2">
+                      <div className="mt-4 grid gap-2">
                         {resolveMetricKeys(datasheet.plans[planKey].quota).map((key, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#637381]" />
-                            <div className="text-xs text-[#637381] font-medium">
-                              Quota:{' '}
-                              <span className="text-[#212B36] font-semibold inline-block align-top">
-                                {renderMetricValue(datasheet.capacity?.[key], true)}
-                              </span>
-                            </div>
-                          </div>
+                          <PlanMetricItem
+                            key={i}
+                            label="Quota"
+                            value={renderMetricValue(datasheet.capacity?.[key], true)}
+                          />
                         ))}
                         {resolveMetricKeys(datasheet.plans[planKey].rate).map((key, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#637381]" />
-                            <div className="text-xs text-[#637381] font-medium">
-                              Rate:{' '}
-                              <span className="text-[#212B36] font-semibold inline-block align-top">
-                                {renderMetricValue(datasheet.maxPower?.[key], true)}
-                              </span>
-                            </div>
-                          </div>
+                          <PlanMetricItem
+                            key={i}
+                            label="Rate"
+                            value={renderMetricValue(datasheet.maxPower?.[key], true)}
+                          />
                         ))}
                       </div>
                     </div>
@@ -326,20 +356,14 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                     );
                   }
 
-                  const effectiveRate = resolveEffectiveMetricKeys(
-                    endpointDef.rate,
-                    plan.rate
-                  );
-                  const effectiveQuota = resolveEffectiveMetricKeys(
-                    endpointDef.quota,
-                    plan.quota
-                  );
+                  const effectiveRateEntries = resolveMetricEntries(endpointDef.rate, plan.rate);
+                  const effectiveQuotaEntries = resolveMetricEntries(endpointDef.quota, plan.quota);
                   const effectiveWorkload = resolveEffectiveWorkload(endpointDef.workload);
 
                   const aliases = extractAliases(endpointDef);
                   const hasAliases = aliases.length > 0;
                   const hasEffectiveMetrics =
-                    effectiveRate.keys.length > 0 || effectiveQuota.keys.length > 0 || effectiveWorkload != null;
+                    effectiveRateEntries.length > 0 || effectiveQuotaEntries.length > 0 || effectiveWorkload != null;
 
                   return (
                     <td key={planKey} className="p-0 py-1 align-top">
@@ -373,30 +397,16 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
 
                           {hasEffectiveMetrics && (
                             <div className={`flex flex-col ${hasAliases ? 'mb-4' : ''}`}>
-                              {effectiveRate.keys.length > 0 && (
+                              {effectiveRateEntries.length > 0 && (
                                 <MetricRow
                                   label="Rate Limit"
-                                  value={
-                                    effectiveRate.source ? (
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span>{formatMetricList(effectiveRate.keys, datasheet.maxPower)}</span>
-                                        <SharedBadge level={effectiveRate.source} color={warningColor} />
-                                      </div>
-                                    ) : formatMetricList(effectiveRate.keys, datasheet.maxPower)
-                                  }
+                                  value={renderMetricEntries(effectiveRateEntries, datasheet.maxPower, false, warningColor)}
                                 />
                               )}
-                              {effectiveQuota.keys.length > 0 && (
+                              {effectiveQuotaEntries.length > 0 && (
                                 <MetricRow
                                   label="Quota"
-                                  value={
-                                    effectiveQuota.source ? (
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span>{formatMetricList(effectiveQuota.keys, datasheet.capacity)}</span>
-                                        <SharedBadge level={effectiveQuota.source} color={infoColor} />
-                                      </div>
-                                    ) : formatMetricList(effectiveQuota.keys, datasheet.capacity)
-                                  }
+                                  value={renderMetricEntries(effectiveQuotaEntries, datasheet.capacity, false, infoColor)}
                                 />
                               )}
                               {effectiveWorkload && (
@@ -413,12 +423,18 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                               className={`flex flex-col gap-4 ${hasEffectiveMetrics ? 'pt-4 border-t border-dashed border-[#DFE3E8]' : ''}`}
                             >
                               {aliases.map(([aliasName, aliasValues]) => {
-                                const aliasEffectiveRate = resolveEffectiveMetricKeys(aliasValues.rate, endpointDef.rate ?? plan.rate);
-                                const aliasEffectiveQuota = resolveEffectiveMetricKeys(aliasValues.quota, endpointDef.quota ?? plan.quota);
+                                const aliasEffectiveRateEntries = resolveMetricEntries(
+                                  aliasValues.rate,
+                                  endpointDef.rate ?? plan.rate
+                                );
+                                const aliasEffectiveQuotaEntries = resolveMetricEntries(
+                                  aliasValues.quota,
+                                  endpointDef.quota ?? plan.quota
+                                );
                                 const aliasEffectiveWorkload = resolveEffectiveWorkload(aliasValues.workload);
                                 const hasAliasMetrics =
-                                  aliasEffectiveRate.keys.length > 0 ||
-                                  aliasEffectiveQuota.keys.length > 0 ||
+                                  aliasEffectiveRateEntries.length > 0 ||
+                                  aliasEffectiveQuotaEntries.length > 0 ||
                                   aliasEffectiveWorkload != null;
 
                                 return (
@@ -437,30 +453,16 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                                     </div>
                                     {hasAliasMetrics && (
                                       <div className="flex flex-col">
-                                        {aliasEffectiveRate.keys.length > 0 && (
+                                        {aliasEffectiveRateEntries.length > 0 && (
                                           <MetricRow
                                             label="Rate Limit"
-                                            value={
-                                              aliasEffectiveRate.source ? (
-                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                  <span>{formatMetricList(aliasEffectiveRate.keys, datasheet.maxPower)}</span>
-                                                  <SharedBadge level={aliasEffectiveRate.source} color={warningColor} />
-                                                </div>
-                                              ) : formatMetricList(aliasEffectiveRate.keys, datasheet.maxPower)
-                                            }
+                                            value={renderMetricEntries(aliasEffectiveRateEntries, datasheet.maxPower, false, warningColor)}
                                           />
                                         )}
-                                        {aliasEffectiveQuota.keys.length > 0 && (
+                                        {aliasEffectiveQuotaEntries.length > 0 && (
                                           <MetricRow
                                             label="Quota"
-                                            value={
-                                              aliasEffectiveQuota.source ? (
-                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                  <span>{formatMetricList(aliasEffectiveQuota.keys, datasheet.capacity)}</span>
-                                                  <SharedBadge level={aliasEffectiveQuota.source} color={infoColor} />
-                                                </div>
-                                              ) : formatMetricList(aliasEffectiveQuota.keys, datasheet.capacity)
-                                            }
+                                            value={renderMetricEntries(aliasEffectiveQuotaEntries, datasheet.capacity, false, infoColor)}
                                           />
                                         )}
                                         {aliasEffectiveWorkload && (
