@@ -4,13 +4,10 @@ import {
   DatasheetEndpoint,
   DatasheetMetric,
   DatasheetModel,
-  DatasheetPlan,
   DatasheetPlanAlias,
   DatasheetPeriod,
   DatasheetWorkload,
 } from '../../types/datasheetTypes';
-
-const SHARED_ENDPOINT_KEY = '/*';
 
 // palette colors used throughout
 const PLAN_COLORS = [
@@ -90,10 +87,6 @@ function extractAliases(endpoint: DatasheetEndpoint): Array<[string, DatasheetPl
   }) as Array<[string, DatasheetPlanAlias]>;
 }
 
-function getSharedEndpoint(plan?: DatasheetPlan): DatasheetEndpoint | undefined {
-  return plan?.endpoints?.[SHARED_ENDPOINT_KEY];
-}
-
 function normalizeWorkloads(workload?: DatasheetEndpoint['workload']): DatasheetWorkload[] {
   if (!workload) return [];
   return Array.isArray(workload) ? workload : [workload];
@@ -171,14 +164,10 @@ void formatUnifiedRoute;
 
 function resolveEffectiveMetricKeys(
   endpointValue?: string | string[],
-  sharedEndpointValue?: string | string[],
   planValue?: string | string[]
-): { keys: string[]; source: 'endpoint' | 'plan' | null } {
+): { keys: string[]; source: 'plan' | null } {
   const endpointKeys = resolveMetricKeys(endpointValue);
   if (endpointKeys.length > 0) return { keys: endpointKeys, source: null };
-
-  const sharedEndpointKeys = resolveMetricKeys(sharedEndpointValue);
-  if (sharedEndpointKeys.length > 0) return { keys: sharedEndpointKeys, source: 'endpoint' };
 
   const planKeys = resolveMetricKeys(planValue);
   if (planKeys.length > 0) return { keys: planKeys, source: 'plan' };
@@ -186,11 +175,8 @@ function resolveEffectiveMetricKeys(
   return { keys: [], source: null };
 }
 
-function resolveEffectiveWorkload(
-  endpointWorkload?: DatasheetEndpoint['workload'],
-  sharedEndpointWorkload?: DatasheetEndpoint['workload']
-) {
-  return endpointWorkload ?? sharedEndpointWorkload;
+function resolveEffectiveWorkload(endpointWorkload?: DatasheetEndpoint['workload']) {
+  return endpointWorkload;
 }
 
 const SharedBadge = ({ level, color }: { level: 'plan' | 'endpoint'; color: string }) => (
@@ -219,9 +205,7 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
   const allEndpoints = new Set<string>();
   planKeys.forEach(planKey => {
     const planEndpoints = datasheet.plans[planKey]?.endpoints || {};
-    Object.keys(planEndpoints)
-      .filter(ep => ep !== SHARED_ENDPOINT_KEY)
-      .forEach(ep => allEndpoints.add(ep));
+    Object.keys(planEndpoints).forEach(ep => allEndpoints.add(ep));
   });
   const endpointList = Array.from(allEndpoints).sort();
 
@@ -327,7 +311,6 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                   const endpointExists = plan?.endpoints != null && endpoint in plan.endpoints;
                   const rawEndpointDef = endpointExists ? plan.endpoints[endpoint] : undefined;
                   const endpointDef = (rawEndpointDef ?? {}) as DatasheetEndpoint;
-                  const sharedEndpointDef = getSharedEndpoint(plan);
                   const planColor = getPlanColor(idx);
 
                   if (!endpointExists) {
@@ -343,9 +326,15 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                     );
                   }
 
-                  const effectiveRate = resolveEffectiveMetricKeys(endpointDef.rate, sharedEndpointDef?.rate, plan.rate);
-                  const effectiveQuota = resolveEffectiveMetricKeys(endpointDef.quota, sharedEndpointDef?.quota, plan.quota);
-                  const effectiveWorkload = resolveEffectiveWorkload(endpointDef.workload, sharedEndpointDef?.workload);
+                  const effectiveRate = resolveEffectiveMetricKeys(
+                    endpointDef.rate,
+                    plan.rate
+                  );
+                  const effectiveQuota = resolveEffectiveMetricKeys(
+                    endpointDef.quota,
+                    plan.quota
+                  );
+                  const effectiveWorkload = resolveEffectiveWorkload(endpointDef.workload);
 
                   const aliases = extractAliases(endpointDef);
                   const hasAliases = aliases.length > 0;
@@ -424,20 +413,9 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                               className={`flex flex-col gap-4 ${hasEffectiveMetrics ? 'pt-4 border-t border-dashed border-[#DFE3E8]' : ''}`}
                             >
                               {aliases.map(([aliasName, aliasValues]) => {
-                                const aliasEffectiveRate = resolveEffectiveMetricKeys(
-                                  aliasValues.rate,
-                                  endpointDef.rate ?? sharedEndpointDef?.rate,
-                                  plan.rate
-                                );
-                                const aliasEffectiveQuota = resolveEffectiveMetricKeys(
-                                  aliasValues.quota,
-                                  endpointDef.quota ?? sharedEndpointDef?.quota,
-                                  plan.quota
-                                );
-                                const aliasEffectiveWorkload = resolveEffectiveWorkload(
-                                  aliasValues.workload,
-                                  endpointDef.workload ?? sharedEndpointDef?.workload
-                                );
+                                const aliasEffectiveRate = resolveEffectiveMetricKeys(aliasValues.rate, endpointDef.rate ?? plan.rate);
+                                const aliasEffectiveQuota = resolveEffectiveMetricKeys(aliasValues.quota, endpointDef.quota ?? plan.quota);
+                                const aliasEffectiveWorkload = resolveEffectiveWorkload(aliasValues.workload);
                                 const hasAliasMetrics =
                                   aliasEffectiveRate.keys.length > 0 ||
                                   aliasEffectiveQuota.keys.length > 0 ||
