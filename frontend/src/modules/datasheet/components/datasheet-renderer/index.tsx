@@ -6,6 +6,7 @@ import {
   DatasheetModel,
   DatasheetPlanAlias,
   DatasheetPeriod,
+  DatasheetWorkload,
 } from '../../types/datasheetTypes';
 
 // palette colors used throughout
@@ -72,9 +73,33 @@ function extractAliases(endpoint: DatasheetEndpoint): Array<[string, DatasheetPl
   }) as Array<[string, DatasheetPlanAlias]>;
 }
 
-function formatWorkloadText(workload?: DatasheetEndpoint['workload']) {
-  if (!workload) return 'Not defined';
+function normalizeWorkloads(workload?: DatasheetEndpoint['workload']): DatasheetWorkload[] {
+  if (!workload) return [];
+  return Array.isArray(workload) ? workload : [workload];
+}
+
+function formatWorkloadText(workload: DatasheetWorkload) {
   return `${workload.min} - ${workload.max} ${String(workload.unit).toLowerCase()}`;
+}
+
+function renderCrfValue(workload?: DatasheetEndpoint['workload']) {
+  const workloads = normalizeWorkloads(workload);
+  if (workloads.length === 0) return 'Not defined';
+
+  return (
+    <div className="flex flex-col gap-2">
+      {workloads.map((entry, index) => (
+        <div key={`${entry.unit}-${entry.min}-${entry.max}-${index}`}>
+          <span className="block">{formatWorkloadText(entry)}</span>
+          {entry.description && (
+            <span className="block text-xs text-[#637381] mt-1">
+              {entry.description}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function resolveMetricKeys(value?: string | string[]): string[] {
@@ -324,17 +349,8 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                               )}
                               {endpointDef.workload && (
                                 <MetricRow
-                                  label="Workload"
-                                  value={
-                                    <div>
-                                      {formatWorkloadText(endpointDef.workload)}
-                                      {endpointDef.workload.description && (
-                                        <span className="block text-xs text-[#637381] mt-1">
-                                          {endpointDef.workload.description}
-                                        </span>
-                                      )}
-                                    </div>
-                                  }
+                                  label="CRF"
+                                  value={renderCrfValue(endpointDef.workload)}
                                 />
                               )}
                             </div>
@@ -403,17 +419,8 @@ export default function DatasheetRenderer({ datasheet }: { datasheet: DatasheetM
                                         )}
                                         {aliasValues.workload && (
                                           <MetricRow
-                                            label="Workload"
-                                            value={
-                                              <div>
-                                                {formatWorkloadText(aliasValues.workload)}
-                                                {aliasValues.workload.description && (
-                                                  <span className="block text-xs text-[#637381] mt-1">
-                                                    {aliasValues.workload.description}
-                                                  </span>
-                                                )}
-                                              </div>
-                                            }
+                                            label="CRF"
+                                            value={renderCrfValue(aliasValues.workload)}
                                           />
                                         )}
                                       </div>

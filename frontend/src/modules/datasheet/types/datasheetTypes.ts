@@ -17,7 +17,7 @@ export type DatasheetMetric = {
 export type DatasheetPlanAlias = {
   rate?: string | string[];
   quota?: string | string[];
-  workload?: DatasheetWorkload;
+  workload?: DatasheetWorkload | DatasheetWorkload[];
 };
 
 export type DatasheetWorkload = {
@@ -30,7 +30,7 @@ export type DatasheetWorkload = {
 export type DatasheetEndpoint = {
   quota?: string | string[];
   rate?: string | string[];
-  workload?: DatasheetWorkload;
+  workload?: DatasheetWorkload | DatasheetWorkload[];
 } & Record<string, unknown>;
 
 export type DatasheetPlanPeriod = {

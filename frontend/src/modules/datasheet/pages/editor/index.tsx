@@ -158,10 +158,14 @@ plans:
       v1/email:
         quota: quota_500_emails_month
         workload:
-          unit: emails
-          min: 1
-          max: 70
-          description: "depends on the params you use, cc, to, bcc"
+          - unit: emails
+            min: 1
+            max: 70
+            description: "depends on the params you use, cc, to, bcc"
+          - unit: MBs
+            min: 0.128
+            max: 0.128
+            description: "depends on the size of the attachments"
         healthy_reputation:
           rate: rate_120_min
         under_review_reputation:
@@ -190,10 +194,14 @@ plans:
       v1/email:
         quota: quota_5k_emails_month
         workload:
-          unit: emails
-          min: 1
-          max: 70
-          description: "depends on the params you use, cc, to, bcc"
+          - unit: emails
+            min: 1
+            max: 70
+            description: "depends on the params you use, cc, to, bcc"
+          - unit: MBs
+            min: 0.128
+            max: 0.128
+            description: "depends on the size of the attachments"
         healthy_reputation:
           rate: rate_120_min
         under_review_reputation:
@@ -222,10 +230,14 @@ plans:
       v1/email:
         quota: quota_50k_emails_month
         workload:
-          unit: emails
-          min: 1
-          max: 70
-          description: "depends on the params you use, cc, to, bcc"
+          - unit: emails
+            min: 1
+            max: 70
+            description: "depends on the params you use, cc, to, bcc"
+          - unit: MBs
+            min: 0.128
+            max: 0.128
+            description: "depends on the size of the attachments"
         healthy_reputation:
           rate: rate_120_min
         under_review_reputation:
@@ -262,10 +274,14 @@ plans:
       v1/email:
         quota: quota_50k_emails_month
         workload:
-          unit: emails
-          min: 1
-          max: 70
-          description: "depends on the params you use, cc, to, bcc"
+          - unit: emails
+            min: 1
+            max: 70
+            description: "depends on the params you use, cc, to, bcc"
+          - unit: MBs
+            min: 0.128
+            max: 0.128
+            description: "depends on the size of the attachments"
         healthy_reputation:
           rate: rate_120_min
         under_review_reputation:
