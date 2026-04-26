@@ -80,10 +80,22 @@ permit (
     SPHERE::Action::"createSubgroup",
     SPHERE::Action::"updateGroup",
     SPHERE::Action::"manageGroupMembers",
-    SPHERE::Action::"manageGroupCollections"
+    SPHERE::Action::"manageGroupCollections",
+    SPHERE::Action::"manageGroupPricings"
   ],
   resource is SPHERE::Group
 ) when { context.groupRole == "admin" };
+
+// El propietario del recurso puede desasignarlo del grupo, independientemente de su rol de grupo
+// (aplica tanto a colecciones como a pricings asignados al grupo)
+permit (
+  principal is SPHERE::User,
+  action in [
+    SPHERE::Action::"manageGroupCollections",
+    SPHERE::Action::"manageGroupPricings"
+  ],
+  resource is SPHERE::Group
+) when { context has isResourceOwner && context.isResourceOwner };
 
 // Eliminar subgrupos: el admin del grupo padre también puede hacerlo
 // (eliminar grupos raíz es exclusivo de owner/admin org, ya cubiertos)
@@ -116,6 +128,15 @@ permit (
   context.effectiveRole == "viewer"
 };
 
+// Org member puede leer colecciones que no estén asignadas a ningún grupo
+permit (
+  principal is SPHERE::User,
+  action == SPHERE::Action::"readCollection",
+  resource is SPHERE::PricingCollection
+) when {
+  context.orgRole == "member" && !context.isGroupRestricted
+};
+
 // Admin_G y editor pueden modificar los metadatos de la colección
 permit (
   principal is SPHERE::User,
@@ -144,6 +165,13 @@ permit (
   resource is SPHERE::Organization
 ) when { context.orgRole == "member" && context.hasGroupEditorRole };
 
+// Crear pricing en contexto de grupo: admin o editor del grupo concreto
+permit (
+  principal is SPHERE::User,
+  action == SPHERE::Action::"createPricing",
+  resource is SPHERE::Group
+) when { context.hasGroupEditorRole };
+
 // Admin_G y editor pueden crear pricings en la colección (añadir pricing a colección)
 permit (
   principal is SPHERE::User,
@@ -160,6 +188,16 @@ permit (
   context.effectiveRole == "admin"  ||
   context.effectiveRole == "editor" ||
   context.effectiveRole == "viewer"
+};
+
+// Org member puede leer pricings que no estén asignados a ningún grupo
+// (ni directamente ni a través de su colección)
+permit (
+  principal is SPHERE::User,
+  action == SPHERE::Action::"readPricing",
+  resource is SPHERE::Pricing
+) when {
+  context.orgRole == "member" && !context.isGroupRestricted
 };
 
 // Admin_G y editor pueden modificar pricings

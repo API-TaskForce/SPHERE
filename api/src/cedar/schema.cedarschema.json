@@ -10,10 +10,11 @@
       "GroupContext": {
         "type": "Record",
         "attributes": {
-          "orgRole":         { "type": "String" },
-          "groupRole":       { "type": "String" },
-          "parentGroupRole": { "type": "String" },
-          "isRootGroup":     { "type": "Boolean" }
+          "orgRole":          { "type": "String" },
+          "groupRole":        { "type": "String" },
+          "parentGroupRole":  { "type": "String" },
+          "isRootGroup":      { "type": "Boolean" },
+          "isResourceOwner":  { "type": "Boolean", "required": false }
         }
       },
       "CreateCollectionContext": {
@@ -26,10 +27,12 @@
       "ResourceContext": {
         "type": "Record",
         "attributes": {
-          "orgRole":             { "type": "String" },
-          "effectiveRole":       { "type": "String" },
-          "isCreator":           { "type": "Boolean" },
-          "hasGroupEditorRole":  { "type": "Boolean" }
+          "orgRole":                  { "type": "String" },
+          "effectiveRole":            { "type": "String" },
+          "isCreator":                { "type": "Boolean" },
+          "hasGroupEditorRole":       { "type": "Boolean" },
+          "isStandaloneOrgPricing":   { "type": "Boolean", "required": false },
+          "isGroupRestricted":        { "type": "Boolean", "required": false }
         }
       }
     },
@@ -206,6 +209,13 @@
           "context": { "type": "GroupContext" }
         }
       },
+      "manageGroupPricings": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
+        }
+      },
 
       "createCollection": {
         "appliesTo": {
@@ -239,7 +249,7 @@
       "createPricing": {
         "appliesTo": {
           "principalTypes": ["User"],
-          "resourceTypes":  ["Organization", "PricingCollection"],
+          "resourceTypes":  ["Organization", "Group", "PricingCollection"],
           "context": { "type": "ResourceContext" }
         }
       },
