@@ -13,7 +13,9 @@ import type { GroupRepository } from '../types/repositories/GroupRepository.js';
 
 export type CedarAction =
   | 'createOrganization' | 'readOrganization' | 'updateOrganization'
-  | 'deleteOrganization' | 'manageOrganizationMembers' | 'manageSubscription'
+  | 'deleteOrganization' | 'manageOrganizationMembers'
+  /** Planned: subscription management (owner-only gate). No route wired yet. */
+  | 'manageSubscription'
   | 'createGroup'        | 'createSubgroup'    | 'listSubgroups'
   | 'readGroup'          | 'updateGroup'       | 'deleteGroup'
   | 'manageGroupMembers' | 'manageGroupCollections' | 'manageGroupPricings'
@@ -187,10 +189,10 @@ export default class AuthorizationService {
       if (request.groupId) {
         // Standalone group pricing: effectiveRole = user's role in that specific group
         const effectiveRole = await this.resolveGroupRole(userId, request.groupId);
-        return { orgRole, effectiveRole, isCreator, hasGroupEditorRole: false, isStandaloneOrgPricing: true, isGroupRestricted: true };
+        return { orgRole, effectiveRole, isCreator, hasGroupEditorRole: false, isGroupRestricted: true };
       }
       // Standalone org pricing (no group): accessible to all org members
-      return { orgRole, effectiveRole: 'none', isCreator, hasGroupEditorRole: false, isStandaloneOrgPricing: true, isGroupRestricted: false };
+      return { orgRole, effectiveRole: 'none', isCreator, hasGroupEditorRole: false, isGroupRestricted: false };
     }
 
     const collectionId = resource.type === 'PricingCollection'

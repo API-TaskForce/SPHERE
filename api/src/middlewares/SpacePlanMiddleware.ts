@@ -85,13 +85,20 @@ const checkSpacePlan = (featureName: string, expectedConsumption?: number) =>
  * user's personal organization regardless of the active org context.
  *
  * Use this for features tied to the individual user rather than to a
- * specific organization: harveyAssistant, communitySupport, standardSupport,
- * prioritySupport.
+ * specific organization — most notably pricing creation, where the
+ * pricingManagement gate and the maxPricings usage limit must be checked
+ * against the owner's personal org, not the currently active org.
+ *
+ * @param featureName        Feature name as defined in sphere-pricing.yaml.
+ * @param expectedConsumption  Optional increment for usage-limited features.
+ *                             Pass 1 on create operations (e.g. 'pricings', 1)
+ *                             so SPACE checks whether adding one more unit is
+ *                             still within the personal-org limit.
  *
  * Must be applied AFTER isLoggedIn (requires req.user). Does NOT require
  * orgContext — in fact, orgContext must NOT override the personal org here.
  */
-const checkUserFeature = (featureName: string) =>
+const checkUserFeature = (featureName: string, expectedConsumption?: number) =>
   async (req: any, res: any, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -108,7 +115,7 @@ const checkUserFeature = (featureName: string) =>
         return res.status(403).json({ error: 'No personal organization found for user' });
       }
 
-      const result = await spaceService.evaluateFeature(personalOrg.id, featureName);
+      const result = await spaceService.evaluateFeature(personalOrg.id, featureName, expectedConsumption);
 
       if (!result.eval) {
         return res.status(403).json({
