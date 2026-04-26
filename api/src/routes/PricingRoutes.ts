@@ -96,6 +96,9 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('pricingManagement'),
+      // collectionId is expected in req.body; CedarMiddleware resolves it via
+      // `req.body.collectionId` and uses it as resourceId for the PricingCollection gate.
+      checkCedar('createPricing', 'PricingCollection'),
       pricingController.addPricingToCollection
     );
 

@@ -33,7 +33,6 @@
           "effectiveRole":            { "type": "String" },
           "isCreator":                { "type": "Boolean" },
           "hasGroupEditorRole":       { "type": "Boolean" },
-          "isStandaloneOrgPricing":   { "type": "Boolean", "required": false },
           "isGroupRestricted":        { "type": "Boolean", "required": false }
         }
       }
