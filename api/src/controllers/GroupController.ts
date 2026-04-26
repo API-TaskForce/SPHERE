@@ -11,8 +11,10 @@ class GroupController {
     this.pricingService = container.resolve('pricingService');
     this.index = this.index.bind(this);
     this.indexByOrganization = this.indexByOrganization.bind(this);
+    this.indexByParent = this.indexByParent.bind(this);
     this.show = this.show.bind(this);
     this.create = this.create.bind(this);
+    this.createSubgroup = this.createSubgroup.bind(this);
     this.update = this.update.bind(this);
     this.destroy = this.destroy.bind(this);
     this.listMembers = this.listMembers.bind(this);
@@ -49,6 +51,15 @@ class GroupController {
     }
   }
 
+  async indexByParent(req: any, res: any) {
+    try {
+      const subgroups = await this.groupService.indexByParent(req.params.groupId);
+      res.json(subgroups);
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
   async show(req: any, res: any) {
     try {
       const group = await this.groupService.show(req.params.groupId);
@@ -71,6 +82,21 @@ class GroupController {
       res.status(201).json(group);
     } catch (err: any) {
       if (err.name?.includes('ValidationError') || err.code === 11000) {
+        res.status(422).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  async createSubgroup(req: any, res: any) {
+    try {
+      const subgroup = await this.groupService.createInGroup(req.body, req.params.groupId);
+      res.status(201).json(subgroup);
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else if (err.name?.includes('ValidationError') || err.code === 11000) {
         res.status(422).send({ error: err.message });
       } else {
         res.status(500).send({ error: err.message });

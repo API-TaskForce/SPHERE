@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { useOrgFetch } from '../hooks/useOrganization';
+import type { Group } from './organizationsApi';
 
 export const GROUPS_BASE_PATH = import.meta.env.VITE_API_URL + '/groups';
 
@@ -90,7 +91,7 @@ export function useGroupsApi() {
 
   const updateGroup = useCallback(async (
     groupId: string,
-    payload: { displayName?: string; description?: string }
+    payload: { displayName?: string; description?: string; _parentGroupId?: string | null }
   ) => {
     const response = await fetchWithOrgContext(`${GROUPS_BASE_PATH}/${groupId}`, {
       method: 'PUT',
@@ -287,6 +288,38 @@ export function useGroupsApi() {
     return response.json();
   }, [fetchWithOrgContext, basicHeaders]);
 
+  const getSubgroups = useCallback(async (parentGroupId: string): Promise<Group[]> => {
+    const response = await fetchWithOrgContext(`${GROUPS_BASE_PATH}/${parentGroupId}/subgroups`, {
+      method: 'GET',
+      headers: basicHeaders,
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error ?? 'Failed to fetch subgroups');
+    }
+
+    return response.json();
+  }, [fetchWithOrgContext, basicHeaders]);
+
+  const createSubgroup = useCallback(async (
+    parentGroupId: string,
+    payload: { name: string; displayName?: string; description?: string }
+  ): Promise<Group> => {
+    const response = await fetchWithOrgContext(`${GROUPS_BASE_PATH}/${parentGroupId}/subgroups`, {
+      method: 'POST',
+      headers: basicHeaders,
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error ?? 'Failed to create subgroup');
+    }
+
+    return response.json();
+  }, [fetchWithOrgContext, basicHeaders]);
+
   const getMyGroupMemberships = useCallback(async (
     userId: string
   ): Promise<GroupMembershipWithGroup[]> => {
@@ -320,6 +353,8 @@ export function useGroupsApi() {
     updateGroupCollectionAccess,
     removeGroupCollection,
     getMyGroupMemberships,
+    getSubgroups,
+    createSubgroup,
   }), [
     getGroup,
     updateGroup,
@@ -334,5 +369,7 @@ export function useGroupsApi() {
     updateGroupCollectionAccess,
     removeGroupCollection,
     getMyGroupMemberships,
+    getSubgroups,
+    createSubgroup,
   ]);
 }

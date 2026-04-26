@@ -61,9 +61,11 @@ class GroupRepository extends RepositoryBase {
   }
 
   async update(id: string, data: any, ...args: any) {
+    // Use $set for partial updates — passing the plain object without $set
+    // causes a full document replacement in MongoDB, wiping unspecified fields.
     return GroupMongoose.findOneAndUpdate(
       { _id: id },
-      data,
+      { $set: data },
       { new: true }
     );
   }

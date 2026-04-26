@@ -865,6 +865,105 @@ function AssignCollectionToGroupModal({
   );
 }
 
+// ── Group Tree ────────────────────────────────────────────────────────────────
+
+interface GroupTreeNode extends Group {
+  children: GroupTreeNode[];
+}
+
+/** Converts a flat group list (may include subgroups) into a nested tree. */
+function buildGroupTree(groups: Group[]): GroupTreeNode[] {
+  const nodeMap = new Map<string, GroupTreeNode>(
+    groups.map((g) => [g.id, { ...g, children: [] }])
+  );
+  const roots: GroupTreeNode[] = [];
+
+  for (const node of nodeMap.values()) {
+    if (node._parentGroupId && nodeMap.has(node._parentGroupId)) {
+      nodeMap.get(node._parentGroupId)!.children.push(node);
+    } else {
+      // Root group — either no parent, or parent belongs to a different org
+      roots.push(node);
+    }
+  }
+
+  return roots;
+}
+
+function GroupTreeItem({
+  node,
+  depth,
+  orgName,
+  onNavigate,
+}: {
+  node: GroupTreeNode;
+  depth: number;
+  orgName: string;
+  onNavigate: (groupId: string) => void;
+}) {
+  const isNested = depth > 0;
+  const indent = depth * 20; // px per level
+
+  return (
+    <>
+      <div
+        style={{ marginLeft: `${indent}px` }}
+        className={`flex items-center gap-3 rounded-lg border bg-white px-4 py-3 ${
+          isNested
+            ? 'border-sphere-grey-200 border-l-4 border-l-sphere-primary-200'
+            : 'border-sphere-grey-200'
+        }`}
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sphere-grey-100 text-sphere-grey-600">
+          <Iconify
+            icon={isNested ? 'mdi:folder-open-outline' : 'mdi:folder-outline'}
+            width={18}
+          />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            {isNested && (
+              <Iconify icon="mdi:subdirectory-arrow-right" width={14} className="shrink-0 text-sphere-grey-400" />
+            )}
+            <p className="truncate text-sm font-semibold text-sphere-grey-800">
+              {node.displayName ?? node.name}
+            </p>
+            {node.children.length > 0 && (
+              <span className="shrink-0 rounded-full bg-sphere-grey-100 px-1.5 py-0.5 text-xs text-sphere-grey-500">
+                {node.children.length}
+              </span>
+            )}
+          </div>
+          <p className="truncate text-xs text-sphere-grey-500">@{node.name}</p>
+          {node.description && (
+            <p className="mt-0.5 truncate text-xs text-sphere-grey-400">{node.description}</p>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onNavigate(node.id)}
+          className="shrink-0 flex items-center gap-1 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-xs font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+        >
+          Open
+          <Iconify icon="mdi:chevron-right" width={16} />
+        </button>
+      </div>
+
+      {node.children.map((child) => (
+        <GroupTreeItem
+          key={child.id}
+          node={child}
+          depth={depth + 1}
+          orgName={orgName}
+          onNavigate={onNavigate}
+        />
+      ))}
+    </>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 type Tab = 'overview' | 'members' | 'groups' | 'pricings' | 'collections';
@@ -1367,7 +1466,7 @@ export default function OrganizationDetailPage() {
         </div>
       )}
 
-      {/* Groups Tab */}
+      {/* Groups Tab — tree view */}
       {activeTab === 'groups' && (
         <div className="flex flex-col gap-3">
           {canManage && (
@@ -1388,32 +1487,14 @@ export default function OrganizationDetailPage() {
               <p className="text-sm">No groups yet.</p>
             </div>
           )}
-          {groups.map((group) => (
-            <div
-              key={group.id}
-              className="flex items-center gap-3 rounded-lg border border-sphere-grey-200 bg-white px-4 py-3"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-sphere-grey-100 text-sphere-grey-600">
-                <Iconify icon="mdi:folder-outline" width={18} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-sphere-grey-800">
-                  {group.displayName ?? group.name}
-                </p>
-                <p className="text-xs text-sphere-grey-500">@{group.name}</p>
-                {group.description && (
-                  <p className="mt-0.5 text-xs text-sphere-grey-400">{group.description}</p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => router.push(`/me/organizations/${org.name}/groups/${group.id}`)}
-                className="flex items-center gap-1 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-xs font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
-              >
-                Open
-                <Iconify icon="mdi:chevron-right" width={16} />
-              </button>
-            </div>
+          {buildGroupTree(groups).map((root) => (
+            <GroupTreeItem
+              key={root.id}
+              node={root}
+              depth={0}
+              orgName={org.name}
+              onNavigate={(groupId) => router.push(`/me/organizations/${org.name}/groups/${groupId}`)}
+            />
           ))}
         </div>
       )}

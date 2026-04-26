@@ -66,12 +66,27 @@ permit (
 
 // ── Grupos ──────────────────────────────────────────────────────
 
-// Cualquier miembro puede consultar grupos (owner/admin ya cubiertos)
+// Cualquier miembro puede consultar grupos raíz (owner/admin ya cubiertos)
 permit (
   principal is SPHERE::User,
   action == SPHERE::Action::"readGroup",
   resource is SPHERE::Group
 ) when { context.orgRole == "member" };
+
+// Cualquier miembro de un grupo puede leer los subgrupos directos de ese grupo
+// (no se extiende a miembros arbitrarios de la org que no pertenezcan al grupo padre)
+permit (
+  principal is SPHERE::User,
+  action == SPHERE::Action::"readGroup",
+  resource is SPHERE::Group
+) when { !context.isRootGroup && context.parentGroupRole != "none" };
+
+// Cualquier miembro de un grupo puede listar sus subgrupos directos
+permit (
+  principal is SPHERE::User,
+  action == SPHERE::Action::"listSubgroups",
+  resource is SPHERE::Group
+) when { context.groupRole != "none" };
 
 // El admin del grupo puede crear subgrupos y gestionar el grupo, sus miembros y sus colecciones
 permit (
@@ -85,6 +100,20 @@ permit (
   ],
   resource is SPHERE::Group
 ) when { context.groupRole == "admin" };
+
+// El admin del grupo padre tiene las mismas capacidades sobre los subgrupos directos
+// que un admin de org tiene sobre los grupos de primer nivel:
+// puede crear sub-subgrupos, actualizar, gestionar miembros, colecciones y pricings
+permit (
+  principal is SPHERE::User,
+  action in [
+    SPHERE::Action::"updateGroup",
+    SPHERE::Action::"manageGroupMembers",
+    SPHERE::Action::"manageGroupCollections",
+    SPHERE::Action::"manageGroupPricings"
+  ],
+  resource is SPHERE::Group
+) when { !context.isRootGroup && context.parentGroupRole == "admin" };
 
 // El propietario del recurso puede desasignarlo del grupo, independientemente de su rol de grupo
 // (aplica tanto a colecciones como a pricings asignados al grupo)
@@ -116,6 +145,17 @@ permit (
   action == SPHERE::Action::"createCollection",
   resource is SPHERE::Group
 ) when { context.groupRole == "admin" || context.groupRole == "editor" };
+
+// El admin/editor del grupo padre también puede crear colecciones en subgrupos directos
+permit (
+  principal is SPHERE::User,
+  action == SPHERE::Action::"createCollection",
+  resource is SPHERE::Group
+) when {
+  context has isRootGroup && !context.isRootGroup &&
+  context has parentGroupRole &&
+  (context.parentGroupRole == "admin" || context.parentGroupRole == "editor")
+};
 
 // Cualquier rol con acceso efectivo puede leer la colección
 permit (

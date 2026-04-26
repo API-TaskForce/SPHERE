@@ -110,18 +110,6 @@ features:
     expression: pricingContext['features']['collectionAnalytics']
     type: INFORMATION
 
-  # ── AUTOMATION ────────────────────────────────────────────────────────────
-
-  harveyAssistant:
-    description: >
-      Access Harvey, the AI-powered pricing assistant, to analyze, compare
-      and query pricing models using natural language.
-    valueType: BOOLEAN
-    defaultValue: true
-    expression: pricingContext['features']['harveyAssistant']
-    type: AUTOMATION
-    automationType: BOT
-
   # ── MANAGEMENT ────────────────────────────────────────────────────────────
 
   organizationManagement:
@@ -190,34 +178,6 @@ features:
     defaultValue: true
     expression: pricingContext['features']['orgWideCollections']
     type: MANAGEMENT
-
-  # ── SUPPORT ───────────────────────────────────────────────────────────────
-
-  communitySupport:
-    description: >
-      Access community forums and public documentation for help and guidance.
-    valueType: BOOLEAN
-    defaultValue: true
-    expression: pricingContext['features']['communitySupport']
-    type: SUPPORT
-
-  standardSupport:
-    description: >
-      Access official support channels via email with guaranteed response
-      times.
-    valueType: BOOLEAN
-    defaultValue: false
-    expression: pricingContext['features']['standardSupport']
-    type: SUPPORT
-
-  prioritySupport:
-    description: >
-      Access dedicated priority support with accelerated response times and
-      direct escalation path.
-    valueType: BOOLEAN
-    defaultValue: false
-    expression: pricingContext['features']['prioritySupport']
-    type: SUPPORT
 
 usageLimits:
 
@@ -299,8 +259,6 @@ plans:
         value: true
       sharedCollections:
         value: true
-      standardSupport:
-        value: true
     usageLimits:
       maxGroups:
         value: 5
@@ -329,10 +287,6 @@ plans:
       groupManagement:
         value: true
       sharedCollections:
-        value: true
-      standardSupport:
-        value: true
-      prioritySupport:
         value: true
     usageLimits:
       maxGroups:

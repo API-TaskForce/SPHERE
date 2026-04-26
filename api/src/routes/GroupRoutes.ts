@@ -106,6 +106,28 @@ const loadFileRoutes = function (app: express.Application) {
       groupController.removeCollection
     );
 
+  // ── Subgroup routes ───────────────────────────────────────────────────────
+  // Listar subgrupos: permitido a cualquier miembro del grupo padre (acción listSubgroups)
+  // Crear subgrupo: exclusivo de admin del grupo padre (acción createSubgroup)
+  app
+    .route(baseUrl + '/groups/:groupId/subgroups')
+    .get(
+      isLoggedIn,
+      orgContext,
+      checkCedar('listSubgroups', 'Group', 'groupId'),
+      groupController.indexByParent
+    )
+    .post(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('groupManagement'),
+      checkSpacePlan('groups', 1),
+      checkCedar('createSubgroup', 'Group', 'groupId'),
+      GroupValidation.create,
+      handleValidation,
+      groupController.createSubgroup
+    );
+
   // ── Organization-scoped group routes ──────────────────────────────────────
   app
     .route(baseUrl + '/organizations/:organizationId/groups')
