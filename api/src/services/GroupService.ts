@@ -58,6 +58,23 @@ class GroupService {
     return await this.groupRepository.create({ ...data, _organizationId: organizationId });
   }
 
+  /**
+   * Creates a subgroup under an existing parent group.
+   * _organizationId and _parentGroupId are always enforced server-side — never trusted from body.
+   */
+  async createInGroup(data: any, parentGroupId: string) {
+    const parent = await this.groupRepository.findById(parentGroupId);
+    if (!parent) {
+      throw new Error('Parent group not found');
+    }
+
+    return await this.groupRepository.create({
+      ...data,
+      _organizationId: parent._organizationId,
+      _parentGroupId: parentGroupId,
+    });
+  }
+
   async update(id: string, data: any) {
     const group = await this.groupRepository.update(id, data);
     if (!group) {
@@ -67,7 +84,8 @@ class GroupService {
   }
 
   /**
-   * Deletes a group and cascades to memberships and collection associations.
+   * Deletes a group and cascades recursively to all subgroups, memberships and collection associations.
+   * Depth-first: subgroups are fully destroyed before their parent is removed.
    */
   async destroy(id: string) {
     const group = await this.groupRepository.findById(id);
@@ -75,14 +93,29 @@ class GroupService {
       throw new Error('Group not found');
     }
 
+    await this.destroyRecursive(id);
+    return true;
+  }
+
+  /**
+   * Internal recursive helper — destroys a group and all its descendants.
+   * Called by destroy() and recursively for each subgroup.
+   */
+  private async destroyRecursive(id: string): Promise<void> {
+    // First, recursively destroy all direct subgroups
+    const subgroups = await this.groupRepository.findByParentGroupId(id);
+    for (const subgroup of subgroups) {
+      await this.destroyRecursive(subgroup.id);
+    }
+
+    // Then clean up this group's own associations and delete it
     await this.groupCollectionRepository.destroyByGroupId(id);
     await this.groupMembershipRepository.destroyByGroupId(id);
 
     const result = await this.groupRepository.destroy(id);
     if (!result) {
-      throw new Error('Group not found');
+      throw new Error(`Failed to delete group ${id}`);
     }
-    return true;
   }
 
   async exists(id: string) {

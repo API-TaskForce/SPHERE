@@ -40,6 +40,12 @@ const update = [
     .isString()
     .withMessage('The description field must be a string')
     .trim(),
+  // Allows promoting a subgroup to root-level by setting _parentGroupId to null.
+  // Only org admin/owner should call this in practice (enforced at the UI layer).
+  check('_parentGroupId')
+    .optional({ nullable: true })
+    .custom((val) => val === null || typeof val === 'string')
+    .withMessage('_parentGroupId must be null or a valid group ID string'),
 ];
 
 const addMember = [
