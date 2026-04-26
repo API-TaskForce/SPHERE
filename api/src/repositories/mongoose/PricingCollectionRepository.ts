@@ -170,6 +170,7 @@ class PricingCollectionRepository extends RepositoryBase {
         ...getAllPricingsFromCollection(),
         {
           $project: {
+            _ownerId: 1,
             name: 1,
             description: 1,
             analytics: 1,
@@ -188,7 +189,13 @@ class PricingCollectionRepository extends RepositoryBase {
     try {
       const match: any = { _ownerId: new mongoose.Types.ObjectId(userId) };
       if (organizationId) {
-        match._organizationId = new mongoose.Types.ObjectId(organizationId);
+        // Include items assigned to this org AND items with no org assignment
+        // (i.e. unassigned items should still appear in the personal listing)
+        match.$or = [
+          { _organizationId: new mongoose.Types.ObjectId(organizationId) },
+          { _organizationId: { $exists: false } },
+          { _organizationId: null },
+        ];
       }
 
       const collections = await PricingCollectionMongoose.aggregate([
@@ -395,6 +402,50 @@ class PricingCollectionRepository extends RepositoryBase {
     await collection.save();
 
     return collection.toJSON();
+  }
+
+  async findAllByUserId(userId: string) {
+    try {
+      const collections = await PricingCollectionMongoose.aggregate([
+        { $match: { _ownerId: new mongoose.Types.ObjectId(userId) } },
+        ...addNumberOfPricingsAggregator(),
+        ...addOwnerToCollectionAggregator(),
+        {
+          $addFields: { id: { $toString: '$_id' } },
+        },
+        {
+          $project: {
+            id: 1,
+            _id: 0,
+            owner: { username: 1, avatar: 1, id: { $toString: '$owner._id' } },
+            name: 1,
+            description: 1,
+            private: 1,
+            numberOfPricings: 1,
+            _organizationId: 1,
+          },
+        },
+        { $sort: { name: 1 } },
+      ]);
+      collections.forEach((c: any) => processFileUris(c.owner, ['avatar']));
+      return collections;
+    } catch (err) {
+      return [];
+    }
+  }
+
+  async updateOrganizationId(collectionId: string, organizationId: string) {
+    return PricingCollectionMongoose.updateOne(
+      { _id: new mongoose.Types.ObjectId(collectionId) },
+      { $set: { _organizationId: new mongoose.Types.ObjectId(organizationId) } }
+    );
+  }
+
+  async clearOrganizationId(collectionId: string) {
+    return PricingCollectionMongoose.updateOne(
+      { _id: new mongoose.Types.ObjectId(collectionId) },
+      { $unset: { _organizationId: 1 } }
+    );
   }
 
   async destroy(id: string, ...args: any) {

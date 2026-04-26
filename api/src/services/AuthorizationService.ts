@@ -16,7 +16,7 @@ export type CedarAction =
   | 'deleteOrganization' | 'manageOrganizationMembers' | 'manageSubscription'
   | 'createGroup'        | 'createSubgroup'    | 'readGroup'
   | 'updateGroup'        | 'deleteGroup'       | 'manageGroupMembers'
-  | 'manageGroupCollections'
+  | 'manageGroupCollections' | 'manageGroupPricings'
   | 'createCollection'   | 'readCollection'    | 'updateCollection'
   | 'deleteCollection'
   | 'createPricing'      | 'readPricing'       | 'updatePricing'
@@ -34,6 +34,11 @@ export interface AuthorizationRequest {
    * necesario para resolver el effectiveRole del usuario sobre esa colección.
    */
   collectionId?: string;
+  /**
+   * ID del grupo al que pertenece el pricing directamente (sin colección).
+   * Permite resolver el effectiveRole para pricings standalone de grupo.
+   */
+  groupId?: string;
   /**
    * ID del creador del recurso. Requerido para las acciones deleteCollection y deletePricing
    * cuando el usuario tiene effectiveRole "editor" (puede eliminar solo si es el creador).
@@ -131,47 +136,78 @@ export default class AuthorizationService {
         const hasGroupEditorRole = groupMemberships.some(
           (gm: any) => gm.role === 'editor' || gm.role === 'admin'
         );
-        return { orgRole, effectiveRole: 'none', isCreator: false, hasGroupEditorRole };
+        return { orgRole, effectiveRole: 'none', isCreator: false, hasGroupEditorRole, isGroupRestricted: false };
       }
       return { orgRole };
     }
 
-    // GroupContext / CreateCollectionContext — acciones cuyo resource es un grupo
+    // GroupContext / CreateCollectionContext / ResourceContext — acciones cuyo resource es un grupo
     if (resource.type === 'Group') {
       if (action === 'createCollection') {
         // CreateCollectionContext: rol del usuario en ese grupo concreto
         const groupRole = await this.resolveGroupRole(userId, resource.id);
         return { orgRole, groupRole };
       }
+      // createPricing on Group (assign pricing to group): check editor role in that group
+      if (action === 'createPricing') {
+        const groupRole = await this.resolveGroupRole(userId, resource.id);
+        const hasGroupEditorRole = groupRole === 'admin' || groupRole === 'editor';
+        return { orgRole, effectiveRole: 'none', isCreator: false, hasGroupEditorRole, isGroupRestricted: false };
+      }
       // GroupContext: incluye parentGroupRole e isRootGroup para deleteGroup
-      return this.resolveGroupContext(userId, orgRole, resource.id);
+      // creatorId portado por el middleware para manageGroupCollections / manageGroupPricings
+      return this.resolveGroupContext(userId, orgRole, resource.id, request.creatorId);
     }
 
     // ResourceContext — acciones sobre PricingCollection o Pricing
+    // For PricingCollection, resource.id IS the collection's own ID.
+    // For Pricing, resource.id is the pricing's own ID — the collection that contains it
+    // is carried separately in request.collectionId (set by CedarMiddleware).
+
+    // Standalone org/group pricing: has no collection.
+    // CedarMiddleware skips Cedar for personal pricings; reaching here means the pricing
+    // belongs to an org or group. Resolve effectiveRole from direct group membership when
+    // a groupId is available; otherwise mark as non-group-restricted (readable by any org member).
+    if (resource.type === 'Pricing' && !request.collectionId) {
+      const isCreator = Boolean(creatorId) && creatorId === userId;
+      if (request.groupId) {
+        // Standalone group pricing: effectiveRole = user's role in that specific group
+        const effectiveRole = await this.resolveGroupRole(userId, request.groupId);
+        return { orgRole, effectiveRole, isCreator, hasGroupEditorRole: false, isStandaloneOrgPricing: true, isGroupRestricted: true };
+      }
+      // Standalone org pricing (no group): accessible to all org members
+      return { orgRole, effectiveRole: 'none', isCreator, hasGroupEditorRole: false, isStandaloneOrgPricing: true, isGroupRestricted: false };
+    }
+
     const collectionId = resource.type === 'PricingCollection'
       ? resource.id
       : this.requireCollectionId(request);
 
-    const effectiveRole = await this.resolveEffectiveRole(userId, collectionId);
-    const isCreator     = Boolean(creatorId) && creatorId === userId;
+    const [effectiveRole, isGroupRestricted] = await this.resolveEffectiveRoleAndGroupStatus(userId, collectionId);
+    const isCreator = Boolean(creatorId) && creatorId === userId;
 
-    return { orgRole, effectiveRole, isCreator, hasGroupEditorRole: false };
+    return { orgRole, effectiveRole, isCreator, hasGroupEditorRole: false, isGroupRestricted };
   }
 
   private async resolveGroupContext(
     userId: string,
     orgRole: OrgRole,
     groupId: string,
+    creatorId?: string,
   ): Promise<CedarContext> {
     const group       = await this.groupRepository.findById(groupId);
     const isRootGroup = !group?._parentGroupId;
+
+    // isResourceOwner: true when the caller owns the resource being (un)assigned to/from the group.
+    // Populated by CedarMiddleware for manageGroupCollections and manageGroupPricings DELETE routes.
+    const isResourceOwner = Boolean(creatorId) && creatorId === userId;
 
     const [groupRole, parentGroupRole] = await Promise.all([
       this.resolveGroupRole(userId, groupId),
       isRootGroup ? Promise.resolve<GroupRole>('none') : this.resolveGroupRole(userId, group!._parentGroupId!),
     ]);
 
-    return { orgRole, groupRole, parentGroupRole, isRootGroup };
+    return { orgRole, groupRole, parentGroupRole, isRootGroup, isResourceOwner };
   }
 
   // ── Role resolution helpers ────────────────────────────────────────────────
@@ -197,12 +233,29 @@ export default class AuthorizationService {
    *   3. Si ningún grupo del usuario tiene acceso a la colección, el rol efectivo es "none".
    */
   async resolveEffectiveRole(userId: string, collectionId: string): Promise<EffectiveRole> {
+    const [role] = await this.resolveEffectiveRoleAndGroupStatus(userId, collectionId);
+    return role;
+  }
+
+  /**
+   * Igual que resolveEffectiveRole pero también devuelve si la colección está asignada
+   * a algún grupo (isGroupRestricted). Necesario para construir el contexto Cedar correcto:
+   *   - isGroupRestricted = false → cualquier miembro de la org puede leer el recurso
+   *   - isGroupRestricted = true  → solo miembros del grupo (effectiveRole != "none") o owner/admin
+   */
+  private async resolveEffectiveRoleAndGroupStatus(
+    userId: string,
+    collectionId: string,
+  ): Promise<[EffectiveRole, boolean]> {
     const [groupMemberships, groupCollections] = await Promise.all([
       this.groupMembershipRepository.findByUserId(userId),
       this.groupCollectionRepository.findByPricingCollectionId(collectionId),
     ]);
 
-    if (!groupMemberships.length || !groupCollections.length) return 'none';
+    // isGroupRestricted: la colección pertenece a ≥1 grupo → acceso restringido a miembros de ese grupo
+    const isGroupRestricted = groupCollections.length > 0;
+
+    if (!groupMemberships.length || !groupCollections.length) return ['none', isGroupRestricted];
 
     const gcByGroupId = new Map(groupCollections.map(gc => [gc._groupId, gc]));
 
@@ -220,7 +273,7 @@ export default class AuthorizationService {
       }
     }
 
-    return bestRole;
+    return [bestRole, isGroupRestricted];
   }
 
   // ── Entity building ────────────────────────────────────────────────────────

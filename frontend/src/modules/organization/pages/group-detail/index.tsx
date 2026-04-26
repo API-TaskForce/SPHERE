@@ -15,6 +15,8 @@ import {
   GroupRole,
   useGroupsApi,
 } from '../../api/groupsApi';
+import { usePricingsApi } from '../../../pricing/api/pricingsApi';
+import { usePricingCollectionsApi } from '../../../profile/api/pricingCollectionsApi';
 
 const GROUP_ROLE_LABELS: Record<GroupRole, string> = {
   admin: 'Admin',
@@ -346,6 +348,303 @@ function AddGroupCollectionModal({
   );
 }
 
+// ── Create Group Collection Modal ─────────────────────────────────────────────
+
+function CreateGroupCollectionModal({
+  groupId,
+  onClose,
+  onCreated,
+}: {
+  groupId: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { createGroupCollection } = usePricingCollectionsApi();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await createGroupCollection(groupId, { name, description, private: false, pricings: [] });
+      onCreated();
+      onClose();
+    } catch (err: unknown) {
+      customAlert(getErrorMessage(err, 'Failed to create collection'));
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">Create Collection</h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700">
+            <Iconify icon="mdi:close" width={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-sphere-grey-700">
+              Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              maxLength={100}
+              className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-sphere-grey-700">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              maxLength={500}
+              className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || !name.trim()}
+              className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50"
+            >
+              {isSubmitting ? 'Creating...' : 'Create collection'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Add Existing Pricing to Group Modal ──────────────────────────────────────
+
+function AddExistingPricingToGroupModal({
+  groupId,
+  onClose,
+  onAdded,
+}: {
+  groupId: string;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const [pricings, setPricings] = useState<any[]>([]);
+  const [selected, setSelected] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { getAllByOwner, assignExistingPricingToGroup } = usePricingsApi();
+
+  useEffect(() => {
+    getAllByOwner()
+      .then((res: any) => {
+        const list = res.pricings ?? [];
+        setPricings(list);
+        if (list.length > 0) setSelected(list[0].id);
+      })
+      .catch(() => setPricings([]))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected) return;
+    setIsSubmitting(true);
+    try {
+      await assignExistingPricingToGroup(groupId, selected);
+      onAdded();
+      onClose();
+    } catch (err: any) {
+      customAlert(err.message ?? 'Failed to add pricing');
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">Add Existing Pricing</h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700">
+            <Iconify icon="mdi:close" width={20} />
+          </button>
+        </div>
+        {isLoading && <p className="py-4 text-center text-sm text-sphere-grey-500">Loading...</p>}
+        {!isLoading && pricings.length === 0 && (
+          <p className="py-4 text-center text-sm text-sphere-grey-400">No pricings available to add.</p>
+        )}
+        {!isLoading && pricings.length > 0 && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-sphere-grey-700">Pricing</label>
+              <select
+                value={selected}
+                onChange={(e) => setSelected(e.target.value)}
+                className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+              >
+                {pricings.map((p: any) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} (v{p.version})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Adding...' : 'Add pricing'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Assign Group Pricing to Group Collection Modal ───────────────────────────
+
+function AssignGroupPricingToCollectionModal({
+  groupId,
+  groupPricings,
+  groupCollections,
+  onClose,
+  onAssigned,
+}: {
+  groupId: string;
+  groupPricings: any[];
+  groupCollections: GroupCollectionWithCollection[];
+  onClose: () => void;
+  onAssigned: () => void;
+}) {
+  // Only offer pricings that are not already in a collection
+  const availablePricings = groupPricings.filter((p: any) => !p._collectionId);
+
+  const [selectedPricing, setSelectedPricing] = useState(availablePricings[0]?.name ?? '');
+  const [selectedCollection, setSelectedCollection] = useState(
+    groupCollections[0]?._pricingCollectionId ?? ''
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { addPricingToCollection } = usePricingsApi();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPricing || !selectedCollection) return;
+    setIsSubmitting(true);
+    try {
+      await addPricingToCollection(selectedPricing, selectedCollection);
+      onAssigned();
+      onClose();
+    } catch (err: any) {
+      customAlert(err.message ?? 'Failed to assign pricing to collection');
+      setIsSubmitting(false);
+    }
+  };
+
+  if (availablePricings.length === 0 || groupCollections.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-sphere-grey-800">Assign Pricing to Collection</h2>
+            <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700">
+              <Iconify icon="mdi:close" width={20} />
+            </button>
+          </div>
+          <p className="py-4 text-center text-sm text-sphere-grey-400">
+            {groupCollections.length === 0
+              ? 'This group needs at least one collection.'
+              : 'All group pricings are already assigned to a collection.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">Assign Pricing to Collection</h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700">
+            <Iconify icon="mdi:close" width={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-sphere-grey-700">Pricing</label>
+            <select
+              value={selectedPricing}
+              onChange={(e) => setSelectedPricing(e.target.value)}
+              className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+            >
+              {availablePricings.map((p: any) => (
+                <option key={p.id} value={p.name}>
+                  {p.name} (v{p.version})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-sphere-grey-700">Collection</label>
+            <select
+              value={selectedCollection}
+              onChange={(e) => setSelectedCollection(e.target.value)}
+              className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+            >
+              {groupCollections.map((gc) => (
+                <option key={gc._pricingCollectionId} value={gc._pricingCollectionId}>
+                  {gc.pricingCollection.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50"
+            >
+              {isSubmitting ? 'Assigning...' : 'Assign'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function GroupDetailPage() {
   const { orgName, groupId } = useParams<{ orgName: string; groupId: string }>();
   const { authUser } = useAuth();
@@ -355,6 +654,7 @@ export default function GroupDetailPage() {
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<GroupMemberWithUser[]>([]);
   const [collections, setCollections] = useState<GroupCollectionWithCollection[]>([]);
+  const [groupPricings, setGroupPricings] = useState<any[]>([]);
   const [availableCollections, setAvailableCollections] = useState<AvailableGroupCollectionOption[]>([]);
   const [myOrgRole, setMyOrgRole] = useState<'owner' | 'admin' | 'member' | null>(null);
   const [myGroupRole, setMyGroupRole] = useState<GroupRole | null>(null);
@@ -365,6 +665,9 @@ export default function GroupDetailPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
   const [addCollectionModalOpen, setAddCollectionModalOpen] = useState(false);
+  const [createCollectionModalOpen, setCreateCollectionModalOpen] = useState(false);
+  const [addExistingPricingModalOpen, setAddExistingPricingModalOpen] = useState(false);
+  const [assignPricingToCollectionModalOpen, setAssignPricingToCollectionModalOpen] = useState(false);
 
   const { getMyMemberships } = useOrganizationsApi();
   const {
@@ -379,12 +682,25 @@ export default function GroupDetailPage() {
     updateGroupCollectionAccess,
     removeGroupCollection,
   } = useGroupsApi();
+  const { getGroupPricings, removeGroupPricing } = usePricingsApi();
 
   const canManageOrg = myOrgRole === 'owner' || myOrgRole === 'admin';
   const canManageGroup = canManageOrg || myGroupRole === 'admin';
   const canManageMembers = canManageGroup;
   const canManageCollections = canManageGroup;
+
+  // Resource-owner bypass: the owner of a collection/pricing can always unassign it from the group,
+  // regardless of their group role (backed by the Cedar isResourceOwner policy).
+  const canRemoveCollectionFromGroup = (collection: GroupCollectionWithCollection) =>
+    canManageGroup || collection.pricingCollection.ownerId === authUser.user?.id;
+
+  const canRemovePricingFromGroup = (pricing: any) =>
+    canManageGroup || pricing.owner === authUser.user?.username;
   const canDeleteGroup = canManageOrg || (!!group?._parentGroupId && myParentGroupRole === 'admin');
+  // Any group member (admin/editor/viewer) or org owner/admin can view group content.
+  // Derived from the already-fetched members list (loaded via getGroupMembers with org context)
+  // instead of myGroupRole, which relies on getMyGroupMemberships (no org context header).
+  const isGroupMember = canManageOrg || members.some((m) => m.user.id === authUser.user?.id);
 
   const refreshMembers = useCallback(async () => {
     if (!groupId) return;
@@ -407,6 +723,17 @@ export default function GroupDetailPage() {
       // Ignore refresh errors to avoid disrupting the screen.
     }
   }, [groupId, getGroupCollections]);
+
+  const refreshPricings = useCallback(async () => {
+    if (!groupId) return;
+
+    try {
+      const data = await getGroupPricings(groupId);
+      setGroupPricings(data?.pricings ?? []);
+    } catch {
+      // Ignore refresh errors to avoid disrupting the screen.
+    }
+  }, [groupId, getGroupPricings]);
 
   const loadAvailableCollections = useCallback(async () => {
     if (!groupId || !activeOrganization?.id || !canManageCollections) return;
@@ -451,13 +778,15 @@ export default function GroupDetailPage() {
       setMyParentGroupRole(parentGroupMembership?.role ?? null);
       setGroup(groupData);
 
-      const [membersData, collectionsData] = await Promise.all([
+      const [membersData, collectionsData, pricingsData] = await Promise.all([
         getGroupMembers(groupId),
         getGroupCollections(groupId),
+        getGroupPricings(groupId).catch(() => ({ pricings: [] })),
       ]);
 
       setMembers(membersData);
       setCollections(collectionsData);
+      setGroupPricings(pricingsData?.pricings ?? []);
     } catch (error: unknown) {
       setError(getErrorMessage(error, 'Failed to load group'));
     } finally {
@@ -473,6 +802,7 @@ export default function GroupDetailPage() {
     getGroup,
     getGroupMembers,
     getGroupCollections,
+    getGroupPricings,
   ]);
 
   useEffect(() => {
@@ -561,6 +891,18 @@ export default function GroupDetailPage() {
               await loadAvailableCollections();
             }
           })
+          .catch((err: Error) => customAlert(err.message))
+      )
+      .catch(() => {});
+  };
+
+  const handleRemovePricingFromGroup = (pricing: any) => {
+    if (!group) return;
+
+    customConfirm(`Remove "${pricing.name}" from this group?`)
+      .then(() =>
+        removeGroupPricing(group.id, pricing.id)
+          .then(() => refreshPricings())
           .catch((err: Error) => customAlert(err.message))
       )
       .catch(() => {});
@@ -769,95 +1111,195 @@ export default function GroupDetailPage() {
               </p>
             </div>
             {canManageCollections && (
-              <button
-                type="button"
-                onClick={() => setAddCollectionModalOpen(true)}
-                className="flex items-center gap-2 rounded-md bg-sphere-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sphere-primary-700"
-              >
-                <Iconify icon="mdi:link-plus" width={16} />
-                Associate
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCreateCollectionModalOpen(true)}
+                  className="flex items-center gap-2 rounded-md bg-sphere-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sphere-primary-700"
+                >
+                  <Iconify icon="mdi:plus" width={16} />
+                  Create
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddCollectionModalOpen(true)}
+                  className="flex items-center gap-2 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+                >
+                  <Iconify icon="mdi:link-plus" width={16} />
+                  Associate
+                </button>
+              </div>
             )}
           </div>
 
           <div className="flex flex-col gap-3">
-            {collections.length === 0 && (
+            {!isGroupMember ? (
               <div className="flex flex-col items-center gap-2 py-10 text-sphere-grey-400">
-                <Iconify icon="mdi:folder-link-outline" width={36} />
-                <p className="text-sm">No collections associated with this group.</p>
+                <Iconify icon="mdi:lock-outline" width={36} />
+                <p className="text-sm">Join this group to view its collections.</p>
               </div>
+            ) : (
+              <>
+                {collections.length === 0 && (
+                  <div className="flex flex-col items-center gap-2 py-10 text-sphere-grey-400">
+                    <Iconify icon="mdi:folder-link-outline" width={36} />
+                    <p className="text-sm">No collections associated with this group.</p>
+                  </div>
+                )}
+
+                {collections.map((collection) => (
+                  <div
+                    key={collection.id}
+                    className="flex flex-wrap items-center gap-3 rounded-lg border border-sphere-grey-200 bg-sphere-grey-50 px-4 py-3"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sphere-grey-600">
+                      <Iconify icon="mdi:view-grid-outline" width={18} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-sphere-grey-800">
+                        {collection.pricingCollection.name}
+                      </p>
+                      <p className="text-xs text-sphere-grey-500">
+                        {collection.pricingCollection.description || 'No description provided.'}
+                      </p>
+                    </div>
+
+                    {canManageCollections ? (
+                      <select
+                        value={collection.accessRole ?? ''}
+                        onChange={(event) => {
+                          const val = event.target.value;
+                          handleCollectionRoleChange(
+                            collection,
+                            val === '' ? null : (val as NonNullable<GroupCollectionAccessRole>)
+                          );
+                        }}
+                        className="rounded border border-sphere-grey-300 bg-white px-2 py-1 text-xs font-semibold text-sphere-grey-700"
+                      >
+                        <option value="">Group role</option>
+                        <option value="viewer">Viewer</option>
+                        <option value="editor">Editor</option>
+                      </select>
+                    ) : (
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${COLLECTION_ROLE_STYLES[collection.accessRole ?? 'none']}`}
+                      >
+                        {COLLECTION_ROLE_LABELS[collection.accessRole ?? 'none']}
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        router.push(
+                          `/pricings/collections/${collection.pricingCollection.ownerId}/${collection.pricingCollection.name}`
+                        )
+                      }
+                      title="View collection"
+                      className="text-sphere-grey-300 hover:text-sphere-primary-700"
+                    >
+                      <Iconify icon="mdi:open-in-new" width={18} />
+                    </button>
+
+                    {canRemoveCollectionFromGroup(collection) && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCollection(collection)}
+                        title="Remove association"
+                        className="text-sphere-grey-300 hover:text-red-500"
+                      >
+                        <Iconify icon="mdi:link-variant-remove" width={18} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </>
             )}
-
-            {collections.map((collection) => (
-              <div
-                key={collection.id}
-                className="flex flex-wrap items-center gap-3 rounded-lg border border-sphere-grey-200 bg-sphere-grey-50 px-4 py-3"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sphere-grey-600">
-                  <Iconify icon="mdi:view-grid-outline" width={18} />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-sphere-grey-800">
-                    {collection.pricingCollection.name}
-                  </p>
-                  <p className="text-xs text-sphere-grey-500">
-                    {collection.pricingCollection.description || 'No description provided.'}
-                  </p>
-                </div>
-
-                {canManageCollections ? (
-                  <select
-                    value={collection.accessRole ?? ''}
-                    onChange={(event) => {
-                      const val = event.target.value;
-                      handleCollectionRoleChange(
-                        collection,
-                        val === '' ? null : (val as NonNullable<GroupCollectionAccessRole>)
-                      );
-                    }}
-                    className="rounded border border-sphere-grey-300 bg-white px-2 py-1 text-xs font-semibold text-sphere-grey-700"
-                  >
-                    <option value="">Group role</option>
-                    <option value="viewer">Viewer</option>
-                    <option value="editor">Editor</option>
-                  </select>
-                ) : (
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${COLLECTION_ROLE_STYLES[collection.accessRole ?? 'none']}`}
-                  >
-                    {COLLECTION_ROLE_LABELS[collection.accessRole ?? 'none']}
-                  </span>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push(
-                      `/pricings/collections/${collection.pricingCollection.ownerId}/${collection.pricingCollection.name}`
-                    )
-                  }
-                  title="View collection"
-                  className="text-sphere-grey-300 hover:text-sphere-primary-700"
-                >
-                  <Iconify icon="mdi:open-in-new" width={18} />
-                </button>
-
-                {canManageCollections && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCollection(collection)}
-                    title="Remove association"
-                    className="text-sphere-grey-300 hover:text-red-500"
-                  >
-                    <Iconify icon="mdi:link-variant-remove" width={18} />
-                  </button>
-                )}
-              </div>
-            ))}
           </div>
         </section>
       </div>
+
+      <section className="mt-6 rounded-xl border border-sphere-grey-200 bg-white p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-sphere-grey-800">Pricings</h2>
+            <p className="text-sm text-sphere-grey-500">
+              Pricings created in or assigned to this group.
+            </p>
+          </div>
+          {canManageGroup && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setAddExistingPricingModalOpen(true)}
+                className="flex items-center gap-2 rounded-md bg-sphere-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sphere-primary-700"
+              >
+                <Iconify icon="mdi:link-variant-plus" width={16} />
+                Add pricing
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignPricingToCollectionModalOpen(true)}
+                className="flex items-center gap-2 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+              >
+                <Iconify icon="mdi:folder-arrow-right-outline" width={16} />
+                Assign to collection
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {!isGroupMember ? (
+            <div className="flex flex-col items-center gap-2 py-10 text-sphere-grey-400">
+              <Iconify icon="mdi:lock-outline" width={36} />
+              <p className="text-sm">Join this group to view its pricings.</p>
+            </div>
+          ) : (
+            <>
+              {groupPricings.length === 0 && (
+                <div className="flex flex-col items-center gap-2 py-10 text-sphere-grey-400">
+                  <Iconify icon="mdi:tag-outline" width={36} />
+                  <p className="text-sm">No pricings in this group yet.</p>
+                </div>
+              )}
+              {groupPricings.map((pricing: any) => (
+                <div
+                  key={pricing.id}
+                  className="flex flex-wrap items-center gap-3 rounded-lg border border-sphere-grey-200 bg-sphere-grey-50 px-4 py-3"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sphere-grey-600">
+                    <Iconify icon="mdi:tag-outline" width={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-sphere-grey-800">{pricing.name}</p>
+                    <p className="text-xs text-sphere-grey-500">v{pricing.version} · @{pricing.owner}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/pricings/${pricing.owner}/${pricing.name}?collectionName=${pricing.collectionName ?? 'undefined'}`)}
+                    title="View pricing"
+                    className="text-sphere-grey-300 hover:text-sphere-primary-700"
+                  >
+                    <Iconify icon="mdi:open-in-new" width={18} />
+                  </button>
+                  {canRemovePricingFromGroup(pricing) && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePricingFromGroup(pricing)}
+                      title="Remove from group"
+                      className="text-sphere-grey-300 hover:text-red-500"
+                    >
+                      <Iconify icon="mdi:link-variant-remove" width={18} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </section>
 
       {editModalOpen && (
         <EditGroupModal
@@ -875,6 +1317,14 @@ export default function GroupDetailPage() {
         />
       )}
 
+      {createCollectionModalOpen && (
+        <CreateGroupCollectionModal
+          groupId={group.id}
+          onClose={() => setCreateCollectionModalOpen(false)}
+          onCreated={() => { setCreateCollectionModalOpen(false); refreshCollections(); }}
+        />
+      )}
+
       {addCollectionModalOpen && activeOrganization && (
         <AddGroupCollectionModal
           orgId={activeOrganization.id}
@@ -883,6 +1333,24 @@ export default function GroupDetailPage() {
           isLoading={isLoadingAvailableCollections}
           onClose={() => setAddCollectionModalOpen(false)}
           onAdded={refreshCollections}
+        />
+      )}
+
+      {addExistingPricingModalOpen && (
+        <AddExistingPricingToGroupModal
+          groupId={group.id}
+          onClose={() => setAddExistingPricingModalOpen(false)}
+          onAdded={() => { setAddExistingPricingModalOpen(false); refreshPricings(); }}
+        />
+      )}
+
+      {assignPricingToCollectionModalOpen && (
+        <AssignGroupPricingToCollectionModal
+          groupId={group.id}
+          groupPricings={groupPricings}
+          groupCollections={collections}
+          onClose={() => setAssignPricingToCollectionModalOpen(false)}
+          onAssigned={() => { setAssignPricingToCollectionModalOpen(false); }}
         />
       )}
     </div>

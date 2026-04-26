@@ -16,7 +16,7 @@ export function usePricingCollectionsApi() {
     Authorization: `Bearer ${token}`,
   }), [token]);
 
-  const getCollections = useCallback(async (filters?: Record<string, string | number>) => {
+  const getCollections = useCallback(async (filters?: Record<string, string | number>, orgId?: string) => {
     let requestUrl;
 
     if (Object.keys(filters ?? {}).length === 0) {
@@ -35,9 +35,12 @@ export function usePricingCollectionsApi() {
       requestUrl = `${COLLECTIONS_BASE_PATH}?${filterParams.toString()}`;
     }
 
+    const headers: Record<string, string> = { ...basicHeaders };
+    if (orgId) headers['X-Organization-Id'] = orgId;
+
     return fetch(requestUrl, {
       method: 'GET',
-      headers: basicHeaders,
+      headers,
     })
       .then(response => response.json())
       .catch(error => {
@@ -110,7 +113,10 @@ export function usePricingCollectionsApi() {
   }, [fetchWithOrgContext, token]);
 
   const getCollectionByOwnerAndName = useCallback(async (ownerId: string, collectionName: string) => {
-    return fetchWithInterceptor(`${COLLECTIONS_BASE_PATH}/${ownerId}/${collectionName}`, {
+    // fetchWithOrgContext is required: the backend's orgContext middleware scopes the query
+    // by _organizationId. Without the X-Organization-Id header it defaults to the personal
+    // org, so collections belonging to a team org would return 404 for non-owners.
+    return fetchWithOrgContext(`${COLLECTIONS_BASE_PATH}/${ownerId}/${collectionName}`, {
       method: 'GET',
       headers: basicHeaders,
     })
@@ -124,10 +130,12 @@ export function usePricingCollectionsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders]);
+  }, [fetchWithOrgContext, basicHeaders]);
 
   const downloadCollection = useCallback(async (ownerId: string, collectionName: string) => {
-    return fetchWithInterceptor(`${COLLECTIONS_BASE_PATH}/${ownerId}/${collectionName}/download`, {
+    // Same orgContext requirement as getCollectionByOwnerAndName — the download route calls
+    // showByNameAndUserId internally which also filters by _organizationId.
+    return fetchWithOrgContext(`${COLLECTIONS_BASE_PATH}/${ownerId}/${collectionName}/download`, {
       method: 'GET',
       headers: basicHeaders,
     })
@@ -149,7 +157,7 @@ export function usePricingCollectionsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders]);
+  }, [fetchWithOrgContext, basicHeaders]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateCollection = useCallback(async (collectionName: string, collectionData: any) => {
@@ -175,6 +183,72 @@ export function usePricingCollectionsApi() {
       });
   }, [fetchWithOrgContext, basicHeaders, authUser]);
 
+  const getAllByUser = useCallback(async () => {
+    return fetchWithInterceptor(`${import.meta.env.VITE_API_URL}/me/collections/all`, {
+      method: 'GET',
+      headers: basicHeaders,
+    })
+      .then(async response => {
+        if (!response.ok) return Promise.reject(response);
+        return response.json();
+      })
+      .catch(error => Promise.reject(error as Error));
+  }, [fetchWithInterceptor, basicHeaders]);
+
+  const assignCollectionToOrg = useCallback(async (organizationId: string, collectionId: string) => {
+    return fetchWithInterceptor(
+      `${import.meta.env.VITE_API_URL}/organizations/${organizationId}/collections/assign`,
+      {
+        method: 'POST',
+        headers: basicHeaders,
+        body: JSON.stringify({ collectionId }),
+      }
+    )
+      .then(async response => {
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error((err as any).error ?? 'Failed to assign collection to organization');
+        }
+        return response.json();
+      })
+      .catch(error => Promise.reject(error instanceof Error ? error : new Error(String(error))));
+  }, [fetchWithInterceptor, basicHeaders]);
+
+  const removeOrgCollection = useCallback(async (orgId: string, collectionId: string) => {
+    return fetchWithOrgContext(
+      `${import.meta.env.VITE_API_URL}/organizations/${orgId}/collections/${collectionId}`,
+      { method: 'DELETE', headers: basicHeaders }
+    )
+      .then(async response => {
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error((err as any).error ?? 'Failed to remove collection from organization');
+        }
+        return response.json();
+      })
+      .catch(error => Promise.reject(error instanceof Error ? error : new Error(String(error))));
+  }, [fetchWithOrgContext, basicHeaders]);
+
+  const createGroupCollection = useCallback(async (groupId: string, collection: CollectionToCreate) => {
+    return fetchWithOrgContext(`${import.meta.env.VITE_API_URL}/groups/${groupId}/collections`, {
+      method: 'POST',
+      headers: basicHeaders,
+      body: JSON.stringify(collection),
+    })
+      .then(async response => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const message = data?.error || data?.message || response.statusText || 'Error creating collection';
+          type ErrorWithStatus = Error & { status?: number };
+          const e = new Error(message) as ErrorWithStatus;
+          e.status = response.status;
+          return Promise.reject(e);
+        }
+        return data;
+      })
+      .catch(error => Promise.reject(error instanceof Error ? error : new Error(String(error))));
+  }, [fetchWithOrgContext, basicHeaders]);
+
   return useMemo(() => ({
     getLoggedUserCollections,
     createCollection,
@@ -183,7 +257,11 @@ export function usePricingCollectionsApi() {
     getCollections,
     downloadCollection,
     updateCollection,
-    deleteCollection
+    deleteCollection,
+    getAllByUser,
+    assignCollectionToOrg,
+    createGroupCollection,
+    removeOrgCollection,
   }), [
     getLoggedUserCollections,
     createCollection,
@@ -193,5 +271,9 @@ export function usePricingCollectionsApi() {
     downloadCollection,
     updateCollection,
     deleteCollection,
+    getAllByUser,
+    assignCollectionToOrg,
+    createGroupCollection,
+    removeOrgCollection,
   ]);
 }

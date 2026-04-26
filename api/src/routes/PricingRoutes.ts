@@ -1,6 +1,6 @@
 import express from 'express';
 import { isLoggedIn } from '../middlewares/AuthMiddleware';
-import { orgContext } from '../middlewares/OrgMiddleware';
+import { orgContext, orgContextFromParam } from '../middlewares/OrgMiddleware';
 import { checkCedar } from '../middlewares/CedarMiddleware';
 import { checkSpacePlan } from '../middlewares/SpacePlanMiddleware';
 import PricingController from '../controllers/PricingController';
@@ -24,11 +24,6 @@ const loadFileRoutes = function (app: express.Application) {
     .post(
       isLoggedIn,
       orgContext,
-      checkSpacePlan('pricingManagement'),
-      checkSpacePlan('pricings', 1),
-      // Standalone pricing upload: authorized at org level.
-      // owner/admin always pass; members need editor/admin role in at least one group.
-      checkCedar('createPricing', 'Organization'),
       upload,
       pricingController.create
     )
@@ -96,10 +91,30 @@ const loadFileRoutes = function (app: express.Application) {
       isLoggedIn,
       orgContext,
       checkSpacePlan('pricingManagement'),
-      // Adding a pricing to a collection requires editor/admin role on that collection.
-      // collectionId comes from request body; Cedar middleware resolves it as PricingCollection resource.
-      checkCedar('createPricing', 'PricingCollection', 'collectionId'),
       pricingController.addPricingToCollection
+    );
+
+  app
+    .route(baseUrl + '/me/pricings/all')
+    .get(isLoggedIn, pricingController.getAllByOwner);
+
+  app
+    .route(baseUrl + '/organizations/:organizationId/pricings/assign')
+    .post(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('updateOrganization', 'Organization', 'organizationId'),
+      pricingController.assignToOrg
+    );
+
+  // Uses owner+name (not ID) because the org-pricings list aggregator excludes _id.
+  app
+    .route(baseUrl + '/organizations/:organizationId/pricings/:owner/:pricingName')
+    .delete(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('updateOrganization', 'Organization', 'organizationId'),
+      pricingController.removeFromOrg
     );
 };
 

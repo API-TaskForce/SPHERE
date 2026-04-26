@@ -14,6 +14,7 @@ const pricingCollectionSchema = new Schema(
     description: { type: String, required: false },
     _ownerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     _organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
+    _groupId: { type: Schema.Types.ObjectId, ref: 'Group', required: false },
     private: { type: Boolean, required: true, default: false },
     analytics: {
       evolutionOfPlans: { type: ParameterEvolutionSchema, required: false },

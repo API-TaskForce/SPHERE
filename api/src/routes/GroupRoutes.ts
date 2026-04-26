@@ -8,7 +8,6 @@ import GroupController from '../controllers/GroupController';
 import GroupMembershipController from '../controllers/GroupMembershipController';
 import GroupCollectionController from '../controllers/GroupCollectionController';
 import * as GroupValidation from '../controllers/validation/GroupValidation';
-
 const loadFileRoutes = function (app: express.Application) {
   const groupController = new GroupController();
   const groupMembershipController = new GroupMembershipController();
@@ -146,6 +145,33 @@ const loadFileRoutes = function (app: express.Application) {
       GroupValidation.addCollection,
       handleValidation,
       groupController.addCollection
+    );
+
+  // ── Group pricing management ──────────────────────────────────────────────
+  app
+    .route(baseUrl + '/groups/:groupId/pricings')
+    .get(
+      isLoggedIn,
+      orgContext,
+      checkCedar('readGroup', 'Group', 'groupId'),
+      groupController.listPricings
+    )
+    .put(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('pricingManagement'),
+      checkCedar('createPricing', 'Group', 'groupId'),
+      groupController.assignExistingPricing
+    );
+
+  app
+    .route(baseUrl + '/groups/:groupId/pricings/:pricingId')
+    .delete(
+      isLoggedIn,
+      orgContext,
+      checkSpacePlan('pricingManagement'),
+      checkCedar('manageGroupPricings', 'Group', 'groupId'),
+      groupController.removePricing
     );
 
   // ── Lightweight read endpoints ────────────────────────────────────────────
