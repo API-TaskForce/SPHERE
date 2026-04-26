@@ -112,15 +112,6 @@ features:
 
   # ── MANAGEMENT ────────────────────────────────────────────────────────────
 
-  organizationManagement:
-    description: >
-      Create and manage organizations, invite members and assign roles
-      (owner, admin, member).
-    valueType: BOOLEAN
-    defaultValue: true
-    expression: pricingContext['features']['organizationManagement']
-    type: MANAGEMENT
-
   orgMembers:
     description: >
       Number of members the organization can have.
@@ -168,15 +159,6 @@ features:
     valueType: BOOLEAN
     defaultValue: false
     expression: pricingContext['features']['sharedCollections']
-    type: MANAGEMENT
-
-  orgWideCollections:
-    description: >
-      Make collections accessible to all organization members without
-      requiring group assignment.
-    valueType: BOOLEAN
-    defaultValue: true
-    expression: pricingContext['features']['orgWideCollections']
     type: MANAGEMENT
 
 usageLimits:

@@ -2,7 +2,7 @@ import express from 'express';
 import { isLoggedIn } from '../middlewares/AuthMiddleware';
 import { orgContext, orgContextFromParam } from '../middlewares/OrgMiddleware';
 import { checkCedar } from '../middlewares/CedarMiddleware';
-import { checkSpacePlan } from '../middlewares/SpacePlanMiddleware';
+import { checkSpacePlan, checkUserFeature } from '../middlewares/SpacePlanMiddleware';
 import PricingController from '../controllers/PricingController';
 import { handlePricingUpload } from '../middlewares/FileHandlerMiddleware';
 import * as PricingValidator from '../controllers/validation/PricingValidation';
@@ -24,6 +24,11 @@ const loadFileRoutes = function (app: express.Application) {
     .post(
       isLoggedIn,
       orgContext,
+      // Pricing creation is gated on the user's personal org, not on the
+      // active org context: pricings are owned by users, so the plan tier
+      // and maxPricings limit that apply are those of the owner's personal org.
+      checkUserFeature('pricingManagement'),
+      checkUserFeature('pricings', 1),
       upload,
       pricingController.create
     )
