@@ -7,11 +7,14 @@ import {
   OrganizationInvitation,
   useOrganizationsApi,
 } from '../../api/organizationsApi';
+import { useGroupsApi, GroupCollectionWithCollection, GroupMembershipWithGroup } from '../../api/groupsApi';
 import Iconify from '../../../core/components/iconify';
 import { useRouter } from '../../../core/hooks/useRouter';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import customAlert from '../../../core/utils/custom-alert';
 import customConfirm from '../../../core/utils/custom-confirm';
+import { usePricingsApi } from '../../../pricing/api/pricingsApi';
+import { usePricingCollectionsApi } from '../../../profile/api/pricingCollectionsApi';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -453,9 +456,418 @@ function CreateGroupModal({
   );
 }
 
+// ── Create Org Collection Modal ──────────────────────────────────────────────
+
+function CreateOrgCollectionModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { createCollection } = usePricingCollectionsApi();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await createCollection({ name, description, private: false, pricings: [] });
+      onCreated();
+      onClose();
+    } catch (err: any) {
+      customAlert(err.message ?? 'Failed to create collection');
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">Create Collection</h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700">
+            <Iconify icon="mdi:close" width={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-sphere-grey-700">Name <span className="text-red-500">*</span></label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              maxLength={100}
+              className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-sphere-grey-700">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              maxLength={500}
+              className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-1">
+            <button type="button" onClick={onClose} className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">Cancel</button>
+            <button type="submit" disabled={isSubmitting || !name.trim()} className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50">
+              {isSubmitting ? 'Creating...' : 'Create collection'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Add Existing Pricing to Org Modal ───────────────────────────────────────
+
+function AddExistingPricingModal({
+  orgId,
+  onClose,
+  onAdded,
+}: {
+  orgId: string;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const [pricings, setPricings] = useState<any[]>([]);
+  const [selected, setSelected] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { getAllByOwner, assignPricingToOrg } = usePricingsApi();
+
+  useEffect(() => {
+    getAllByOwner()
+      .then((res: any) => {
+        setPricings(res.pricings ?? []);
+        if (res.pricings?.length > 0) setSelected(res.pricings[0].id);
+      })
+      .catch(() => setPricings([]))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected) return;
+    setIsSubmitting(true);
+    try {
+      await assignPricingToOrg(orgId, selected);
+      onAdded();
+      onClose();
+    } catch (err: any) {
+      customAlert(err.message ?? 'Failed to add pricing');
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">Add Existing Pricing</h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700"><Iconify icon="mdi:close" width={20} /></button>
+        </div>
+        {isLoading && <p className="text-sm text-sphere-grey-500 py-4 text-center">Loading...</p>}
+        {!isLoading && pricings.length === 0 && (
+          <p className="text-sm text-sphere-grey-400 py-4 text-center">No pricings available to add.</p>
+        )}
+        {!isLoading && pricings.length > 0 && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-sphere-grey-700">Pricing</label>
+              <select
+                value={selected}
+                onChange={(e) => setSelected(e.target.value)}
+                className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+              >
+                {pricings.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name} (v{p.version})</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-3 pt-1">
+              <button type="button" onClick={onClose} className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">Cancel</button>
+              <button type="submit" disabled={isSubmitting} className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50">
+                {isSubmitting ? 'Adding...' : 'Add pricing'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Add Existing Collection to Org Modal ─────────────────────────────────────
+
+function AddExistingCollectionModal({
+  orgId,
+  onClose,
+  onAdded,
+}: {
+  orgId: string;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const [collections, setCollections] = useState<any[]>([]);
+  const [selected, setSelected] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { getAllByUser, assignCollectionToOrg } = usePricingCollectionsApi();
+
+  useEffect(() => {
+    getAllByUser()
+      .then((res: any) => {
+        setCollections(res.collections ?? []);
+        if (res.collections?.length > 0) setSelected(res.collections[0].id);
+      })
+      .catch(() => setCollections([]))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected) return;
+    setIsSubmitting(true);
+    try {
+      await assignCollectionToOrg(orgId, selected);
+      onAdded();
+      onClose();
+    } catch (err: any) {
+      customAlert(err.message ?? 'Failed to add collection');
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">Add Existing Collection</h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700"><Iconify icon="mdi:close" width={20} /></button>
+        </div>
+        {isLoading && <p className="text-sm text-sphere-grey-500 py-4 text-center">Loading...</p>}
+        {!isLoading && collections.length === 0 && (
+          <p className="text-sm text-sphere-grey-400 py-4 text-center">No collections available to add.</p>
+        )}
+        {!isLoading && collections.length > 0 && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-sphere-grey-700">Collection</label>
+              <select
+                value={selected}
+                onChange={(e) => setSelected(e.target.value)}
+                className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+              >
+                {collections.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name} · @{c.owner?.username}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-3 pt-1">
+              <button type="button" onClick={onClose} className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">Cancel</button>
+              <button type="submit" disabled={isSubmitting} className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50">
+                {isSubmitting ? 'Adding...' : 'Add collection'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Assign Pricing to Collection Modal ───────────────────────────────────────
+
+function AssignPricingToCollectionModal({
+  onClose,
+  onAssigned,
+}: {
+  onClose: () => void;
+  onAssigned: () => void;
+}) {
+  const [pricings, setPricings] = useState<any[]>([]);
+  const [collections, setCollections] = useState<any[]>([]);
+  const [selectedPricing, setSelectedPricing] = useState('');
+  const [selectedCollection, setSelectedCollection] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { getLoggedUserPricings, addPricingToCollection } = usePricingsApi();
+  const { getLoggedUserCollections } = usePricingCollectionsApi();
+
+  useEffect(() => {
+    Promise.all([getLoggedUserPricings(), getLoggedUserCollections()])
+      .then(([pricingsRes, collectionsRes]) => {
+        const pricingList = pricingsRes?.pricings?.pricings ?? [];
+        const collectionList = collectionsRes?.collections ?? [];
+        setPricings(pricingList);
+        setCollections(collectionList);
+        if (pricingList.length > 0) setSelectedPricing(pricingList[0]?.name ?? '');
+        if (collectionList.length > 0) setSelectedCollection(collectionList[0].id ?? '');
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPricing || !selectedCollection) return;
+    setIsSubmitting(true);
+    try {
+      await addPricingToCollection(selectedPricing, selectedCollection);
+      onAssigned();
+      onClose();
+    } catch (err: any) {
+      customAlert(err.message ?? 'Failed to assign pricing');
+      setIsSubmitting(false);
+    }
+  };
+
+  const allPricings = pricings;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">Assign Pricing to Collection</h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700"><Iconify icon="mdi:close" width={20} /></button>
+        </div>
+        {isLoading && <p className="text-sm text-sphere-grey-500 py-4 text-center">Loading...</p>}
+        {!isLoading && (allPricings.length === 0 || collections.length === 0) && (
+          <p className="text-sm text-sphere-grey-400 py-4 text-center">No pricings or collections available.</p>
+        )}
+        {!isLoading && allPricings.length > 0 && collections.length > 0 && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-sphere-grey-700">Pricing</label>
+              <select value={selectedPricing} onChange={(e) => setSelectedPricing(e.target.value)} className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500">
+                {allPricings.map((p: any) => (
+                  <option key={`${p.name}-${p.version}`} value={p.name}>{p.name} (v{p.version})</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-sphere-grey-700">Collection</label>
+              <select value={selectedCollection} onChange={(e) => setSelectedCollection(e.target.value)} className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500">
+                {collections.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-3 pt-1">
+              <button type="button" onClick={onClose} className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">Cancel</button>
+              <button type="submit" disabled={isSubmitting} className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50">
+                {isSubmitting ? 'Assigning...' : 'Assign'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Assign Collection to Group Modal ─────────────────────────────────────────
+
+function AssignCollectionToGroupModal({
+  orgId,
+  groups,
+  onClose,
+  onAssigned,
+}: {
+  orgId: string;
+  groups: Group[];
+  onClose: () => void;
+  onAssigned: () => void;
+}) {
+  const [collections, setCollections] = useState<any[]>([]);
+  const [selectedCollection, setSelectedCollection] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState(groups[0]?.id ?? '');
+  const [accessRole, setAccessRole] = useState<'editor' | 'viewer' | ''>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { getLoggedUserCollections } = usePricingCollectionsApi();
+  const { addGroupCollection } = useGroupsApi();
+
+  useEffect(() => {
+    getLoggedUserCollections()
+      .then((res: any) => {
+        const list = res?.collections ?? [];
+        setCollections(list);
+        if (list.length > 0) setSelectedCollection(list[0].id ?? '');
+      })
+      .catch(() => setCollections([]))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCollection || !selectedGroup) return;
+    setIsSubmitting(true);
+    try {
+      await addGroupCollection(orgId, selectedGroup, selectedCollection, accessRole || null);
+      onAssigned();
+      onClose();
+    } catch (err: any) {
+      customAlert(err.message ?? 'Failed to assign collection to group');
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">Assign Collection to Group</h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700"><Iconify icon="mdi:close" width={20} /></button>
+        </div>
+        {isLoading && <p className="text-sm text-sphere-grey-500 py-4 text-center">Loading...</p>}
+        {!isLoading && (collections.length === 0 || groups.length === 0) && (
+          <p className="text-sm text-sphere-grey-400 py-4 text-center">No collections or groups available.</p>
+        )}
+        {!isLoading && collections.length > 0 && groups.length > 0 && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-sphere-grey-700">Collection</label>
+              <select value={selectedCollection} onChange={(e) => setSelectedCollection(e.target.value)} className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500">
+                {collections.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-sphere-grey-700">Group</label>
+              <select value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)} className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500">
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.displayName ?? g.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-sphere-grey-700">Access role override</label>
+              <select value={accessRole} onChange={(e) => setAccessRole(e.target.value as 'editor' | 'viewer' | '')} className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500">
+                <option value="">Use group role</option>
+                <option value="viewer">Viewer</option>
+                <option value="editor">Editor</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-3 pt-1">
+              <button type="button" onClick={onClose} className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">Cancel</button>
+              <button type="submit" disabled={isSubmitting} className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50">
+                {isSubmitting ? 'Assigning...' : 'Assign'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 
-type Tab = 'overview' | 'members' | 'groups';
+type Tab = 'overview' | 'members' | 'groups' | 'pricings' | 'collections';
 
 export default function OrganizationDetailPage() {
   const { orgName } = useParams<{ orgName: string }>();
@@ -467,6 +879,14 @@ export default function OrganizationDetailPage() {
   const [members, setMembers] = useState<OrgMemberWithUser[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [invitations, setInvitations] = useState<OrganizationInvitation[]>([]);
+  const [orgPricings, setOrgPricings] = useState<any[]>([]);
+  const [orgCollections, setOrgCollections] = useState<any[]>([]);
+  // "ownerId/collectionName" → groupIds that contain it (within this org)
+  const [collectionGroupMap, setCollectionGroupMap] = useState<Map<string, string[]>>(new Map());
+  // "ownerUsername/pricingName" → groupIds that directly contain it (within this org)
+  const [pricingGroupMap, setPricingGroupMap] = useState<Map<string, string[]>>(new Map());
+  // group IDs where current user has ANY role (admin/editor/viewer) within this org
+  const [myGroupMemberIds, setMyGroupMemberIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -475,6 +895,11 @@ export default function OrganizationDetailPage() {
   const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false);
+  const [createCollectionModalOpen, setCreateCollectionModalOpen] = useState(false);
+  const [addExistingPricingModalOpen, setAddExistingPricingModalOpen] = useState(false);
+  const [addExistingCollectionModalOpen, setAddExistingCollectionModalOpen] = useState(false);
+  const [assignPricingToCollectionModalOpen, setAssignPricingToCollectionModalOpen] = useState(false);
+  const [assignCollectionToGroupModalOpen, setAssignCollectionToGroupModalOpen] = useState(false);
 
   const {
     getOrganizationByName,
@@ -486,7 +911,65 @@ export default function OrganizationDetailPage() {
     removeMember,
   } = useOrganizationsApi();
 
+  const { getPricings, getGroupPricings, removeOrgPricing } = usePricingsApi();
+  const { getCollections, removeOrgCollection } = usePricingCollectionsApi();
+  const { getGroupCollections, getMyGroupMemberships } = useGroupsApi();
+
   const canManage = myRole === 'owner' || myRole === 'admin';
+
+  /**
+   * Returns true if the current user may navigate to a collection's detail page.
+   * A collection assigned to ≥1 group is restricted to:
+   *   - org owner / admin
+   *   - any member (admin/editor/viewer) of any group that contains the collection
+   *   - the collection owner (by user ID)
+   * Collections not assigned to any group are accessible by all org members.
+   */
+  const canAccessCollection = useCallback(
+    (collection: any): boolean => {
+      if (canManage) return true;
+      if (collection.owner?.id === authUser.user?.id) return true;
+      const key = `${collection.owner?.id}/${collection.name}`;
+      const groupIds = collectionGroupMap.get(key) ?? [];
+      if (groupIds.length === 0) return true; // collection not assigned to any group
+      return groupIds.some((gId) => myGroupMemberIds.has(gId));
+    },
+    [canManage, authUser.user?.id, collectionGroupMap, myGroupMemberIds]
+  );
+
+  /**
+   * Returns true if the current user may navigate to a pricing's detail page.
+   * Restriction applies when:
+   *   - the pricing is directly assigned to a group, OR
+   *   - the pricing belongs to a collection that is assigned to a group.
+   * Allowed: org owner/admin, creator, any member of the relevant group(s).
+   */
+  const canAccessPricing = useCallback(
+    (pricing: any): boolean => {
+      if (canManage) return true;
+      if (pricing.owner === authUser.user?.username) return true;
+
+      // Check if pricing is directly in a group (key: ownerUsername/pricingName)
+      const pricingKey = `${pricing.owner}/${pricing.name}`;
+      const directGroupIds = pricingGroupMap.get(pricingKey) ?? [];
+      if (directGroupIds.length > 0) {
+        return directGroupIds.some((gId) => myGroupMemberIds.has(gId));
+      }
+
+      // Check if pricing's collection is assigned to a group
+      const collection = pricing.collectionName
+        ? orgCollections.find(
+            (c) => c.name === pricing.collectionName && c.owner?.username === pricing.owner
+          )
+        : null;
+      if (!collection) return true; // no group context → unrestricted
+      const colKey = `${collection.owner?.id}/${collection.name}`;
+      const colGroupIds = collectionGroupMap.get(colKey) ?? [];
+      if (colGroupIds.length === 0) return true; // collection not in any group
+      return colGroupIds.some((gId) => myGroupMemberIds.has(gId));
+    },
+    [canManage, authUser.user?.username, pricingGroupMap, orgCollections, collectionGroupMap, myGroupMemberIds]
+  );
 
   const loadOrgData = useCallback(async () => {
     if (!authUser.user?.id || !orgName) return;
@@ -503,21 +986,102 @@ export default function OrganizationDetailPage() {
       setMyRole(role);
 
       const isManager = role === 'owner' || role === 'admin';
-      const [membersData, groupsData, invitationsData] = await Promise.all([
+      const [membersData, groupsData, invitationsData, pricingsData, collectionsData] = await Promise.all([
         getOrgMembers(orgData.id),
         getOrgGroups(orgData.id),
         isManager ? listInvitations(orgData.id) : Promise.resolve([]),
+        getPricings({}, orgData.id).catch(() => ({ pricings: [] })),
+        getCollections({}, orgData.id).catch(() => ({ collections: [] })),
       ]);
 
       setMembers(membersData);
       setGroups(groupsData);
       setInvitations(invitationsData);
+      setOrgPricings(pricingsData?.pricings ?? []);
+      setOrgCollections(collectionsData?.collections ?? []);
+
+      // Build group-access maps for collection/pricing detail access control.
+      // Fetch in parallel: every group's collections, every group's pricings, and my memberships.
+      const [allGroupCollections, allGroupPricings, myGroupMemberships] = await Promise.all([
+        Promise.all(
+          groupsData.map((g) =>
+            getGroupCollections(g.id).catch((): GroupCollectionWithCollection[] => [])
+          )
+        ),
+        Promise.all(
+          groupsData.map((g) =>
+            getGroupPricings(g.id)
+              .then((res: any) => res?.pricings ?? [])
+              .catch((): any[] => [])
+          )
+        ),
+        authUser.user?.id
+          ? getMyGroupMemberships(authUser.user.id).catch((): GroupMembershipWithGroup[] => [])
+          : Promise.resolve([] as GroupMembershipWithGroup[]),
+      ]);
+
+      // Map: "ownerId/collectionName" → groupIds[] (only groups within this org).
+      // Composite key avoids relying on collection.id (absent from Collection type).
+      const colGroupMap = new Map<string, string[]>();
+      allGroupCollections.forEach((cols, idx) => {
+        const groupId = groupsData[idx].id;
+        cols.forEach((gc) => {
+          const key = `${gc.pricingCollection.ownerId}/${gc.pricingCollection.name}`;
+          const existing = colGroupMap.get(key) ?? [];
+          existing.push(groupId);
+          colGroupMap.set(key, existing);
+        });
+      });
+      setCollectionGroupMap(colGroupMap);
+
+      // Map: "ownerUsername/pricingName" → groupIds[] for pricings directly in a group.
+      const pricGrpMap = new Map<string, string[]>();
+      allGroupPricings.forEach((pricings, idx) => {
+        const groupId = groupsData[idx].id;
+        pricings.forEach((p: any) => {
+          const key = `${p.owner}/${p.name}`;
+          const existing = pricGrpMap.get(key) ?? [];
+          existing.push(groupId);
+          pricGrpMap.set(key, existing);
+        });
+      });
+      setPricingGroupMap(pricGrpMap);
+
+      // Set of group IDs where the current user has ANY role (admin/editor/viewer) in this org.
+      // Members of a group — regardless of role — may access that group's content.
+      setMyGroupMemberIds(
+        new Set(
+          myGroupMemberships
+            .filter((m) => m._organizationId === orgData.id)
+            .map((m) => m._groupId)
+        )
+      );
     } catch (err: any) {
       setError(err.message ?? 'Failed to load organization');
     } finally {
       setIsLoading(false);
     }
   }, [orgName, authUser.user?.id]);
+
+  const refreshPricings = useCallback(async () => {
+    if (!org?.id) return;
+    try {
+      const data = await getPricings({}, org.id);
+      setOrgPricings(data?.pricings ?? []);
+    } catch {
+      // ignore
+    }
+  }, [getPricings, org]);
+
+  const refreshCollections = useCallback(async () => {
+    if (!org?.id) return;
+    try {
+      const data = await getCollections({}, org.id);
+      setOrgCollections(data?.collections ?? []);
+    } catch {
+      // ignore
+    }
+  }, [getCollections, org]);
 
   const refreshInvitations = useCallback(async () => {
     if (!org) return;
@@ -572,6 +1136,28 @@ export default function OrganizationDetailPage() {
     updateMemberRole(org!.id, member.user.id, newRole)
       .then(() => refreshMembers())
       .catch((err: Error) => customAlert(err.message));
+  };
+
+  const handleRemoveOrgPricing = (pricing: any) => {
+    customConfirm(`Remove "${pricing.name}" from this organization?`)
+      .then(() =>
+        // org-pricings list does not expose id (aggregator uses _id:0); identify by owner+name
+        removeOrgPricing(org!.id, pricing.owner, pricing.name)
+          .then(() => refreshPricings())
+          .catch((err: Error) => customAlert(err.message))
+      )
+      .catch(() => {});
+  };
+
+  const handleRemoveOrgCollection = (collection: any) => {
+    customConfirm(`Remove "${collection.name}" from this organization?`)
+      .then(() =>
+        // org-collections list does not map _id to 'id'; _id is present as the raw Mongo field
+        removeOrgCollection(org!.id, collection._id ?? collection.id)
+          .then(() => refreshCollections())
+          .catch((err: Error) => customAlert(err.message))
+      )
+      .catch(() => {});
   };
 
   if (isLoading) {
@@ -662,7 +1248,7 @@ export default function OrganizationDetailPage() {
 
       {/* Tabs */}
       <div className="mb-4 flex border-b border-sphere-grey-200">
-        {(['overview', 'members', 'groups'] as Tab[]).map((tab) => (
+        {(['overview', 'members', 'groups', 'pricings', 'collections'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -832,6 +1418,129 @@ export default function OrganizationDetailPage() {
         </div>
       )}
 
+      {/* Pricings Tab */}
+      {activeTab === 'pricings' && (
+        <div className="flex flex-col gap-3">
+          {canManage && (
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" onClick={() => setAddExistingPricingModalOpen(true)} className="flex items-center gap-2 rounded-md bg-sphere-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sphere-primary-700">
+                <Iconify icon="mdi:link-variant-plus" width={16} />Add pricing
+              </button>
+              <button type="button" onClick={() => setAssignPricingToCollectionModalOpen(true)} className="flex items-center gap-2 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">
+                <Iconify icon="mdi:folder-arrow-right-outline" width={16} />Assign to collection
+              </button>
+            </div>
+          )}
+          {orgPricings.length === 0 && (
+            <div className="flex flex-col items-center gap-2 py-12 text-sphere-grey-400">
+              <Iconify icon="mdi:tag-outline" width={36} />
+              <p className="text-sm">No pricings in this organization yet.</p>
+            </div>
+          )}
+          {orgPricings.map((pricing: any) => (
+            <div key={`${pricing.name}-${pricing.version}`} className="flex items-center gap-3 rounded-lg border border-sphere-grey-200 bg-white px-4 py-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-sphere-grey-100 text-sphere-grey-600">
+                <Iconify icon="mdi:tag-outline" width={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-sphere-grey-800">{pricing.name}</p>
+                <p className="text-xs text-sphere-grey-500">v{pricing.version} · @{pricing.owner}</p>
+              </div>
+              {canAccessPricing(pricing) ? (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/pricings/${pricing.owner}/${pricing.name}?collectionName=${pricing.collectionName ?? 'undefined'}`)}
+                  className="flex items-center gap-1 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-xs font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+                >
+                  Open<Iconify icon="mdi:chevron-right" width={16} />
+                </button>
+              ) : (
+                <span
+                  title="Only the group admin, collection owner, or org admin can access this pricing"
+                  className="flex items-center gap-1 rounded-md border border-sphere-grey-200 px-3 py-1.5 text-xs text-sphere-grey-400 cursor-not-allowed select-none"
+                >
+                  <Iconify icon="mdi:lock-outline" width={14} />
+                  Restricted
+                </span>
+              )}
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveOrgPricing(pricing)}
+                  title="Remove from organization"
+                  className="text-sphere-grey-300 hover:text-red-500"
+                >
+                  <Iconify icon="mdi:link-variant-remove" width={18} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Collections Tab */}
+      {activeTab === 'collections' && (
+        <div className="flex flex-col gap-3">
+          {canManage && (
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" onClick={() => setCreateCollectionModalOpen(true)} className="flex items-center gap-2 rounded-md bg-sphere-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sphere-primary-700">
+                <Iconify icon="mdi:plus" width={16} />Create collection
+              </button>
+              <button type="button" onClick={() => setAddExistingCollectionModalOpen(true)} className="flex items-center gap-2 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">
+                <Iconify icon="mdi:link-variant-plus" width={16} />Add existing
+              </button>
+              <button type="button" onClick={() => setAssignCollectionToGroupModalOpen(true)} className="flex items-center gap-2 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">
+                <Iconify icon="mdi:folder-arrow-right-outline" width={16} />Assign to group
+              </button>
+            </div>
+          )}
+          {orgCollections.length === 0 && (
+            <div className="flex flex-col items-center gap-2 py-12 text-sphere-grey-400">
+              <Iconify icon="mdi:view-grid-outline" width={36} />
+              <p className="text-sm">No collections in this organization yet.</p>
+            </div>
+          )}
+          {orgCollections.map((collection: any) => (
+            <div key={collection.id} className="flex items-center gap-3 rounded-lg border border-sphere-grey-200 bg-white px-4 py-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-sphere-grey-100 text-sphere-grey-600">
+                <Iconify icon="mdi:view-grid-outline" width={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-sphere-grey-800">{collection.name}</p>
+                <p className="text-xs text-sphere-grey-500">{collection.numberOfPricings ?? 0} pricing{collection.numberOfPricings !== 1 ? 's' : ''} · @{collection.owner?.username}</p>
+              </div>
+              {canAccessCollection(collection) ? (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/pricings/collections/${collection.owner?.id}/${collection.name}`)}
+                  className="flex items-center gap-1 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-xs font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+                >
+                  Open<Iconify icon="mdi:chevron-right" width={16} />
+                </button>
+              ) : (
+                <span
+                  title="Only the group admin, collection owner, or org admin can access this collection"
+                  className="flex items-center gap-1 rounded-md border border-sphere-grey-200 px-3 py-1.5 text-xs text-sphere-grey-400 cursor-not-allowed select-none"
+                >
+                  <Iconify icon="mdi:lock-outline" width={14} />
+                  Restricted
+                </span>
+              )}
+              {canManage && (
+                <button
+                  type="button"
+                  onClick={() => handleRemoveOrgCollection(collection)}
+                  title="Remove from organization"
+                  className="text-sphere-grey-300 hover:text-red-500"
+                >
+                  <Iconify icon="mdi:link-variant-remove" width={18} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Modals */}
       {editModalOpen && org && (
         <EditOrgModal
@@ -860,6 +1569,40 @@ export default function OrganizationDetailPage() {
           orgId={org.id}
           onClose={() => setCreateGroupModalOpen(false)}
           onCreated={refreshGroups}
+        />
+      )}
+      {createCollectionModalOpen && (
+        <CreateOrgCollectionModal
+          onClose={() => setCreateCollectionModalOpen(false)}
+          onCreated={() => { setCreateCollectionModalOpen(false); refreshCollections(); }}
+        />
+      )}
+      {addExistingPricingModalOpen && org && (
+        <AddExistingPricingModal
+          orgId={org.id}
+          onClose={() => setAddExistingPricingModalOpen(false)}
+          onAdded={() => { setAddExistingPricingModalOpen(false); refreshPricings(); }}
+        />
+      )}
+      {addExistingCollectionModalOpen && org && (
+        <AddExistingCollectionModal
+          orgId={org.id}
+          onClose={() => setAddExistingCollectionModalOpen(false)}
+          onAdded={() => { setAddExistingCollectionModalOpen(false); refreshCollections(); }}
+        />
+      )}
+      {assignPricingToCollectionModalOpen && (
+        <AssignPricingToCollectionModal
+          onClose={() => setAssignPricingToCollectionModalOpen(false)}
+          onAssigned={() => { setAssignPricingToCollectionModalOpen(false); refreshPricings(); refreshCollections(); }}
+        />
+      )}
+      {assignCollectionToGroupModalOpen && org && (
+        <AssignCollectionToGroupModal
+          orgId={org.id}
+          groups={groups}
+          onClose={() => setAssignCollectionToGroupModalOpen(false)}
+          onAssigned={() => { setAssignCollectionToGroupModalOpen(false); refreshCollections(); }}
         />
       )}
     </div>
