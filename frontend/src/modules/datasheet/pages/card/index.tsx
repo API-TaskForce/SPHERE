@@ -7,6 +7,7 @@ import { useQueryParams } from '../../../core/hooks/useQueryParams';
 import customAlert from '../../../core/utils/custom-alert';
 import DatasheetRenderer from '../../components/datasheet-renderer';
 import { DatasheetModel } from '../../types/datasheetTypes';
+import DatasheetChatBubble from '../../../harvey4api/components/DatasheetChatBubble';
 
 interface DatasheetResponse {
   name: string;
@@ -298,6 +299,12 @@ export default function DatasheetCardPage() {
           )}
         </div>
       </div>
+      {currentDatasheet && (
+        <DatasheetChatBubble
+          datasheetName={datasheetNameDisplay}
+          datasheetYamlUrl={resolveDatasheetYamlUrl(currentDatasheet.yaml)}
+        />
+      )}
     </>
   );
 }

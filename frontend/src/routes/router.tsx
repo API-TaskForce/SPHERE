@@ -30,6 +30,7 @@ import CreateDatasheetPage from '../modules/datasheet/pages/create';
 import DatasheetCollectionsListPage from '../modules/datasheet/pages/collections-list';
 import DatasheetCollectionCardPage from '../modules/datasheet/pages/collection-card';
 import DatasheetEditorPage from '../modules/datasheet/pages/editor';
+import Harvey4APIPage from '../modules/harvey4api/pages/api-assistant';
 
 
 export default function Router() {
@@ -65,7 +66,8 @@ export default function Router() {
         { element: <MyPricingsPage />, path: "/me/pricings" },
         { element: <MyDatasheetsPage />, path: "/me/datasheets" },
         { element: <PricingAssistantPage />, path: "/harvey"},
-        { element: <PricingAssistantPage playground />, path: "/harvey-play"}
+        { element: <PricingAssistantPage playground />, path: "/harvey-play"},
+        { element: <Harvey4APIPage />, path: "/harvey4api" }
       ],
         },
         {

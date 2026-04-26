@@ -132,6 +132,7 @@ services:
     environment:
       - LOG_LEVEL=INFO
       - OPENAI_API_KEY=${HARVEY_API_KEY}
+      - HARVEY_LLM_KEY=${HARVEY_API_KEY}
       - OPENAI_MODEL=gpt-5-nano
       - AMINT_BASE_URL=http://a-mint:8000
       - ANALYSIS_BASE_URL=http://analysis-engine:3000

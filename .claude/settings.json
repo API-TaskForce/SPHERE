@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Read(//c/Users/danie_epmcijo/OneDrive/Desktop/TFM/**)"
+    ]
+  }
+}
