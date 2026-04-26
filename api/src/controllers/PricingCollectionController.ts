@@ -21,6 +21,9 @@ class PricingCollectionController {
     this.generateAnalytics = this.generateAnalytics.bind(this);
     this.update = this.update.bind(this);
     this.destroy = this.destroy.bind(this);
+    this.getAllByUser = this.getAllByUser.bind(this);
+    this.assignToOrg = this.assignToOrg.bind(this);
+    this.removeFromOrg = this.removeFromOrg.bind(this);
   }
 
   async index(req: any, res: any) {
@@ -213,6 +216,44 @@ class PricingCollectionController {
       res.json({ message: message });
     } catch (err: any) {
       res.status(400).send({ error: err.message });
+    }
+  }
+
+  async getAllByUser(req: any, res: any) {
+    try {
+      const collections = await this.pricingCollectionService.getAllByUser(req.user.id);
+      res.json({ collections });
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async removeFromOrg(req: any, res: any) {
+    try {
+      await this.pricingCollectionService.removeFromOrg(req.params.collectionId);
+      res.json({ message: 'Collection removed from organization.' });
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  async assignToOrg(req: any, res: any) {
+    try {
+      const { collectionId } = req.body;
+      await this.pricingCollectionService.assignToOrg(collectionId, req.params.organizationId, req.user.id);
+      res.json({ message: 'Collection assigned to organization.' });
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else if (err.message.toLowerCase().includes('do not own')) {
+        res.status(403).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
     }
   }
 

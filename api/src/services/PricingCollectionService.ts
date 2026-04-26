@@ -60,6 +60,9 @@ class PricingCollectionService {
     try {
       newCollection._ownerId = new mongoose.Types.ObjectId(userId);
       newCollection._organizationId = new mongoose.Types.ObjectId(organizationId);
+      if (groupId) {
+        newCollection._groupId = new mongoose.Types.ObjectId(groupId);
+      }
 
       newCollection.analytics = {
         evolutionOfPlans: {
@@ -341,6 +344,29 @@ class PricingCollectionService {
 
   _getExtractPath(userId: string, collectionName: string) {
     return `${process.env.COLLECTIONS_FOLDER}/${userId}/${collectionName}`;
+  }
+
+  async removeFromOrg(collectionId: string) {
+    const collection = await this.pricingCollectionRepository.findById(collectionId);
+    if (!collection) throw new Error('Collection not found');
+    await this.pricingCollectionRepository.clearOrganizationId(collectionId);
+    return true;
+  }
+
+  async getAllByUser(userId: string) {
+    return this.pricingCollectionRepository.findAllByUserId(userId);
+  }
+
+  async assignToOrg(collectionId: string, organizationId: string, userId: string) {
+    const collection = await this.pricingCollectionRepository.findById(collectionId);
+    if (!collection) {
+      throw new Error('Collection not found');
+    }
+    if (collection._ownerId?.toString() !== userId && collection.owner?.id !== userId) {
+      throw new Error('You do not own this collection');
+    }
+    await this.pricingCollectionRepository.updateOrganizationId(collectionId, organizationId);
+    return true;
   }
 
   async _handleCollectionCreationError(

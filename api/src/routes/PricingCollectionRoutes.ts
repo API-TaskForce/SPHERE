@@ -1,7 +1,7 @@
 import express from 'express';
 import PricingCollectionController from '../controllers/PricingCollectionController';
 import { isLoggedIn } from '../middlewares/AuthMiddleware';
-import { orgContext } from '../middlewares/OrgMiddleware';
+import { orgContext, orgContextFromParam } from '../middlewares/OrgMiddleware';
 import { checkCedar } from '../middlewares/CedarMiddleware';
 import { checkSpacePlan } from '../middlewares/SpacePlanMiddleware';
 import PricingController from '../controllers/PricingController';
@@ -111,6 +111,27 @@ const loadFileRoutes = function (app: express.Application) {
       checkSpacePlan('collectionExport'),
       checkCedar('readCollection', 'PricingCollection'),
       pricingCollectionController.downloadCollection
+    );
+  app
+    .route(baseUrl + '/me/collections/all')
+    .get(isLoggedIn, pricingCollectionController.getAllByUser);
+
+  app
+    .route(baseUrl + '/organizations/:organizationId/collections/assign')
+    .post(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('updateOrganization', 'Organization', 'organizationId'),
+      pricingCollectionController.assignToOrg
+    );
+
+  app
+    .route(baseUrl + '/organizations/:organizationId/collections/:collectionId')
+    .delete(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('updateOrganization', 'Organization', 'organizationId'),
+      pricingCollectionController.removeFromOrg
     );
 };
 
