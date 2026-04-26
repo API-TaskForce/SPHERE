@@ -134,28 +134,49 @@ function EditGroupModal({
   );
 }
 
+// Candidate user shape shared between org-member and group-member responses
+interface MemberCandidate {
+  id: string;
+  username: string;
+  email: string;
+}
+
 function AddGroupMemberModal({
   groupId,
+  candidates,
+  isLoadingCandidates,
+  isSubgroup,
   onClose,
   onAdded,
 }: {
   groupId: string;
+  /** Users eligible to be added — org members (L1) or parent-group members (L2+), already filtered. */
+  candidates: MemberCandidate[];
+  isLoadingCandidates: boolean;
+  /** True when the group has a parent (used only for the empty-state label). */
+  isSubgroup: boolean;
   onClose: () => void;
   onAdded: () => void;
 }) {
-  const [username, setUsername] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [role, setRole] = useState<GroupRole>('viewer');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { lookupUserByUsername } = useOrganizationsApi();
   const { addGroupMember } = useGroupsApi();
+
+  // Auto-select first candidate once list loads
+  useEffect(() => {
+    if (candidates.length > 0 && !selectedUserId) {
+      setSelectedUserId(candidates[0].id);
+    }
+  }, [candidates, selectedUserId]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!selectedUserId) return;
     setIsSubmitting(true);
 
     try {
-      const user = await lookupUserByUsername(username.trim());
-      await addGroupMember(groupId, user.id, role);
+      await addGroupMember(groupId, selectedUserId, role);
       onAdded();
       onClose();
     } catch (error: unknown) {
@@ -174,49 +195,81 @@ function AddGroupMemberModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-sphere-grey-700">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder="john-doe"
-              required
-              className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
-            />
-          </div>
+        {isLoadingCandidates && (
+          <p className="py-8 text-center text-sm text-sphere-grey-500">Loading eligible members…</p>
+        )}
 
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-sphere-grey-700">Role</label>
-            <select
-              value={role}
-              onChange={(event) => setRole(event.target.value as GroupRole)}
-              className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
-            >
-              <option value="viewer">Viewer</option>
-              <option value="editor">Editor</option>
-              <option value="admin">Admin</option>
-            </select>
+        {!isLoadingCandidates && candidates.length === 0 && (
+          <div className="rounded-lg border border-sphere-grey-200 bg-sphere-grey-50 px-4 py-6 text-center text-sm text-sphere-grey-500">
+            {isSubgroup
+              ? 'All members of the parent group are already in this subgroup.'
+              : 'All organization members are already in this group.'}
           </div>
+        )}
 
-          <div className="flex justify-end gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50"
-            >
-              {isSubmitting ? 'Adding...' : 'Add member'}
-            </button>
-          </div>
-        </form>
+        {!isLoadingCandidates && candidates.length > 0 && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-sphere-grey-700">
+                {isSubgroup ? 'Member (from parent group)' : 'Member (from organization)'}
+              </label>
+              {/* Scrollable candidate list — select by clicking */}
+              <div className="max-h-48 overflow-y-auto rounded-md border border-sphere-grey-300">
+                {candidates.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedUserId(c.id)}
+                    className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-sphere-grey-50 ${
+                      selectedUserId === c.id ? 'bg-sphere-primary-50 font-semibold' : ''
+                    }`}
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sphere-grey-200 text-sphere-grey-600">
+                      <Iconify icon="mdi:account-outline" width={16} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-sphere-grey-800">@{c.username}</p>
+                      <p className="truncate text-xs text-sphere-grey-500">{c.email}</p>
+                    </div>
+                    {selectedUserId === c.id && (
+                      <Iconify icon="mdi:check-circle" width={16} className="ml-auto shrink-0 text-sphere-primary-600" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-semibold text-sphere-grey-700">Role</label>
+              <select
+                value={role}
+                onChange={(event) => setRole(event.target.value as GroupRole)}
+                className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+              >
+                <option value="viewer">Viewer</option>
+                <option value="editor">Editor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !selectedUserId}
+                className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Adding...' : 'Add member'}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -645,6 +698,113 @@ function AssignGroupPricingToCollectionModal({
   );
 }
 
+// ── Create Subgroup Modal ──────────────────────────────────────────────────────
+
+function CreateSubgroupModal({
+  parentGroupId,
+  onClose,
+  onCreated,
+}: {
+  parentGroupId: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [description, setDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { createSubgroup } = useGroupsApi();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await createSubgroup(parentGroupId, {
+        name: name.trim(),
+        displayName: displayName.trim() || undefined,
+        description: description.trim() || undefined,
+      });
+      onCreated();
+      onClose();
+    } catch (err: unknown) {
+      customAlert(getErrorMessage(err, 'Failed to create subgroup'));
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">Create Subgroup</h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700">
+            <Iconify icon="mdi:close" width={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-sphere-grey-700">
+              Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              minLength={3}
+              maxLength={50}
+              placeholder="my-subgroup"
+              className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+            />
+            <p className="text-xs text-sphere-grey-400">Unique identifier within the organization (3–50 chars).</p>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-sphere-grey-700">Display name</label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="My Subgroup"
+              maxLength={255}
+              className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-semibold text-sphere-grey-700">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              maxLength={500}
+              className="rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || name.trim().length < 3}
+              className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50"
+            >
+              {isSubmitting ? 'Creating...' : 'Create subgroup'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function GroupDetailPage() {
   const { orgName, groupId } = useParams<{ orgName: string; groupId: string }>();
   const { authUser } = useAuth();
@@ -662,16 +822,21 @@ export default function GroupDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingAvailableCollections, setIsLoadingAvailableCollections] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subgroups, setSubgroups] = useState<Group[]>([]);
+  const [memberCandidates, setMemberCandidates] = useState<{ id: string; username: string; email: string }[]>([]);
+  const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
   const [addCollectionModalOpen, setAddCollectionModalOpen] = useState(false);
   const [createCollectionModalOpen, setCreateCollectionModalOpen] = useState(false);
   const [addExistingPricingModalOpen, setAddExistingPricingModalOpen] = useState(false);
   const [assignPricingToCollectionModalOpen, setAssignPricingToCollectionModalOpen] = useState(false);
+  const [createSubgroupModalOpen, setCreateSubgroupModalOpen] = useState(false);
 
-  const { getMyMemberships } = useOrganizationsApi();
+  const { getMyMemberships, getOrgMembers } = useOrganizationsApi();
   const {
     getGroup,
+    updateGroup,
     deleteGroup,
     getGroupMembers,
     getGroupCollections,
@@ -681,11 +846,14 @@ export default function GroupDetailPage() {
     removeGroupMember,
     updateGroupCollectionAccess,
     removeGroupCollection,
+    getSubgroups,
   } = useGroupsApi();
   const { getGroupPricings, removeGroupPricing } = usePricingsApi();
 
+  const isSubgroup = !!group?._parentGroupId;
   const canManageOrg = myOrgRole === 'owner' || myOrgRole === 'admin';
-  const canManageGroup = canManageOrg || myGroupRole === 'admin';
+  // Parent group admin has the same management rights over direct subgroups as org admin has over groups.
+  const canManageGroup = canManageOrg || myGroupRole === 'admin' || (isSubgroup && myParentGroupRole === 'admin');
   const canManageMembers = canManageGroup;
   const canManageCollections = canManageGroup;
 
@@ -735,6 +903,53 @@ export default function GroupDetailPage() {
     }
   }, [groupId, getGroupPricings]);
 
+  const refreshSubgroups = useCallback(async () => {
+    if (!groupId) return;
+
+    try {
+      const data = await getSubgroups(groupId);
+      setSubgroups(data);
+    } catch {
+      // Ignore refresh errors to avoid disrupting the screen.
+    }
+  }, [groupId, getSubgroups]);
+
+  /**
+   * Loads the eligible candidates for adding a new member to this group:
+   *   - L1 group (no parent) → all org members not already in this group
+   *   - L2+ group (has parent) → parent group members not already in this group
+   */
+  const loadMemberCandidates = useCallback(async () => {
+    if (!group || !activeOrganization?.id) return;
+
+    setIsLoadingCandidates(true);
+    try {
+      const existingIds = new Set(members.map((m) => m.user.id));
+
+      if (!group._parentGroupId) {
+        // Level-1: source = org members
+        const orgMembers = await getOrgMembers(activeOrganization.id);
+        setMemberCandidates(
+          orgMembers
+            .filter((m) => !existingIds.has(m.user.id))
+            .map((m) => ({ id: m.user.id, username: m.user.username, email: m.user.email }))
+        );
+      } else {
+        // Level-2+: source = parent group members (only parent-group members can be added here)
+        const parentMembers = await getGroupMembers(group._parentGroupId);
+        setMemberCandidates(
+          parentMembers
+            .filter((m) => !existingIds.has(m.user.id))
+            .map((m) => ({ id: m.user.id, username: m.user.username, email: m.user.email }))
+        );
+      }
+    } catch {
+      setMemberCandidates([]);
+    } finally {
+      setIsLoadingCandidates(false);
+    }
+  }, [group, activeOrganization?.id, members, getOrgMembers, getGroupMembers]);
+
   const loadAvailableCollections = useCallback(async () => {
     if (!groupId || !activeOrganization?.id || !canManageCollections) return;
 
@@ -778,15 +993,17 @@ export default function GroupDetailPage() {
       setMyParentGroupRole(parentGroupMembership?.role ?? null);
       setGroup(groupData);
 
-      const [membersData, collectionsData, pricingsData] = await Promise.all([
+      const [membersData, collectionsData, pricingsData, subgroupsData] = await Promise.all([
         getGroupMembers(groupId),
         getGroupCollections(groupId),
         getGroupPricings(groupId).catch(() => ({ pricings: [] })),
+        getSubgroups(groupId).catch(() => []),
       ]);
 
       setMembers(membersData);
       setCollections(collectionsData);
       setGroupPricings(pricingsData?.pricings ?? []);
+      setSubgroups(subgroupsData);
     } catch (error: unknown) {
       setError(getErrorMessage(error, 'Failed to load group'));
     } finally {
@@ -803,6 +1020,7 @@ export default function GroupDetailPage() {
     getGroupMembers,
     getGroupCollections,
     getGroupPricings,
+    getSubgroups,
   ]);
 
   useEffect(() => {
@@ -830,6 +1048,13 @@ export default function GroupDetailPage() {
   ]);
 
   useEffect(() => {
+    if (addMemberModalOpen) {
+      loadMemberCandidates();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addMemberModalOpen]);
+
+  useEffect(() => {
     if (addCollectionModalOpen) {
       loadAvailableCollections();
     }
@@ -843,6 +1068,27 @@ export default function GroupDetailPage() {
       .then(() =>
         deleteGroup(group.id)
           .then(() => router.push(`/me/organizations/${orgName}`))
+          .catch((err: Error) => customAlert(err.message))
+      )
+      .catch(() => {});
+  };
+
+  /**
+   * Promotes a subgroup to root-level by clearing its _parentGroupId.
+   * Restricted to org admin/owner (canManageOrg guard enforced at render time).
+   */
+  const handlePromoteToRoot = () => {
+    if (!group || !canManageOrg) return;
+
+    customConfirm(
+      `Promote "${group.displayName ?? group.name}" to root-level group? It will no longer be nested under its current parent.`
+    )
+      .then(() =>
+        updateGroup(group.id, { _parentGroupId: null })
+          .then((updated: Group) => {
+            setGroup(updated);
+            // Back navigation will now point to the org since _parentGroupId is null
+          })
           .catch((err: Error) => customAlert(err.message))
       )
       .catch(() => {});
@@ -931,7 +1177,11 @@ export default function GroupDetailPage() {
       <div className="mb-6 flex flex-wrap items-start gap-4">
         <button
           type="button"
-          onClick={() => router.push(`/me/organizations/${orgName}`)}
+          onClick={() =>
+            group._parentGroupId
+              ? router.push(`/me/organizations/${orgName}/groups/${group._parentGroupId}`)
+              : router.push(`/me/organizations/${orgName}`)
+          }
           className="mt-1 text-sphere-grey-400 hover:text-sphere-grey-700"
         >
           <Iconify icon="mdi:arrow-left" width={20} />
@@ -970,6 +1220,18 @@ export default function GroupDetailPage() {
               <Iconify icon="mdi:pencil-outline" width={16} />
               Edit
             </button>
+            {/* Promote to root: only org admin/owner, only for subgroups */}
+            {canManageOrg && isSubgroup && (
+              <button
+                type="button"
+                onClick={handlePromoteToRoot}
+                title="Move this subgroup to root level"
+                className="flex items-center gap-1 rounded-md border border-sphere-primary-200 px-3 py-1.5 text-sm font-semibold text-sphere-primary-700 hover:bg-sphere-primary-50"
+              >
+                <Iconify icon="mdi:arrow-up-bold-circle-outline" width={16} />
+                Promote to root
+              </button>
+            )}
             {canDeleteGroup && (
               <button
                 type="button"
@@ -1017,7 +1279,14 @@ export default function GroupDetailPage() {
             {new Date(group.createdAt).toLocaleDateString()}
           </p>
           {group._parentGroupId && (
-            <p className="text-xs text-sphere-grey-500">Nested group</p>
+            <button
+              type="button"
+              onClick={() => router.push(`/me/organizations/${orgName}/groups/${group._parentGroupId}`)}
+              className="mt-0.5 flex items-center gap-1 text-xs text-sphere-primary-600 hover:underline"
+            >
+              <Iconify icon="mdi:arrow-up-circle-outline" width={13} />
+              View parent group
+            </button>
           )}
         </div>
       </div>
@@ -1301,6 +1570,66 @@ export default function GroupDetailPage() {
         </div>
       </section>
 
+      <section className="mt-6 rounded-xl border border-sphere-grey-200 bg-white p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-sphere-grey-800">Subgroups</h2>
+            <p className="text-sm text-sphere-grey-500">
+              Nested groups within this group. Members of this group can view them.
+            </p>
+          </div>
+          {canManageGroup && (
+            <button
+              type="button"
+              onClick={() => setCreateSubgroupModalOpen(true)}
+              className="flex items-center gap-2 rounded-md bg-sphere-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sphere-primary-700"
+            >
+              <Iconify icon="mdi:plus" width={16} />
+              Create subgroup
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {!isGroupMember ? (
+            <div className="flex flex-col items-center gap-2 py-10 text-sphere-grey-400">
+              <Iconify icon="mdi:lock-outline" width={36} />
+              <p className="text-sm">Join this group to view its subgroups.</p>
+            </div>
+          ) : subgroups.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-10 text-sphere-grey-400">
+              <Iconify icon="mdi:folder-multiple-outline" width={36} />
+              <p className="text-sm">No subgroups in this group yet.</p>
+            </div>
+          ) : (
+            subgroups.map((subgroup) => (
+              <button
+                key={subgroup.id}
+                type="button"
+                onClick={() => router.push(`/me/organizations/${orgName}/groups/${subgroup.id}`)}
+                className="flex w-full items-center gap-3 rounded-lg border border-sphere-grey-200 bg-sphere-grey-50 px-4 py-3 text-left transition-colors hover:border-sphere-primary-200 hover:bg-sphere-primary-50"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-sphere-grey-600">
+                  <Iconify icon="mdi:folder-outline" width={18} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-sphere-grey-800">
+                    {subgroup.displayName ?? subgroup.name}
+                  </p>
+                  <p className="text-xs text-sphere-grey-500">
+                    @{subgroup.name}
+                    {subgroup.description && ` · ${subgroup.description}`}
+                  </p>
+                </div>
+
+                <Iconify icon="mdi:chevron-right" width={18} className="shrink-0 text-sphere-grey-400" />
+              </button>
+            ))
+          )}
+        </div>
+      </section>
+
       {editModalOpen && (
         <EditGroupModal
           group={group}
@@ -1312,7 +1641,10 @@ export default function GroupDetailPage() {
       {addMemberModalOpen && (
         <AddGroupMemberModal
           groupId={group.id}
-          onClose={() => setAddMemberModalOpen(false)}
+          candidates={memberCandidates}
+          isLoadingCandidates={isLoadingCandidates}
+          isSubgroup={isSubgroup}
+          onClose={() => { setAddMemberModalOpen(false); setMemberCandidates([]); }}
           onAdded={refreshMembers}
         />
       )}
@@ -1351,6 +1683,14 @@ export default function GroupDetailPage() {
           groupCollections={collections}
           onClose={() => setAssignPricingToCollectionModalOpen(false)}
           onAssigned={() => { setAssignPricingToCollectionModalOpen(false); }}
+        />
+      )}
+
+      {createSubgroupModalOpen && (
+        <CreateSubgroupModal
+          parentGroupId={group.id}
+          onClose={() => setCreateSubgroupModalOpen(false)}
+          onCreated={refreshSubgroups}
         />
       )}
     </div>
