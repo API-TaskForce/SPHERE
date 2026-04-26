@@ -20,8 +20,10 @@
       "CreateCollectionContext": {
         "type": "Record",
         "attributes": {
-          "orgRole":   { "type": "String" },
-          "groupRole": { "type": "String" }
+          "orgRole":         { "type": "String" },
+          "groupRole":       { "type": "String" },
+          "parentGroupRole": { "type": "String", "required": false },
+          "isRootGroup":     { "type": "Boolean", "required": false }
         }
       },
       "ResourceContext": {
@@ -168,6 +170,13 @@
         }
       },
       "createSubgroup": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes":  ["Group"],
+          "context": { "type": "GroupContext" }
+        }
+      },
+      "listSubgroups": {
         "appliesTo": {
           "principalTypes": ["User"],
           "resourceTypes":  ["Group"],

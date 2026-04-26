@@ -14,9 +14,9 @@ import type { GroupRepository } from '../types/repositories/GroupRepository.js';
 export type CedarAction =
   | 'createOrganization' | 'readOrganization' | 'updateOrganization'
   | 'deleteOrganization' | 'manageOrganizationMembers' | 'manageSubscription'
-  | 'createGroup'        | 'createSubgroup'    | 'readGroup'
-  | 'updateGroup'        | 'deleteGroup'       | 'manageGroupMembers'
-  | 'manageGroupCollections' | 'manageGroupPricings'
+  | 'createGroup'        | 'createSubgroup'    | 'listSubgroups'
+  | 'readGroup'          | 'updateGroup'       | 'deleteGroup'
+  | 'manageGroupMembers' | 'manageGroupCollections' | 'manageGroupPricings'
   | 'createCollection'   | 'readCollection'    | 'updateCollection'
   | 'deleteCollection'
   | 'createPricing'      | 'readPricing'       | 'updatePricing'
@@ -144,18 +144,32 @@ export default class AuthorizationService {
     // GroupContext / CreateCollectionContext / ResourceContext — acciones cuyo resource es un grupo
     if (resource.type === 'Group') {
       if (action === 'createCollection') {
-        // CreateCollectionContext: rol del usuario en ese grupo concreto
-        const groupRole = await this.resolveGroupRole(userId, resource.id);
-        return { orgRole, groupRole };
+        // CreateCollectionContext extendido: incluye parentGroupRole e isRootGroup para que
+        // el admin/editor del grupo padre pueda crear colecciones en subgrupos directos.
+        const group         = await this.groupRepository.findById(resource.id);
+        const isRootGroup   = !group?._parentGroupId;
+        const groupRole     = await this.resolveGroupRole(userId, resource.id);
+        const parentGroupRole: GroupRole = isRootGroup
+          ? 'none'
+          : await this.resolveGroupRole(userId, group!._parentGroupId!);
+        return { orgRole, groupRole, parentGroupRole, isRootGroup };
       }
-      // createPricing on Group (assign pricing to group): check editor role in that group
+      // createPricing on Group: check editor role both in the group and (for subgroups) in parent.
+      // El admin/editor del grupo padre tiene capacidad equivalente sobre sus subgrupos directos.
       if (action === 'createPricing') {
-        const groupRole = await this.resolveGroupRole(userId, resource.id);
-        const hasGroupEditorRole = groupRole === 'admin' || groupRole === 'editor';
+        const group         = await this.groupRepository.findById(resource.id);
+        const isRootGroup   = !group?._parentGroupId;
+        const groupRole     = await this.resolveGroupRole(userId, resource.id);
+        let hasGroupEditorRole = groupRole === 'admin' || groupRole === 'editor';
+        if (!hasGroupEditorRole && !isRootGroup) {
+          const parentGroupRole = await this.resolveGroupRole(userId, group!._parentGroupId!);
+          hasGroupEditorRole = parentGroupRole === 'admin' || parentGroupRole === 'editor';
+        }
         return { orgRole, effectiveRole: 'none', isCreator: false, hasGroupEditorRole, isGroupRestricted: false };
       }
-      // GroupContext: incluye parentGroupRole e isRootGroup para deleteGroup
-      // creatorId portado por el middleware para manageGroupCollections / manageGroupPricings
+      // GroupContext: incluye parentGroupRole e isRootGroup para deleteGroup y todas las
+      // acciones que el admin del grupo padre puede realizar sobre subgrupos directos.
+      // creatorId portado por el middleware para manageGroupCollections / manageGroupPricings.
       return this.resolveGroupContext(userId, orgRole, resource.id, request.creatorId);
     }
 
