@@ -20,6 +20,9 @@ class PricingController {
     this.removePricingFromCollection = this.removePricingFromCollection.bind(this);
     this.destroyByNameAndOwner = this.destroyByNameAndOwner.bind(this);
     this.destroyVersionByNameAndOwner = this.destroyVersionByNameAndOwner.bind(this);
+    this.getAllByOwner = this.getAllByOwner.bind(this);
+    this.assignToOrg = this.assignToOrg.bind(this);
+    this.removeFromOrg = this.removeFromOrg.bind(this);
   }
 
   async index(req: any, res: any) {
@@ -89,29 +92,24 @@ class PricingController {
   }
 
   async create(req: any, res: any) {
-    try {
-      const pricing = await this.pricingService.create(
-        req.file,
-        req.user.username,
-        undefined,
-        req.organizationId
-      );
-      res.json(pricing);
-    } catch (err: any) {
       try {
-        const file = req.file;
-        const directory = path.dirname(file.path);
-        if (fs.readdirSync(directory).length === 1) {
-          fs.rmdirSync(directory, { recursive: true });
-        } else {
-          fs.rmSync(file.path);
+        const pricing = await this.pricingService.create(req.file, req.user.username, undefined, req.organizationId);
+        res.json(pricing);
+      } catch (err: any) {
+        try {
+          const file = req.file;
+          const directory = path.dirname(file.path);
+          if (fs.readdirSync(directory).length === 1) {
+            fs.rmSync(directory, { recursive: true, force: true });
+          } else {
+            fs.rmSync(file.path);
+          }
+          res.status(500).send({ error: err.message });
+        } catch (err) {
+          res.status(500).send({ error: (err as Error).message });
         }
-        res.status(500).send({ error: err.message });
-      } catch (err) {
-        res.status(500).send({ error: (err as Error).message });
       }
     }
-  }
 
   async addPricingToCollection(req: any, res: any) {
     try {
@@ -204,6 +202,40 @@ class PricingController {
         res.status(404).send({ error: err.message });
       }
       res.status(500).send({ error: err.message });
+    }
+  }
+
+  async getAllByOwner(req: any, res: any) {
+    try {
+      const pricings = await this.pricingService.getAllByOwner(req.user.username);
+      res.json({ pricings });
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async removeFromOrg(req: any, res: any) {
+    try {
+      await this.pricingService.removeFromOrg(req.params.pricingName, req.params.owner);
+      res.json({ message: 'Pricing removed from organization.' });
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async assignToOrg(req: any, res: any) {
+    try {
+      const { pricingId } = req.body;
+      await this.pricingService.assignToOrg(pricingId, req.params.organizationId, req.user.username);
+      res.json({ message: 'Pricing assigned to organization.' });
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else if (err.message.toLowerCase().includes('do not own')) {
+        res.status(403).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
     }
   }
 

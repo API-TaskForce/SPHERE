@@ -1,11 +1,14 @@
 import container from '../config/container.js';
 import GroupService from '../services/GroupService.js';
+import PricingService from '../services/PricingService.js';
 
 class GroupController {
   private groupService: GroupService;
+  private pricingService: PricingService;
 
   constructor() {
     this.groupService = container.resolve('groupService');
+    this.pricingService = container.resolve('pricingService');
     this.index = this.index.bind(this);
     this.indexByOrganization = this.indexByOrganization.bind(this);
     this.show = this.show.bind(this);
@@ -21,6 +24,9 @@ class GroupController {
     this.addCollection = this.addCollection.bind(this);
     this.updateCollectionAccess = this.updateCollectionAccess.bind(this);
     this.removeCollection = this.removeCollection.bind(this);
+    this.listPricings = this.listPricings.bind(this);
+    this.assignExistingPricing = this.assignExistingPricing.bind(this);
+    this.removePricing = this.removePricing.bind(this);
   }
 
   // ── Group CRUD ──────────────────────────────────────────────────────────────
@@ -239,6 +245,46 @@ class GroupController {
         req.params.pricingCollectionId
       );
       res.json({ message: 'Successfully removed.' });
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  // ── Group pricing management ────────────────────────────────────────────────
+
+  async listPricings(req: any, res: any) {
+    try {
+      const pricings = await this.pricingService.getByGroup(req.params.groupId);
+      res.json({ pricings });
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async assignExistingPricing(req: any, res: any) {
+    try {
+      const { pricingId } = req.body;
+      await this.pricingService.assignToGroup(pricingId, req.params.groupId, req.user.username, req.organizationId);
+      res.json({ message: 'Pricing assigned to group.' });
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else if (err.message.toLowerCase().includes('do not own')) {
+        res.status(403).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  async removePricing(req: any, res: any) {
+    try {
+      await this.pricingService.removeFromGroup(req.params.pricingId);
+      res.json({ message: 'Pricing removed from group.' });
     } catch (err: any) {
       if (err.message.toLowerCase().includes('not found')) {
         res.status(404).send({ error: err.message });

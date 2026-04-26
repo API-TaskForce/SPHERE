@@ -243,7 +243,13 @@ class PricingRepository extends RepositoryBase {
       };
 
       if (organizationId) {
-        match._organizationId = new mongoose.Types.ObjectId(organizationId);
+        // Show pricings that belong to the current org OR have no org assignment
+        // (personal pricings unassigned from any org should still be visible).
+        match.$or = [
+          { _organizationId: new mongoose.Types.ObjectId(organizationId) },
+          { _organizationId: { $exists: false } },
+          { _organizationId: null },
+        ];
       }
 
       const pricings = await PricingMongoose.aggregate([
@@ -302,6 +308,18 @@ class PricingRepository extends RepositoryBase {
     }
   }
 
+  /**
+   * Find a single pricing document by name+owner without filtering on _collectionId.
+   * Used to distinguish "doesn't exist" from "already in a collection" before write ops.
+   */
+  async findRawByNameAndOwner(name: string, owner: string, organizationId?: string): Promise<any> {
+    const filter: any = { name, owner };
+    if (organizationId) filter._organizationId = new mongoose.Types.ObjectId(organizationId);
+
+    const pricing = await PricingMongoose.findOne(filter).lean();
+    return pricing ?? null;
+  }
+
   async findByCollection(collectionId: string, ...args: any) {
     try {
       const pricings = await PricingMongoose.find({ _collectionId: collectionId });
@@ -322,37 +340,26 @@ class PricingRepository extends RepositoryBase {
   }
 
   async create(data: any[], ...args: any) {
-    data.forEach(item => {
-      if (item._organizationId) {
-        item._organizationId = new mongoose.Types.ObjectId(item._organizationId);
-      }
-      if (item._collectionId) {
-        item._collectionId = new mongoose.Types.ObjectId(item._collectionId);
-      }
-
-      if (
-        item.analytics &&
-        item.analytics.minSubscriptionPrice &&
-        Number.isNaN(item.analytics.minSubscriptionPrice)
-      ) {
-        item.analytics.minSubscriptionPrice = undefined;
-      }
-      if (
-        item.analytics &&
-        item.analytics.minSubscriptionPrice &&
-        Number.isNaN(item.analytics.maxSubscriptionPrice)
-      ) {
-        item.analytics.maxSubscriptionPrice = undefined;
-      }
-    });
-
-    return await PricingMongoose.insertMany(data);
-
-    // const pricing = new PricingMongoose(data);
-    // await pricing.save();
-
-    // return pricing;
-  }
+     data.forEach(item => {
+       if (item._collectionId) {
+         item._collectionId = new mongoose.Types.ObjectId(item._collectionId);
+       }
+ 
+       if (item.analytics && item.analytics.minSubscriptionPrice && Number.isNaN(item.analytics.minSubscriptionPrice)){
+         item.analytics.minSubscriptionPrice = undefined;
+       }
+       if (item.analytics && item.analytics.minSubscriptionPrice && Number.isNaN(item.analytics.maxSubscriptionPrice)){
+         item.analytics.maxSubscriptionPrice = undefined;
+       }
+     });
+ 
+     return await PricingMongoose.insertMany(data);
+ 
+     // const pricing = new PricingMongoose(data);
+     // await pricing.save();
+ 
+     // return pricing;
+   }
 
   async updateAnalytics(pricingId: string, analytics: PricingAnalytics, ...args: any) {
     const pricing = await PricingMongoose.findOne({ _id: pricingId });
@@ -478,6 +485,87 @@ class PricingRepository extends RepositoryBase {
   async destroy(id: string, ...args: any) {
     const result = await PricingMongoose.deleteOne({ _id: id });
     return result?.deletedCount === 1;
+  }
+
+  async findByGroup(groupId: string) {
+    try {
+      const pricings = await PricingMongoose.aggregate([
+        { $match: { _groupId: new mongoose.Types.ObjectId(groupId) } },
+        {
+          $lookup: {
+            from: 'pricingCollections',
+            localField: '_collectionId',
+            foreignField: '_id',
+            as: 'collection',
+            pipeline: [{ $project: { name: 1 } }],
+          },
+        },
+        { $unwind: { path: '$collection', preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            owner: 1,
+            version: 1,
+            _collectionId: 1,
+            _organizationId: 1,
+            _groupId: 1,
+            collectionName: { $ifNull: ['$collection.name', null] },
+          },
+        },
+      ]);
+      return pricings.map((p: any) => ({ ...p, id: p._id.toString() }));
+    } catch (err) {
+      return [];
+    }
+  }
+
+  async findAllByOwner(owner: string) {
+    try {
+      const pricings = await PricingMongoose.find(
+        { owner },
+        { _id: 1, name: 1, owner: 1, version: 1, _collectionId: 1, _organizationId: 1 }
+      ).lean();
+      return pricings.map((p: any) => ({ ...p, id: p._id.toString() }));
+    } catch (err) {
+      return [];
+    }
+  }
+
+  async updateGroupId(pricingId: string, groupId: string | null) {
+    if (groupId) {
+      return PricingMongoose.updateOne(
+        { _id: new mongoose.Types.ObjectId(pricingId) },
+        { $set: { _groupId: new mongoose.Types.ObjectId(groupId) } }
+      );
+    } else {
+      return PricingMongoose.updateOne(
+        { _id: new mongoose.Types.ObjectId(pricingId) },
+        { $unset: { _groupId: 1 } }
+      );
+    }
+  }
+
+  async updateOrganizationId(pricingId: string, organizationId: string) {
+    return PricingMongoose.updateOne(
+      { _id: new mongoose.Types.ObjectId(pricingId) },
+      { $set: { _organizationId: new mongoose.Types.ObjectId(organizationId) } }
+    );
+  }
+
+  async clearOrganizationId(pricingId: string) {
+    return PricingMongoose.updateOne(
+      { _id: new mongoose.Types.ObjectId(pricingId) },
+      { $unset: { _organizationId: 1 } }
+    );
+  }
+
+  /** Clears _organizationId for all versions of a pricing (identified by name+owner). */
+  async clearOrganizationIdByNameAndOwner(name: string, owner: string) {
+    return PricingMongoose.updateMany(
+      { name, owner },
+      { $unset: { _organizationId: 1 } }
+    );
   }
 }
 

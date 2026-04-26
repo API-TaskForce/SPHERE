@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { execSync } from 'child_process';
 import { Pricing } from 'pricing4ts';
 import { Pricing as PricingModel } from '../types/database/Pricing';
 import container from '../config/container';
@@ -110,77 +111,86 @@ class PricingService {
     ];
   }
 
-  async create(pricingFile: any, owner: string, collectionId: string | undefined, organizationId: string) {
-    try {
-      const uploadedPricing: Pricing = retrievePricingFromPath(
-        typeof pricingFile === 'string' ? pricingFile : pricingFile.path
-      );
-      // TODO: if the pricing exists in two or more collections, this could lead to error.
-      const previousPricing = await this.pricingRepository.findByNameAndOwner(
-        uploadedPricing.saasName,
-        owner,
-        undefined,
-        organizationId
-      );
+  async create(pricingFile: any, owner: string, collectionId?: string, organizationId?: string) {
+      try {
+        const uploadedPricing: Pricing = retrievePricingFromPath(
+          typeof pricingFile === 'string' ? pricingFile : pricingFile.path
+        );
+        // TODO: if the pricing exists in two or more collections, this could lead to error.
+        const previousPricing = await this.pricingRepository.findByNameAndOwner(
+          uploadedPricing.saasName,
+          owner
+        );
+  
+        if (!collectionId && previousPricing && previousPricing.versions[0]._collectionId) {
+          collectionId = previousPricing.versions[0]._collectionId.toString();
+        }
+  
+        const rawPath = typeof pricingFile === 'string' ? pricingFile : pricingFile.path;
+        const normalizedPath = rawPath.replace(/\\/g, '/');
+        const staticIndex = normalizedPath.indexOf('static/');
+  
+        if (staticIndex === -1) {
+          throw new Error('Invalid pricing path: it must contain "static/".');
+        }
+  
+        const yamlPath = normalizedPath.slice(staticIndex);
+  
+        const pricingData = {
+          name: uploadedPricing.saasName,
+          version: uploadedPricing.version,
+          _collectionId: collectionId,
+          owner: owner,
+          currency: uploadedPricing.currency,
+          extractionDate: new Date(uploadedPricing.createdAt),
+          url: '',
+          yaml: yamlPath,
+          analytics: {},
+          ...(organizationId && { _organizationId: organizationId }),
+        };
+  
+        const pricing = await this.pricingRepository.create([pricingData]);
+  
+        processFileUris(pricing[0], ['yaml']);
+  
+        let minizincAvailable = false;
+        try {
+          execSync('minizinc --version', { stdio: 'ignore', timeout: 5000 });
+          minizincAvailable = true;
+        } catch {
+          console.warn('MiniZinc not found in PATH, skipping analytics');
+        }
 
-      if (!collectionId && previousPricing && previousPricing.versions[0]._collectionId) {
-        collectionId = previousPricing.versions[0]._collectionId.toString();
+        if (minizincAvailable) {
+          try {
+            const pricingAnalytics = new PricingAnalytics(uploadedPricing);
+            const analytics = await pricingAnalytics.getAnalytics();
+            await this.pricingRepository.updateAnalytics(pricing[0]._id.toString(), analytics);
+          } catch (analyticsErr: any) {
+            console.warn('Analytics computation skipped:', analyticsErr.message);
+          }
+        }
+  
+        if (collectionId) {
+          await this.pricingCollectionService.updateCollectionAnalytics(collectionId);
+        }
+  
+        return pricing;
+      } catch (err) {
+        throw new Error((err as Error).message);
       }
-
-      const rawPath = typeof pricingFile === 'string' ? pricingFile : pricingFile.path;
-      const normalizedPath = rawPath.replace(/\\/g, '/');
-      const staticIndex = normalizedPath.indexOf('static/');
-
-      if (staticIndex === -1) {
-        throw new Error('Invalid pricing path: it must contain "static/".');
-      }
-
-      const yamlPath = normalizedPath.slice(staticIndex);
-
-      const pricingData = {
-        name: uploadedPricing.saasName,
-        version: uploadedPricing.version,
-        _collectionId: collectionId,
-        _organizationId: new mongoose.Types.ObjectId(organizationId),
-        owner: owner,
-        currency: uploadedPricing.currency,
-        extractionDate: new Date(uploadedPricing.createdAt),
-        url: '',
-        yaml: yamlPath,
-        analytics: {},
-      };
-
-      const pricing = await this.pricingRepository.create([pricingData]);
-
-      processFileUris(pricing[0], ['yaml']);
-
-      const pricingAnalytics = new PricingAnalytics(uploadedPricing);
-
-      await pricingAnalytics
-        .getAnalytics()
-        .then((analytics: any) => {
-          this.pricingRepository.updateAnalytics(pricing[0]._id.toString(), analytics);
-        })
-        .catch(async (err: any) => {
-          await this.pricingRepository.destroy(pricing[0]._id.toString());
-          throw new Error((err as Error).message);
-        });
-
-      if (collectionId) {
-        await this.pricingCollectionService.updateCollectionAnalytics(collectionId);
-      }
-
-      return pricing;
-    } catch (err) {
-      throw new Error((err as Error).message);
     }
-  }
 
   async addPricingToCollection(pricingName: string, owner: string, collectionId: string, organizationId?: string) {
     try {
-      const pricing = await this.pricingRepository.findByNameAndOwner(pricingName, owner, undefined, organizationId);
-      if (!pricing) {
+      // Use findRawByNameAndOwner (no _collectionId filter) so we can tell the difference
+      // between "pricing doesn't exist" and "pricing is already in a collection".
+      const raw = await this.pricingRepository.findRawByNameAndOwner(pricingName, owner, organizationId);
+      if (!raw) {
         throw new Error('Either the pricing does not exist or you are not its owner');
+      }
+      if (raw._collectionId) {
+        throw new Error('This pricing is already assigned to a collection');
       }
 
       await this.pricingRepository.addPricingToCollection(pricingName, owner, collectionId, organizationId);
@@ -245,20 +255,20 @@ class PricingService {
 
   async removePricingFromCollection(pricingName: string, owner: string, organizationId?: string) {
     try {
-      const pricing = await this.pricingRepository.findByNameAndOwner(pricingName, owner, undefined, organizationId);
+      // Must use findRawByNameAndOwner — findByNameAndOwner filters _collectionId: { $exists: false }
+      // so it would always return null for pricings that are already in a collection.
+      const raw = await this.pricingRepository.findRawByNameAndOwner(pricingName, owner, organizationId);
 
-      if (!pricing) {
+      if (!raw) {
         throw new Error('Either the pricing does not exist or you are not its owner');
       }
-
-      await this.pricingRepository.removePricingFromCollection(pricingName, owner, organizationId);
-      if (pricing.versions[0]._collectionId) {
-        await this.pricingCollectionService.updateCollectionAnalytics(
-          pricing.versions[0]._collectionId
-        );
-      } else {
+      if (!raw._collectionId) {
         throw new Error('Pricing is not in a collection');
       }
+
+      const collectionId = raw._collectionId.toString();
+      await this.pricingRepository.removePricingFromCollection(pricingName, owner, organizationId);
+      await this.pricingCollectionService.updateCollectionAnalytics(collectionId);
 
       return true;
     } catch (err) {
@@ -318,6 +328,47 @@ class PricingService {
     }
 
     return true;
+  }
+
+  async assignToGroup(pricingId: string, groupId: string, owner: string, organizationId?: string) {
+    const pricing = await this.pricingRepository.findById(pricingId);
+    if (!pricing) throw new Error('Pricing not found');
+    if (pricing.owner !== owner) throw new Error('You do not own this pricing');
+    await this.pricingRepository.updateGroupId(pricingId, groupId);
+    // Sync _organizationId so org-scoped queries can still find this pricing
+    if (organizationId) {
+      await this.pricingRepository.updateOrganizationId(pricingId, organizationId);
+    }
+    return true;
+  }
+
+  async assignToOrg(pricingId: string, organizationId: string, owner: string) {
+    const pricing = await this.pricingRepository.findById(pricingId);
+    if (!pricing) throw new Error('Pricing not found');
+    if (pricing.owner !== owner) throw new Error('You do not own this pricing');
+    await this.pricingRepository.updateOrganizationId(pricingId, organizationId);
+    return true;
+  }
+
+  async removeFromGroup(pricingId: string) {
+    const pricing = await this.pricingRepository.findById(pricingId);
+    if (!pricing) throw new Error('Pricing not found');
+    await this.pricingRepository.updateGroupId(pricingId, null);
+    return true;
+  }
+
+  async removeFromOrg(name: string, owner: string) {
+    // Removes _organizationId from all versions of the pricing (name+owner pair).
+    await this.pricingRepository.clearOrganizationIdByNameAndOwner(name, owner);
+    return true;
+  }
+
+  async getAllByOwner(owner: string) {
+    return this.pricingRepository.findAllByOwner(owner);
+  }
+
+  async getByGroup(groupId: string) {
+    return this.pricingRepository.findByGroup(groupId);
   }
 }
 
