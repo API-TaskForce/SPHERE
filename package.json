@@ -9,12 +9,12 @@
     "build": "cd frontend && tsc -b && vite build",
     "lint": "eslint .",
     "migrate": "cd api && npx migrate up",
-    "dev:api": "cd api && npx migrate up && npx tsx --tsconfig tsconfig.json --watch src/backend.ts",
+    "dev:api": "cd api && export MINIZINC_PATH=${MINIZINC_PATH:-/Applications/MiniZincIDE.app/Contents/Resources} && export PATH=\"$MINIZINC_PATH:$PATH\" && npx migrate up && npx tsx --tsconfig tsconfig.json --watch src/backend.ts",
     "dev:vite": "cd frontend && npx vite",
     "test:api": "cd api && npx vitest --run && cd .. && npm run seed:mongo-local:small",
     "deploy:vercel": "cd frontend && vite build",
     "deploy:prod": "cd frontend && vite preview --host",
-    "seed:mongo-local:small": "cd api && npx tsx --tsconfig tsconfig.json scripts/seedMongo.ts"
+    "seed:mongo-local:small": "cd api && export MINIZINC_PATH=${MINIZINC_PATH:-/Applications/MiniZincIDE.app/Contents/Resources} && export PATH=\"$MINIZINC_PATH:$PATH\" && npx tsx --tsconfig tsconfig.json scripts/seedMongo.ts"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
