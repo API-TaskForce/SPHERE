@@ -1,5 +1,6 @@
 import container from '../config/container.js';
 import OrganizationService from '../services/OrganizationService.js';
+import { revertPendingSpaceEvals } from '../middlewares/SpacePlanMiddleware.js';
 
 class OrganizationController {
   private organizationService: OrganizationService;
@@ -134,6 +135,8 @@ class OrganizationController {
       );
       res.status(201).json(membership);
     } catch (err: any) {
+      // Revert SPACE usage counter incremented by checkSpacePlan('orgMembers', 1)
+      await revertPendingSpaceEvals(req);
       if (err.message.toLowerCase().includes('already a member')) {
         res.status(422).send({ error: err.message });
       } else {

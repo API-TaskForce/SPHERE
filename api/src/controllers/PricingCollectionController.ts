@@ -4,6 +4,7 @@ import PricingService from '../services/PricingService.js';
 import { CollectionIndexQueryParams } from '../types/services/PricingCollection.js';
 import path from 'path';
 import archiver from 'archiver';
+import { revertPendingSpaceEvals } from '../middlewares/SpacePlanMiddleware.js';
 
 class PricingCollectionController {
   private readonly pricingCollectionService: PricingCollectionService;
@@ -133,10 +134,11 @@ class PricingCollectionController {
       );
       res.json(pricing);
     } catch (err: any) {
+      // Revert SPACE usage counter incremented by checkSpacePlan('collections', 1)
+      await revertPendingSpaceEvals(req);
       const msg = (err as Error).message || '';
-      if (msg.includes('Ya existe una colección')) {
-        res.status(409).send({ error: msg });
-        return;
+      if (msg.toLowerCase().includes('already exists')) {
+        return res.status(409).send({ error: msg });
       }
       res.status(500).send({ error: msg });
     }
@@ -154,10 +156,11 @@ class PricingCollectionController {
       );
       res.json({ collection, pricingsWithErrors });
     } catch (err: any) {
+      // Revert SPACE usage counter incremented by checkSpacePlan('collections', 1)
+      await revertPendingSpaceEvals(req);
       const msg = (err as Error).message || '';
-      if (msg.includes('Ya existe una colección')) {
-        res.status(409).send({ error: msg });
-        return;
+      if (msg.toLowerCase().includes('already exists')) {
+        return res.status(409).send({ error: msg });
       }
       res.status(500).send({ error: msg });
     }

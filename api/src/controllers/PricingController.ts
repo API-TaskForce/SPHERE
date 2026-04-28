@@ -3,6 +3,7 @@ import container from '../config/container.js';
 import PricingService from '../services/PricingService';
 import path from 'path';
 import { PricingIndexQueryParams } from '../types/services/PricingService.js';
+import { revertPendingSpaceEvals } from '../middlewares/SpacePlanMiddleware.js';
 
 class PricingController {
   private pricingService: PricingService;
@@ -92,24 +93,26 @@ class PricingController {
   }
 
   async create(req: any, res: any) {
+    try {
+      const pricing = await this.pricingService.create(req.file, req.user.username, undefined, req.organizationId);
+      res.json(pricing);
+    } catch (err: any) {
+      // Revert SPACE usage counter incremented by checkUserFeature('pricings', 1)
+      await revertPendingSpaceEvals(req);
       try {
-        const pricing = await this.pricingService.create(req.file, req.user.username, undefined, req.organizationId);
-        res.json(pricing);
-      } catch (err: any) {
-        try {
-          const file = req.file;
-          const directory = path.dirname(file.path);
-          if (fs.readdirSync(directory).length === 1) {
-            fs.rmSync(directory, { recursive: true, force: true });
-          } else {
-            fs.rmSync(file.path);
-          }
-          res.status(500).send({ error: err.message });
-        } catch (err) {
-          res.status(500).send({ error: (err as Error).message });
+        const file = req.file;
+        const directory = path.dirname(file.path);
+        if (fs.readdirSync(directory).length === 1) {
+          fs.rmSync(directory, { recursive: true, force: true });
+        } else {
+          fs.rmSync(file.path);
         }
+        res.status(500).send({ error: err.message });
+      } catch (cleanupErr) {
+        res.status(500).send({ error: (cleanupErr as Error).message });
       }
     }
+  }
 
   async addPricingToCollection(req: any, res: any) {
     try {
@@ -199,7 +202,7 @@ class PricingController {
       }
     } catch (err: any) {
       if (err.message.toLowerCase().includes('not exist')) {
-        res.status(404).send({ error: err.message });
+        return res.status(404).send({ error: err.message });
       }
       res.status(500).send({ error: err.message });
     }

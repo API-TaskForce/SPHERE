@@ -334,14 +334,6 @@ class PricingCollectionService {
     return evolution;
   }
 
-  // async destroy (id: string) {
-  //   const result = await this.pricingRepository.destroy(id)
-  //   if (!result) {
-  //     throw new Error('Pricing not found')
-  //   }
-  //   return true
-  // }
-
   _getExtractPath(userId: string, collectionName: string) {
     return `${process.env.COLLECTIONS_FOLDER}/${userId}/${collectionName}`;
   }

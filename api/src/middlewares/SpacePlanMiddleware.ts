@@ -1,6 +1,38 @@
 import { NextFunction } from 'express';
 import container from '../config/container';
 
+// ── SPACE revert tracking ─────────────────────────────────────────────────────
+//
+// When checkSpacePlan / checkUserFeature evaluates a usage-limited feature
+// (expectedConsumption > 0), SPACE increments the usage counter immediately.
+// If the downstream controller operation fails, that counter must be decremented.
+//
+// Both middlewares push a revert entry onto req.spaceReverts when they consume
+// quota. Controllers that can fail after SPACE gating must call
+// revertPendingSpaceEvals(req) inside their catch blocks.
+
+export interface SpaceRevertEntry {
+  orgId: string;
+  featureName: string;
+}
+
+/**
+ * Reverts all SPACE usage increments tracked on the current request.
+ * Call in controller catch blocks when a create operation fails after gating.
+ * Each revert is best-effort (errors are swallowed) and only effective within
+ * 2 minutes of the original evaluation.
+ */
+export async function revertPendingSpaceEvals(req: any): Promise<void> {
+  const reverts: SpaceRevertEntry[] = req.spaceReverts ?? [];
+  if (reverts.length === 0) return;
+  const spaceService = container.resolve('spaceService');
+  await Promise.allSettled(
+    reverts.map(({ orgId, featureName }) =>
+      spaceService.revertFeatureEvaluation(orgId, featureName)
+    )
+  );
+}
+
 /**
  * Gates a route on whether the active organization's subscription plan
  * allows the given feature.
@@ -74,6 +106,12 @@ const checkSpacePlan = (featureName: string, expectedConsumption?: number) =>
         });
       }
 
+      // Track this evaluation so the controller can revert it if the operation fails.
+      if (expectedConsumption !== undefined) {
+        if (!req.spaceReverts) req.spaceReverts = [];
+        req.spaceReverts.push({ orgId: organizationId, featureName });
+      }
+
       next();
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -125,6 +163,12 @@ const checkUserFeature = (featureName: string, expectedConsumption?: number) =>
           used: result.used ?? null,
           limit: result.limit ?? null,
         });
+      }
+
+      // Track this evaluation so the controller can revert it if the operation fails.
+      if (expectedConsumption !== undefined) {
+        if (!req.spaceReverts) req.spaceReverts = [];
+        req.spaceReverts.push({ orgId: personalOrg.id, featureName });
       }
 
       next();

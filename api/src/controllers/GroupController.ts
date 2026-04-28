@@ -1,6 +1,7 @@
 import container from '../config/container.js';
 import GroupService from '../services/GroupService.js';
 import PricingService from '../services/PricingService.js';
+import { revertPendingSpaceEvals } from '../middlewares/SpacePlanMiddleware.js';
 
 class GroupController {
   private groupService: GroupService;
@@ -81,6 +82,8 @@ class GroupController {
       );
       res.status(201).json(group);
     } catch (err: any) {
+      // Revert SPACE usage counter incremented by checkSpacePlan('groups', 1)
+      await revertPendingSpaceEvals(req);
       if (err.name?.includes('ValidationError') || err.code === 11000) {
         res.status(422).send({ error: err.message });
       } else {
@@ -94,6 +97,8 @@ class GroupController {
       const subgroup = await this.groupService.createInGroup(req.body, req.params.groupId);
       res.status(201).json(subgroup);
     } catch (err: any) {
+      // Revert SPACE usage counter incremented by checkSpacePlan('groups', 1)
+      await revertPendingSpaceEvals(req);
       if (err.message.toLowerCase().includes('not found')) {
         res.status(404).send({ error: err.message });
       } else if (err.name?.includes('ValidationError') || err.code === 11000) {
@@ -148,6 +153,8 @@ class GroupController {
       const membership = await this.groupService.addMember(userId, req.params.groupId, role);
       res.status(201).json(membership);
     } catch (err: any) {
+      // Revert SPACE usage counter incremented by checkSpacePlan('groupMembers', 1)
+      await revertPendingSpaceEvals(req);
       if (err.message.toLowerCase().includes('not found')) {
         res.status(404).send({ error: err.message });
       } else if (

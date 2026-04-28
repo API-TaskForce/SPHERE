@@ -148,9 +148,12 @@ export default class AuthorizationService {
       if (action === 'createCollection') {
         // CreateCollectionContext extendido: incluye parentGroupRole e isRootGroup para que
         // el admin/editor del grupo padre pueda crear colecciones en subgrupos directos.
-        const group         = await this.groupRepository.findById(resource.id);
-        const isRootGroup   = !group?._parentGroupId;
-        const groupRole     = await this.resolveGroupRole(userId, resource.id);
+        // findById and first resolveGroupRole are independent — run in parallel.
+        const [group, groupRole] = await Promise.all([
+          this.groupRepository.findById(resource.id),
+          this.resolveGroupRole(userId, resource.id),
+        ]);
+        const isRootGroup = !group?._parentGroupId;
         const parentGroupRole: GroupRole = isRootGroup
           ? 'none'
           : await this.resolveGroupRole(userId, group!._parentGroupId!);
@@ -159,9 +162,12 @@ export default class AuthorizationService {
       // createPricing on Group: check editor role both in the group and (for subgroups) in parent.
       // El admin/editor del grupo padre tiene capacidad equivalente sobre sus subgrupos directos.
       if (action === 'createPricing') {
-        const group         = await this.groupRepository.findById(resource.id);
-        const isRootGroup   = !group?._parentGroupId;
-        const groupRole     = await this.resolveGroupRole(userId, resource.id);
+        // findById and first resolveGroupRole are independent — run in parallel.
+        const [group, groupRole] = await Promise.all([
+          this.groupRepository.findById(resource.id),
+          this.resolveGroupRole(userId, resource.id),
+        ]);
+        const isRootGroup = !group?._parentGroupId;
         let hasGroupEditorRole = groupRole === 'admin' || groupRole === 'editor';
         if (!hasGroupEditorRole && !isRootGroup) {
           const parentGroupRole = await this.resolveGroupRole(userId, group!._parentGroupId!);

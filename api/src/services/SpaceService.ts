@@ -156,6 +156,9 @@ class SpaceService {
    * Use this when an organization is deleted.
    *
    * A 404 response is treated as a no-op (contract already gone).
+   *
+   * NOTE: Uses raw fetch instead of spaceClient because the space-node-client SDK
+   * does not expose a deleteContract method. Raw fetch is the only available path.
    */
   async deleteContract(organizationId: string): Promise<void> {
     const response = await fetch(`${SPACE_URL}api/v1/contracts/${organizationId}`, {
