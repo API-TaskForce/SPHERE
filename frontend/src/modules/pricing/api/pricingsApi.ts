@@ -113,15 +113,18 @@ export function usePricingsApi() {
   }, [fetchWithOrgContext, basicHeaders]);
 
   const getConfigurationSpace = useCallback(async (pricingId: string, limit?: number, offset?: number) => {
-    
     const params = new URLSearchParams();
 
     if (limit !== undefined) params.set('limit', limit.toString());
     if (offset !== undefined) params.set('offset', offset.toString());
 
-    const queryString = params.toString(); 
-    
-    return fetchWithInterceptor(
+    const queryString = params.toString();
+
+    // fetchWithOrgContext is required: the backend's checkCedar('readPricing') resolves
+    // authorization against req.organizationId. Without X-Organization-Id the org context
+    // defaults to the personal org, which causes Cedar to deny access for pricings that
+    // belong to a team organization.
+    return fetchWithOrgContext(
       `${PRICINGS_BASE_PATH}/${pricingId}/configuration-space${queryString ? `?${queryString}` : ''}`,
       {
         method: 'GET',
