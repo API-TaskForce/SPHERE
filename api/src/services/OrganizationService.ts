@@ -111,6 +111,24 @@ class OrganizationService {
     return await this.organizationRepository.findById(id);
   }
 
+  // ── Plan management ─────────────────────────────────────────────────────────
+
+  async getPlan(organizationId: string): Promise<string> {
+    return this.spaceService.getPlan(organizationId);
+  }
+
+  async changePlan(organizationId: string, plan: string): Promise<void> {
+    const VALID_PLANS = ['FREE', 'PRO', 'ENTERPRISE'];
+    if (!VALID_PLANS.includes(plan)) {
+      throw new Error(`Invalid plan: ${plan}. Valid plans: ${VALID_PLANS.join(', ')}`);
+    }
+    const org = await this.organizationRepository.findById(organizationId);
+    if (!org) {
+      throw new Error('Organization not found');
+    }
+    await this.spaceService.updateContract(organizationId, plan);
+  }
+
   // ── Member management ───────────────────────────────────────────────────────
 
   async listMembers(organizationId: string) {

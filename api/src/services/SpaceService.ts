@@ -28,6 +28,15 @@ class SpaceService {
   }
 
   /**
+   * Returns the current plan name for the given organization (e.g. 'FREE', 'PRO', 'ENTERPRISE').
+   * Falls back to FREE if the contract or plan field is missing.
+   */
+  async getPlan(organizationId: string): Promise<string> {
+    const contract = await this.spaceClient.contracts.getContract(organizationId);
+    return (contract as any)?.subscriptionPlans?.[SPACE_SERVICE_NAME] ?? FREE_PLAN;
+  }
+
+  /**
    * Evaluates whether the organization's current plan allows the given feature.
    *
    * SPACE resolves the evaluation internally using the registered pricing YAML,

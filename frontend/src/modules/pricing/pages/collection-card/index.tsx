@@ -144,32 +144,38 @@ export default function CollectionCardPage() {
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex gap-4">
-              {collection && collection.analytics && collection.analytics.evolutionOfPlans.dates.length > 0 && (
-                <>
-                  <label className="relative min-w-[170px] rounded-md border border-slate-300 bg-slate-50 px-3 pb-2 pt-4 transition-colors focus-within:border-sphere-primary-500">
-                    <span className="absolute left-3 top-0 -translate-y-1/2 bg-[#F9FAFB] px-1 text-[16px] text-slate-500">
-                      Start Date
-                    </span>
-                    <input
-                      type="date"
-                      className="w-full border-0 bg-transparent p-0 text-center text-slate-700 outline-none"
-                      defaultValue={new Date(collection.analytics.evolutionOfPlans.dates[0]).toISOString().split('T')[0]}
-                      onChange={handleInputDate}
-                    />
-                  </label>
-                  <label className="relative min-w-[170px] rounded-md border border-slate-300 bg-slate-50 px-3 pb-2 pt-4 transition-colors focus-within:border-sphere-primary-500">
-                    <span className="absolute left-3 top-0 -translate-y-1/2 bg-[#F9FAFB] px-1 text-[16px] text-slate-500">
-                      End Date
-                    </span>
-                    <input
-                      type="date"
-                      className="w-full border-0 bg-transparent p-0 text-center text-slate-700 outline-none"
-                      defaultValue={new Date().toISOString().split('T')[0]}
-                      onChange={handleOutputDate}
-                    />
-                  </label>
-                </>
-              )}
+              <Feature id="sphere-collectionAnalytics">
+                <On>
+                  {collection && collection.analytics && collection.analytics.evolutionOfPlans.dates.length > 0 && (
+                    <>
+                      <label className="relative min-w-[170px] rounded-md border border-slate-300 bg-slate-50 px-3 pb-2 pt-4 transition-colors focus-within:border-sphere-primary-500">
+                        <span className="absolute left-3 top-0 -translate-y-1/2 bg-[#F9FAFB] px-1 text-[16px] text-slate-500">
+                          Start Date
+                        </span>
+                        <input
+                          type="date"
+                          className="w-full border-0 bg-transparent p-0 text-center text-slate-700 outline-none"
+                          defaultValue={new Date(collection.analytics.evolutionOfPlans.dates[0]).toISOString().split('T')[0]}
+                          onChange={handleInputDate}
+                        />
+                      </label>
+                      <label className="relative min-w-[170px] rounded-md border border-slate-300 bg-slate-50 px-3 pb-2 pt-4 transition-colors focus-within:border-sphere-primary-500">
+                        <span className="absolute left-3 top-0 -translate-y-1/2 bg-[#F9FAFB] px-1 text-[16px] text-slate-500">
+                          End Date
+                        </span>
+                        <input
+                          type="date"
+                          className="w-full border-0 bg-transparent p-0 text-center text-slate-700 outline-none"
+                          defaultValue={new Date().toISOString().split('T')[0]}
+                          onChange={handleOutputDate}
+                        />
+                      </label>
+                    </>
+                  )}
+                </On>
+                <Default>{null}</Default>
+                <Loading>{null}</Loading>
+              </Feature>
             </div>
           </div>
         </div>
@@ -200,18 +206,28 @@ export default function CollectionCardPage() {
                           {sortOrder === 'asc' ? <FaSortAlphaDown size={25} color="#637381"/> : <FaSortAlphaUpAlt size={25} color="#637381"/>}
                         </button>
                       </div>
-                      <button
-                        type="button"
-                        className="h-10 w-[150px] rounded-md border border-sphere-primary-400 text-base font-bold text-sphere-primary-400 hover:bg-sphere-primary-400 hover:text-white"
-                        onClick={() =>
-                          downloadCollection(
-                            collection?.owner.id as string,
-                            collection?.name as string
-                          )
-                        }
-                      >
-                        DOWNLOAD
-                      </button>
+                      <Feature id="sphere-collectionExport">
+                        <On>
+                          <button
+                            type="button"
+                            className="h-10 w-[150px] rounded-md border border-sphere-primary-400 text-base font-bold text-sphere-primary-400 hover:bg-sphere-primary-400 hover:text-white"
+                            onClick={() =>
+                              downloadCollection(
+                                collection?.owner.id as string,
+                                collection?.name as string
+                              )
+                            }
+                          >
+                            DOWNLOAD
+                          </button>
+                        </On>
+                        <Default>
+                          <UpgradeBanner feature="Collection Export" compact />
+                        </Default>
+                        <Loading>
+                          <div className="h-10 w-[150px] animate-pulse rounded-md bg-slate-200" />
+                        </Loading>
+                      </Feature>
                     </div>
                     <div className="h-full max-h-[800px] overflow-y-scroll rounded-[10px] border border-slate-200 py-5">
                       {sortedPricings.length > 0 ? (
@@ -251,31 +267,49 @@ export default function CollectionCardPage() {
                   <CollectionStats collection={collection} />
                 </div>
 
-                {collection && (
-                  <div className="mb-2 rounded border border-slate-200 p-2">
-                    <CollectionAnalytics
-                      collectionData={collection.analytics}
-                      toggleModal={toggleModal}
-                      startDate={startDate}
-                      endDate={endDate}
-                    />
-                  </div>
-                )}
+                <Feature id="sphere-collectionAnalytics">
+                  <On>
+                    {collection && (
+                      <div className="mb-2 rounded border border-slate-200 p-2">
+                        <CollectionAnalytics
+                          collectionData={collection.analytics}
+                          toggleModal={toggleModal}
+                          startDate={startDate}
+                          endDate={endDate}
+                        />
+                      </div>
+                    )}
+                  </On>
+                  <Default>
+                    <div className="mb-2 rounded border border-slate-200 p-2">
+                      <UpgradeBanner feature="Collection Analytics" />
+                    </div>
+                  </Default>
+                  <Loading>
+                    <div className="mb-2 h-32 animate-pulse rounded border border-slate-200 bg-slate-100" />
+                  </Loading>
+                </Feature>
               </div>
             </>
           )}
         </div>
       </div>
 
-      {collection && (
-        <CollectionAnalyticsModal
-          open={isModalOpen}
-          onClose={toggleModal}
-          collectionData={collection.analytics}
-          startDate={startDate}
-          endDate={endDate}
-        />
-      )}
+      <Feature id="sphere-collectionAnalytics">
+        <On>
+          {collection && (
+            <CollectionAnalyticsModal
+              open={isModalOpen}
+              onClose={toggleModal}
+              collectionData={collection.analytics}
+              startDate={startDate}
+              endDate={endDate}
+            />
+          )}
+        </On>
+        <Default>{null}</Default>
+        <Loading>{null}</Loading>
+      </Feature>
     </>
   );
 }

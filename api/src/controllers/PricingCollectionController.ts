@@ -146,6 +146,12 @@ class PricingCollectionController {
 
   async bulkCreate(req: any, res: any) {
     try {
+      if (!req.file) {
+        return res.status(400).send({ error: 'A ZIP file is required.' });
+      }
+      if (!req.body?.name?.trim()) {
+        return res.status(400).send({ error: 'Collection name is required.' });
+      }
       const [collection, pricingsWithErrors] = await this.pricingCollectionService.bulkCreate(
         req.file,
         req.body,

@@ -135,14 +135,24 @@ export default function CreateCollectionForm({setShowLoading}: CreateCollectionF
           </div>
         </>
       ) : (
-        <FileUpload
-          onSubmit={handleSubmit}
-          submitButtonText="Add Collection"
-          submitButtonWidth={400}
-          isDragActiveText="Drop a .zip file containing all the pricings of the collection"
-          isNotDragActiveText="Drag and drop a .zip file containing all the pricings of the collection"
-          accept={{ 'application/zip': ['.zip'] }}
-        />
+        <Feature id="sphere-bulkImport">
+          <On>
+            <FileUpload
+              onSubmit={handleSubmit}
+              submitButtonText="Add Collection"
+              submitButtonWidth={400}
+              isDragActiveText="Drop a .zip file containing all the pricings of the collection"
+              isNotDragActiveText="Drag and drop a .zip file containing all the pricings of the collection"
+              accept={{ 'application/zip': ['.zip'] }}
+            />
+          </On>
+          <Default>
+            <UpgradeBanner feature="Bulk Import" />
+          </Default>
+          <Loading>
+            <div className="h-32 animate-pulse rounded-lg bg-slate-100" />
+          </Loading>
+        </Feature>
       )}
     </form>
   );
