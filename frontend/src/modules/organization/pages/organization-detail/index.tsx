@@ -1,10 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+import { Feature, On, Default, Loading } from 'space-react-client';
+import UpgradeBanner from '../../../space/components/UpgradeBanner';
 import {
   Organization,
   OrgMemberWithUser,
   Group,
   OrganizationInvitation,
+  OrgPlan,
   useOrganizationsApi,
 } from '../../api/organizationsApi';
 import { useGroupsApi, GroupCollectionWithCollection, GroupMembershipWithGroup } from '../../api/groupsApi';
@@ -964,9 +967,212 @@ function GroupTreeItem({
   );
 }
 
+// ── Plan Modals ───────────────────────────────────────────────────────────────
+
+const PLAN_META: Record<OrgPlan, { label: string; price: string; features: string[] }> = {
+  FREE:       { label: 'Free',       price: '€0/month',  features: ['15 pricings', '5 collections', '1 member', 'Core analysis tools'] },
+  PRO:        { label: 'Pro',        price: '€9/month',  features: ['200 pricings', '30 collections', '15 members', 'Group management', 'Collection analytics', 'Bulk import & export'] },
+  ENTERPRISE: { label: 'Enterprise', price: '€29/month', features: ['Unlimited everything', 'All features'] },
+};
+
+const UPGRADE_PASSWORD = 'sphere';
+
+function UpgradePlanModal({
+  currentPlan,
+  targetPlan,
+  onClose,
+  onConfirm,
+}: {
+  currentPlan: OrgPlan;
+  targetPlan: OrgPlan;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== UPGRADE_PASSWORD) {
+      setError('Incorrect password.');
+      return;
+    }
+    setIsSaving(true);
+    onConfirm();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">
+            Upgrade to {PLAN_META[targetPlan].label}
+          </h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700">
+            <Iconify icon="mdi:close" width={20} />
+          </button>
+        </div>
+        <p className="mb-1 text-sm text-sphere-grey-600">
+          You are upgrading from <strong>{PLAN_META[currentPlan].label}</strong> to{' '}
+          <strong>{PLAN_META[targetPlan].label}</strong> ({PLAN_META[targetPlan].price}).
+        </p>
+        <ul className="mb-4 mt-2 space-y-1 pl-4 text-sm text-sphere-grey-600">
+          {PLAN_META[targetPlan].features.map((f) => (
+            <li key={f} className="flex items-center gap-1">
+              <Iconify icon="mdi:check-circle-outline" width={14} className="text-green-500 shrink-0" />
+              {f}
+            </li>
+          ))}
+        </ul>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-semibold text-sphere-grey-700">
+              Confirm with password
+            </label>
+            <input
+              type="password"
+              autoFocus
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              placeholder="Enter password to confirm"
+              className="w-full rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+            />
+            {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving || !password}
+              className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50"
+            >
+              {isSaving ? 'Upgrading…' : 'Upgrade'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function DowngradePlanModal({
+  currentPlan,
+  targetPlan,
+  onClose,
+  onConfirm,
+}: {
+  currentPlan: OrgPlan;
+  targetPlan: OrgPlan;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [confirmText, setConfirmText] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleConfirm = () => {
+    if (confirmText.trim().toUpperCase() !== 'CONFIRM') return;
+    setIsSaving(true);
+    onConfirm();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">
+            Downgrade to {PLAN_META[targetPlan].label}
+          </h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700">
+            <Iconify icon="mdi:close" width={20} />
+          </button>
+        </div>
+
+        {step === 1 ? (
+          <>
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              <p className="mb-2 font-semibold">⚠️ You will lose access to:</p>
+              <ul className="space-y-1 pl-4">
+                {PLAN_META[currentPlan].features
+                  .filter((f) => !PLAN_META[targetPlan].features.includes(f))
+                  .map((f) => (
+                    <li key={f} className="flex items-center gap-1">
+                      <Iconify icon="mdi:close-circle-outline" width={14} className="text-red-500 shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                <li className="flex items-center gap-1">
+                  <Iconify icon="mdi:close-circle-outline" width={14} className="text-red-500 shrink-0" />
+                  Group management, collection analytics, bulk import &amp; export
+                </li>
+              </ul>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="rounded-md border border-red-400 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+              >
+                I understand, proceed
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mb-3 text-sm text-sphere-grey-600">
+              Type <strong>CONFIRM</strong> to downgrade from{' '}
+              <strong>{PLAN_META[currentPlan].label}</strong> to{' '}
+              <strong>{PLAN_META[targetPlan].label}</strong>.
+            </p>
+            <input
+              type="text"
+              autoFocus
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="CONFIRM"
+              className="mb-4 w-full rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={isSaving || confirmText.trim().toUpperCase() !== 'CONFIRM'}
+                onClick={handleConfirm}
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {isSaving ? 'Downgrading…' : 'Downgrade'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 
-type Tab = 'overview' | 'members' | 'groups' | 'pricings' | 'collections';
+type Tab = 'overview' | 'members' | 'groups' | 'pricings' | 'collections' | 'settings';
 
 export default function OrganizationDetailPage() {
   const { orgName } = useParams<{ orgName: string }>();
@@ -1000,6 +1206,14 @@ export default function OrganizationDetailPage() {
   const [assignPricingToCollectionModalOpen, setAssignPricingToCollectionModalOpen] = useState(false);
   const [assignCollectionToGroupModalOpen, setAssignCollectionToGroupModalOpen] = useState(false);
 
+  // Plan management state
+  const [currentPlan, setCurrentPlan] = useState<OrgPlan | null>(null);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [upgradePlanModalOpen, setUpgradePlanModalOpen] = useState(false);
+  const [downgradePlanModalOpen, setDowngradePlanModalOpen] = useState(false);
+  const [targetPlan, setTargetPlan] = useState<OrgPlan | null>(null);
+
   const {
     getOrganizationByName,
     getMyMemberships,
@@ -1008,6 +1222,8 @@ export default function OrganizationDetailPage() {
     listInvitations,
     updateMemberRole,
     removeMember,
+    getOrgPlan,
+    changeOrgPlan,
   } = useOrganizationsApi();
 
   const { getPricings, getGroupPricings, removeOrgPricing } = usePricingsApi();
@@ -1221,6 +1437,43 @@ export default function OrganizationDetailPage() {
     loadOrgData();
   }, [authUser.isLoading, authUser.isAuthenticated, orgName]);
 
+  // Load plan when settings tab opens (owner-only)
+  useEffect(() => {
+    if (activeTab !== 'settings' || !org?.id || myRole !== 'owner') return;
+    setPlanLoading(true);
+    setPlanError(null);
+    getOrgPlan(org.id)
+      .then((plan) => setCurrentPlan(plan))
+      .catch((err: Error) => setPlanError(err.message))
+      .finally(() => setPlanLoading(false));
+  }, [activeTab, org?.id, myRole]);
+
+  const handleChangePlan = async (newPlan: OrgPlan) => {
+    if (!org?.id) return;
+    try {
+      await changeOrgPlan(org.id, newPlan);
+      setCurrentPlan(newPlan);
+      setUpgradePlanModalOpen(false);
+      setDowngradePlanModalOpen(false);
+      setTargetPlan(null);
+    } catch (err: any) {
+      customAlert(err.message ?? 'Failed to change plan');
+      setUpgradePlanModalOpen(false);
+      setDowngradePlanModalOpen(false);
+    }
+  };
+
+  const openPlanModal = (plan: OrgPlan) => {
+    const planOrder: OrgPlan[] = ['FREE', 'PRO', 'ENTERPRISE'];
+    const isUpgrade = planOrder.indexOf(plan) > planOrder.indexOf(currentPlan ?? 'FREE');
+    setTargetPlan(plan);
+    if (isUpgrade) {
+      setUpgradePlanModalOpen(true);
+    } else {
+      setDowngradePlanModalOpen(true);
+    }
+  };
+
   const handleRemoveMember = (member: OrgMemberWithUser) => {
     customConfirm(`Remove @${member.user.username} from this organization?`)
       .then(() =>
@@ -1347,7 +1600,7 @@ export default function OrganizationDetailPage() {
 
       {/* Tabs */}
       <div className="mb-4 flex border-b border-sphere-grey-200">
-        {(['overview', 'members', 'groups', 'pricings', 'collections'] as Tab[]).map((tab) => (
+        {((['overview', 'members', 'groups', 'pricings', 'collections'] as Tab[]).concat(myRole === 'owner' ? ['settings' as Tab] : [])).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1468,35 +1721,45 @@ export default function OrganizationDetailPage() {
 
       {/* Groups Tab — tree view */}
       {activeTab === 'groups' && (
-        <div className="flex flex-col gap-3">
-          {canManage && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setCreateGroupModalOpen(true)}
-                className="flex items-center gap-2 rounded-md bg-sphere-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sphere-primary-700"
-              >
-                <Iconify icon="mdi:folder-plus-outline" width={16} />
-                Create group
-              </button>
+        <Feature id="sphere-groupManagement">
+          <On>
+            <div className="flex flex-col gap-3">
+              {canManage && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setCreateGroupModalOpen(true)}
+                    className="flex items-center gap-2 rounded-md bg-sphere-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-sphere-primary-700"
+                  >
+                    <Iconify icon="mdi:folder-plus-outline" width={16} />
+                    Create group
+                  </button>
+                </div>
+              )}
+              {groups.length === 0 && (
+                <div className="flex flex-col items-center gap-2 py-12 text-sphere-grey-400">
+                  <Iconify icon="mdi:folder-multiple-outline" width={36} />
+                  <p className="text-sm">No groups yet.</p>
+                </div>
+              )}
+              {buildGroupTree(groups).map((root) => (
+                <GroupTreeItem
+                  key={root.id}
+                  node={root}
+                  depth={0}
+                  orgName={org.name}
+                  onNavigate={(groupId) => router.push(`/me/organizations/${org.name}/groups/${groupId}`)}
+                />
+              ))}
             </div>
-          )}
-          {groups.length === 0 && (
-            <div className="flex flex-col items-center gap-2 py-12 text-sphere-grey-400">
-              <Iconify icon="mdi:folder-multiple-outline" width={36} />
-              <p className="text-sm">No groups yet.</p>
-            </div>
-          )}
-          {buildGroupTree(groups).map((root) => (
-            <GroupTreeItem
-              key={root.id}
-              node={root}
-              depth={0}
-              orgName={org.name}
-              onNavigate={(groupId) => router.push(`/me/organizations/${org.name}/groups/${groupId}`)}
-            />
-          ))}
-        </div>
+          </On>
+          <Default>
+            <UpgradeBanner feature="Group Management" />
+          </Default>
+          <Loading>
+            <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
+          </Loading>
+        </Feature>
       )}
 
       {/* Pricings Tab */}
@@ -1570,9 +1833,17 @@ export default function OrganizationDetailPage() {
               <button type="button" onClick={() => setAddExistingCollectionModalOpen(true)} className="flex items-center gap-2 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">
                 <Iconify icon="mdi:link-variant-plus" width={16} />Add existing
               </button>
-              <button type="button" onClick={() => setAssignCollectionToGroupModalOpen(true)} className="flex items-center gap-2 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">
-                <Iconify icon="mdi:folder-arrow-right-outline" width={16} />Assign to group
-              </button>
+              <Feature id="sphere-sharedCollections">
+                <On>
+                  <button type="button" onClick={() => setAssignCollectionToGroupModalOpen(true)} className="flex items-center gap-2 rounded-md border border-sphere-grey-300 px-3 py-1.5 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">
+                    <Iconify icon="mdi:folder-arrow-right-outline" width={16} />Assign to group
+                  </button>
+                </On>
+                <Default>
+                  <UpgradeBanner feature="Shared Collections" compact />
+                </Default>
+                <Loading>{null}</Loading>
+              </Feature>
             </div>
           )}
           {orgCollections.length === 0 && (
@@ -1619,6 +1890,83 @@ export default function OrganizationDetailPage() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Settings Tab — owner-only plan management */}
+      {activeTab === 'settings' && myRole === 'owner' && (
+        <div className="flex flex-col gap-6">
+          <div className="rounded-lg border border-sphere-grey-200 bg-white p-5">
+            <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-sphere-grey-500">
+              Subscription Plan
+            </h2>
+            {planLoading && (
+              <p className="text-sm text-sphere-grey-400">Loading plan…</p>
+            )}
+            {planError && (
+              <p className="text-sm text-red-600">{planError}</p>
+            )}
+            {!planLoading && !planError && currentPlan && (
+              <>
+                <p className="mb-4 text-sm text-sphere-grey-600">
+                  Current plan:{' '}
+                  <span className="font-semibold text-sphere-primary-800">
+                    {PLAN_META[currentPlan].label}
+                  </span>{' '}
+                  — {PLAN_META[currentPlan].price}
+                </p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {(['FREE', 'PRO', 'ENTERPRISE'] as OrgPlan[]).map((plan) => {
+                    const isCurrent = plan === currentPlan;
+                    return (
+                      <div
+                        key={plan}
+                        className={`flex flex-col gap-3 rounded-lg border p-4 ${
+                          isCurrent
+                            ? 'border-sphere-primary-400 bg-sphere-primary-50'
+                            : 'border-sphere-grey-200 bg-white'
+                        }`}
+                      >
+                        <div>
+                          <p className="font-bold text-sphere-grey-800">{PLAN_META[plan].label}</p>
+                          <p className="text-sm text-sphere-grey-500">{PLAN_META[plan].price}</p>
+                        </div>
+                        <ul className="flex-1 space-y-1 text-xs text-sphere-grey-600">
+                          {PLAN_META[plan].features.map((f) => (
+                            <li key={f} className="flex items-center gap-1">
+                              <Iconify icon="mdi:check" width={12} className="text-green-500 shrink-0" />
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                        {isCurrent ? (
+                          <span className="inline-flex items-center justify-center rounded-md bg-sphere-primary-100 px-3 py-1.5 text-xs font-semibold text-sphere-primary-800">
+                            Current plan
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => openPlanModal(plan)}
+                            className={`rounded-md px-3 py-1.5 text-xs font-semibold ${
+                              (['FREE', 'PRO', 'ENTERPRISE'] as OrgPlan[]).indexOf(plan) >
+                              (['FREE', 'PRO', 'ENTERPRISE'] as OrgPlan[]).indexOf(currentPlan)
+                                ? 'bg-sphere-primary-800 text-white hover:bg-sphere-primary-700'
+                                : 'border border-red-400 text-red-600 hover:bg-red-50'
+                            }`}
+                          >
+                            {(['FREE', 'PRO', 'ENTERPRISE'] as OrgPlan[]).indexOf(plan) >
+                            (['FREE', 'PRO', 'ENTERPRISE'] as OrgPlan[]).indexOf(currentPlan)
+                              ? 'Upgrade'
+                              : 'Downgrade'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 
@@ -1684,6 +2032,24 @@ export default function OrganizationDetailPage() {
           groups={groups}
           onClose={() => setAssignCollectionToGroupModalOpen(false)}
           onAssigned={() => { setAssignCollectionToGroupModalOpen(false); refreshCollections(); }}
+        />
+      )}
+
+      {/* Plan change modals */}
+      {upgradePlanModalOpen && currentPlan && targetPlan && (
+        <UpgradePlanModal
+          currentPlan={currentPlan}
+          targetPlan={targetPlan}
+          onClose={() => { setUpgradePlanModalOpen(false); setTargetPlan(null); }}
+          onConfirm={() => handleChangePlan(targetPlan)}
+        />
+      )}
+      {downgradePlanModalOpen && currentPlan && targetPlan && (
+        <DowngradePlanModal
+          currentPlan={currentPlan}
+          targetPlan={targetPlan}
+          onClose={() => { setDowngradePlanModalOpen(false); setTargetPlan(null); }}
+          onConfirm={() => handleChangePlan(targetPlan)}
         />
       )}
     </div>

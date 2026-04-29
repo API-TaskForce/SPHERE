@@ -1,9 +1,10 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { usePricingsApi } from '../../../pricing/api/pricingsApi';
 import { PricingEntry } from '../../../pricing/pages/list';
 import PricingListCard from '../../../pricing/components/pricing-list-card';
 import { FaSortAlphaDown, FaSortAlphaUpAlt } from 'react-icons/fa';
 import { useAuth } from '../../../auth/hooks/useAuth';
+import { useOrganization } from '../../../organization/hooks/useOrganization';
 
 export default function PricingSection({
   setAddToCollectionModalOpen,
@@ -19,17 +20,32 @@ export default function PricingSection({
 
   const { getLoggedUserPricings } = usePricingsApi();
   const { authUser } = useAuth();
+  const { activeOrganization, isLoading: isOrgLoading } = useOrganization();
+  const getLoggedUserPricingsRef = useRef(getLoggedUserPricings);
 
   const toggleSortOrder = () => {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
   useEffect(() => {
-    if (!authUser.isAuthenticated) {
+    getLoggedUserPricingsRef.current = getLoggedUserPricings;
+  }, [getLoggedUserPricings]);
+
+  useEffect(() => {
+    setPricings([]);
+  }, [activeOrganization?.id]);
+
+  useEffect(() => {
+    if (authUser.isLoading || !authUser.isAuthenticated || isOrgLoading || !activeOrganization?.id) {
       return;
     }
-    getLoggedUserPricings()
+
+    let isCurrentRequest = true;
+
+    getLoggedUserPricingsRef.current()
       .then((data) => {
+        if (!isCurrentRequest) return;
+
         if (data.error) {
           throw new Error(data.error);
         } else if (data.pricings) {
@@ -37,9 +53,20 @@ export default function PricingSection({
         }
       })
       .catch((error) => {
+        if (!isCurrentRequest) return;
         console.error('Cannot GET pricings. Error:', error);
       });
-  }, [renderFlag, authUser]);
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [
+    renderFlag,
+    authUser.isLoading,
+    authUser.isAuthenticated,
+    isOrgLoading,
+    activeOrganization?.id,
+  ]);
 
   const sortedPricings = useMemo(() => {
     return [...pricings].sort((a, b) => {

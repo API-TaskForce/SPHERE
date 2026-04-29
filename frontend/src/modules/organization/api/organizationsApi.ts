@@ -73,6 +73,8 @@ export interface UserLookup {
   avatar: string | null;
 }
 
+export type OrgPlan = 'FREE' | 'PRO' | 'ENTERPRISE';
+
 export interface CreateOrganizationPayload {
   name: string;
   displayName: string;
@@ -450,6 +452,48 @@ export function useOrganizationsApi() {
     [fetchWithInterceptor, token]
   );
 
+  const getOrgPlan = useCallback(async (orgId: string): Promise<OrgPlan> => {
+    const response = await fetchWithInterceptor(
+      `${ORGANIZATIONS_BASE_PATH}/${orgId}/plan`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch plan');
+    }
+
+    const data = await response.json();
+    return data.plan as OrgPlan;
+  }, [fetchWithInterceptor, token]);
+
+  const changeOrgPlan = useCallback(
+    async (orgId: string, plan: OrgPlan): Promise<void> => {
+      const response = await fetchWithInterceptor(
+        `${ORGANIZATIONS_BASE_PATH}/${orgId}/plan`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ plan }),
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error((err as any).error ?? 'Failed to change plan');
+      }
+    },
+    [fetchWithInterceptor, token]
+  );
+
   return {
     getMyOrganizations,
     getMyMemberships,
@@ -468,5 +512,7 @@ export function useOrganizationsApi() {
     joinViaInvitation,
     lookupUserByUsername,
     createGroup,
+    getOrgPlan,
+    changeOrgPlan,
   };
 }

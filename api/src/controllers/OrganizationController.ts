@@ -23,6 +23,8 @@ class OrganizationController {
     this.revokeInvitation = this.revokeInvitation.bind(this);
     this.previewInvitation = this.previewInvitation.bind(this);
     this.joinViaInvitation = this.joinViaInvitation.bind(this);
+    this.getPlan = this.getPlan.bind(this);
+    this.changePlan = this.changePlan.bind(this);
   }
 
   // ── Organization CRUD ───────────────────────────────────────────────────────
@@ -224,6 +226,36 @@ class OrganizationController {
         err.message.toLowerCase().includes('expired') ||
         err.message.toLowerCase().includes('maximum')
       ) {
+        res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  // ── Plan management ─────────────────────────────────────────────────────────
+
+  async getPlan(req: any, res: any) {
+    try {
+      const plan = await this.organizationService.getPlan(req.params.organizationId);
+      res.json({ plan });
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async changePlan(req: any, res: any) {
+    try {
+      const { plan } = req.body;
+      if (!plan) {
+        return res.status(400).send({ error: 'plan is required' });
+      }
+      await this.organizationService.changePlan(req.params.organizationId, plan);
+      res.json({ plan });
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('invalid plan')) {
+        res.status(400).send({ error: err.message });
+      } else if (err.message.toLowerCase().includes('not found')) {
         res.status(404).send({ error: err.message });
       } else {
         res.status(500).send({ error: err.message });
