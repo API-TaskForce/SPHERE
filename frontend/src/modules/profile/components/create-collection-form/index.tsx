@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Feature, On, Default, Loading } from 'space-react-client';
 import VisibilityOptions from '../../../pricing/components/visibility-options';
 import CollectionNameInput from '../collection-name-input';
 import CollectionDescriptionInput from '../collection-description-input';
@@ -8,6 +9,7 @@ import { useRouter } from '../../../core/hooks/useRouter';
 import FileUpload from '../../../core/components/file-upload-input';
 import customAlert from '../../../core/utils/custom-alert';
 import customConfirm from '../../../core/utils/custom-confirm';
+import UpgradeBanner from '../../../space/components/UpgradeBanner';
 
 export type CreateCollectionFormProps = {
   readonly setShowLoading: (show: boolean) => void;
@@ -24,6 +26,10 @@ export default function CreateCollectionForm({setShowLoading}: CreateCollectionF
   const router = useRouter();
 
   const handleSubmit = (file?: File | null) => {
+    if (!collectionName.trim()) {
+      customAlert('Collection name is required.');
+      return;
+    }
 
     const fileToUpload = file instanceof File ? file : null;
 

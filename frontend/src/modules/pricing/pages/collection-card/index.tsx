@@ -1,6 +1,7 @@
 import { Helmet } from 'react-helmet';
 import { useEffect, useState, useMemo } from 'react';
 import { FaHeart, FaRegHeart, FaBookmark, FaRegBookmark } from 'react-icons/fa6';
+import { Feature, On, Default, Loading } from 'space-react-client';
 import { usePathname } from '../../../core/hooks/usePathname';
 import { useRouter } from '../../../core/hooks/useRouter';
 import CollectionStats from '../../components/collection-stats';
@@ -14,6 +15,7 @@ import { useAuth } from '../../../auth/hooks/useAuth';
 import CollectionSettings from '../../components/collection-settings';
 import { FaSortAlphaDown, FaSortAlphaUpAlt } from 'react-icons/fa';
 import type { AnalyticsDataEntry } from '../../../../assets/data/analytics';
+import UpgradeBanner from '../../../space/components/UpgradeBanner';
 
 export default function CollectionCardPage() {
   const [isFollowing, setIsFollowing] = useState(false);
@@ -31,6 +33,8 @@ export default function CollectionCardPage() {
   const { authUser } = useAuth();
 
   useEffect(() => {
+    if (authUser.isLoading) return;
+
     const segments = pathname.split('/');
     const name = segments.pop() as string;
     const ownerId = segments[segments.length - 1];
@@ -56,7 +60,7 @@ export default function CollectionCardPage() {
         // router.push('/error');
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, authUser.isLoading]);
 
   const toggleModal = () => {
     setIsModalOpen(!isModalOpen);
