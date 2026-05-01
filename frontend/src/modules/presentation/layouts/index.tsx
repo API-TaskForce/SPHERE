@@ -6,6 +6,8 @@ import ImportPricingModal from "../../core/components/import-pricing-modal";
 import { retrievePricingFromYaml } from "pricing4ts";
 import Alerts from "../../core/components/alerts";
 import { usePricingsApi } from "../../pricing/api/pricingsApi";
+import { useSpaceClient } from "space-react-client";
+import { useOrganization } from "../../organization/hooks/useOrganization";
 
 export default function PresentationLayout({children}: {children?: React.ReactNode}){
     
@@ -13,6 +15,8 @@ export default function PresentationLayout({children}: {children?: React.ReactNo
     const [errors, setErrors] = useState<string[]>([]);
 
     const {createPricing} = usePricingsApi();
+    const spaceClient = useSpaceClient();
+    const { activeOrganization } = useOrganization();
 
     const handleCloseUploadModal = () => {
         setUploadModalOpen(false);
@@ -30,6 +34,9 @@ export default function PresentationLayout({children}: {children?: React.ReactNo
                     formData.append("yaml", file);
                     createPricing(formData, setErrors)
                       .then(() => {
+                        if (activeOrganization?.id) {
+                          spaceClient.setUserId(activeOrganization.id).catch(() => {});
+                        }
                         setUploadModalOpen(false);
                       }).catch((error) => {
                         console.error('Error creating pricing:', error);
