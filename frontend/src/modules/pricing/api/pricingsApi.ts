@@ -164,7 +164,14 @@ export function usePricingsApi() {
         const parsedResponse = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error((parsedResponse as any).error ?? 'Failed to create pricing');
+          type ApiError = Error & { status?: number };
+          const message =
+            response.status === 403
+              ? ((parsedResponse as any).message ?? 'Your current plan does not allow this action. Please upgrade to continue.')
+              : ((parsedResponse as any).error ?? 'Failed to create pricing');
+          const e = new Error(message) as ApiError;
+          e.status = response.status;
+          throw e;
         }
 
         return parsedResponse;

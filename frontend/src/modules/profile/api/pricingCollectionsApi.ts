@@ -68,8 +68,11 @@ export function usePricingCollectionsApi() {
       .then(async response => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          // Normalize error with status for caller
-          const message = data?.error || data?.message || response.statusText || 'Error creating collection';
+          // For PLAN_LIMIT_REACHED (403) prefer the human-readable `message` field.
+          const message =
+            response.status === 403
+              ? (data?.message ?? 'Your current plan does not allow this action. Please upgrade to continue.')
+              : (data?.error || data?.message || response.statusText || 'Error creating collection');
           type ErrorWithStatus = Error & { status?: number };
           const e = new Error(message) as ErrorWithStatus;
           e.status = response.status;
@@ -93,7 +96,10 @@ export function usePricingCollectionsApi() {
       .then(async response => {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          const message = data?.error || data?.message || response.statusText || 'Error creating collection';
+          const message =
+            response.status === 403
+              ? (data?.message ?? 'Your current plan does not allow this action. Please upgrade to continue.')
+              : (data?.error || data?.message || response.statusText || 'Error creating collection');
           type ErrorWithStatus = Error & { status?: number };
           const e = new Error(message) as ErrorWithStatus;
           e.status = response.status;
