@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Feature, On, Default, Loading } from 'space-react-client';
+import { Feature, On, Default, Loading, useSpaceClient } from 'space-react-client';
 import UpgradeBanner from '../../../space/components/UpgradeBanner';
 import {
   Organization,
@@ -1178,6 +1178,7 @@ export default function OrganizationDetailPage() {
   const { orgName } = useParams<{ orgName: string }>();
   const { authUser } = useAuth();
   const router = useRouter();
+  const spaceClient = useSpaceClient();
 
   const [org, setOrg] = useState<Organization | null>(null);
   const [myRole, setMyRole] = useState<'owner' | 'admin' | 'member' | null>(null);
@@ -1456,6 +1457,9 @@ export default function OrganizationDetailPage() {
       setUpgradePlanModalOpen(false);
       setDowngradePlanModalOpen(false);
       setTargetPlan(null);
+      // Refresh the SPACE pricing token so Feature components immediately
+      // reflect the new plan without requiring a page reload.
+      spaceClient.setUserId(org.id).catch(() => {});
     } catch (err: any) {
       customAlert(err.message ?? 'Failed to change plan');
       setUpgradePlanModalOpen(false);
