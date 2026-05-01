@@ -1,5 +1,6 @@
 import { IoMdAddCircleOutline } from 'react-icons/io';
 import { FaSortAlphaDown, FaSortAlphaUpAlt } from "react-icons/fa";
+import { Feature, On, Default, Loading } from 'space-react-client';
 import { usePricingCollectionsApi } from '../../api/pricingCollectionsApi';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from '../../../core/hooks/useRouter';
@@ -7,6 +8,7 @@ import CollectionsGrid from '../collections-grid';
 import AddPricingToCollectionModal from '../add-pricing-to-collection-modal';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import { useOrganization } from '../../../organization/hooks/useOrganization';
+import UpgradeBanner from '../../../space/components/UpgradeBanner';
 
 export default function CollectionSection({
   pricingToAdd,
@@ -107,9 +109,19 @@ export default function CollectionSection({
               {sortOrder === "asc" ? <FaSortAlphaDown size={25} color="#637381" /> : <FaSortAlphaUpAlt size={25} color="#637381" />}
             </button>
           </div>
-          <button type="button" className="p-2" onClick={handleAddCollection}>
-            <IoMdAddCircleOutline size={28} />
-          </button>
+          <Feature id="sphere-collections">
+            <On>
+              <button type="button" className="p-2" onClick={handleAddCollection}>
+                <IoMdAddCircleOutline size={28} />
+              </button>
+            </On>
+            <Default>
+              <UpgradeBanner feature="Collections" compact />
+            </Default>
+            <Loading>
+              <div className="h-9 w-9 animate-pulse rounded-full bg-slate-200" />
+            </Loading>
+          </Feature>
         </div>
 
         {/* List of collections */}
