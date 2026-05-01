@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Feature, On, Default, Loading } from 'space-react-client';
+import { Feature, On, Default, Loading, useSpaceClient } from 'space-react-client';
 import VisibilityOptions from '../../../pricing/components/visibility-options';
 import CollectionNameInput from '../collection-name-input';
 import CollectionDescriptionInput from '../collection-description-input';
@@ -10,6 +10,7 @@ import FileUpload from '../../../core/components/file-upload-input';
 import customAlert from '../../../core/utils/custom-alert';
 import customConfirm from '../../../core/utils/custom-confirm';
 import UpgradeBanner from '../../../space/components/UpgradeBanner';
+import { useOrganization } from '../../../organization/hooks/useOrganization';
 
 export type CreateCollectionFormProps = {
   readonly setShowLoading: (show: boolean) => void;
@@ -24,6 +25,8 @@ export default function CreateCollectionForm({setShowLoading}: CreateCollectionF
 
   const { createCollection, createBulkCollection, deleteCollection } = usePricingCollectionsApi();
   const router = useRouter();
+  const spaceClient = useSpaceClient();
+  const { activeOrganization } = useOrganization();
 
   const handleSubmit = (file?: File | null) => {
     if (!collectionName.trim()) {
@@ -43,6 +46,9 @@ export default function CreateCollectionForm({setShowLoading}: CreateCollectionF
 
       createCollection(collectionToCreate)
         .then(() => {
+          if (activeOrganization?.id) {
+            spaceClient.setUserId(activeOrganization.id).catch(() => {});
+          }
           router.push('/me/pricings');
         })
         .catch(error => {
@@ -66,6 +72,9 @@ export default function CreateCollectionForm({setShowLoading}: CreateCollectionF
       createBulkCollection(formData)
         .then(data => {
           setShowLoading(false);
+          if (activeOrganization?.id) {
+            spaceClient.setUserId(activeOrganization.id).catch(() => {});
+          }
           handleBulkSuccess(data);
         })
         .catch(error => {
