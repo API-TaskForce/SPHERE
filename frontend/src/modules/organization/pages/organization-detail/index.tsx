@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { Feature, On, Default, Loading } from 'space-react-client';
+import { Feature, On, Default, Loading, useSpaceClient } from 'space-react-client';
 import UpgradeBanner from '../../../space/components/UpgradeBanner';
 import {
   Organization,
@@ -8,6 +8,8 @@ import {
   Group,
   OrganizationInvitation,
   OrgPlan,
+  OrgAddOns,
+  OrgAddOnKey,
   useOrganizationsApi,
 } from '../../api/organizationsApi';
 import { useGroupsApi, GroupCollectionWithCollection, GroupMembershipWithGroup } from '../../api/groupsApi';
@@ -967,6 +969,111 @@ function GroupTreeItem({
   );
 }
 
+// ── Add-on Modals ─────────────────────────────────────────────────────────────
+
+function AddAddOnModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== 'sphere') { setError('Incorrect password.'); return; }
+    setIsSaving(true);
+    onConfirm();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">Confirm add-on purchase</h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700">
+            <Iconify icon="mdi:close" width={20} />
+          </button>
+        </div>
+        <p className="mb-4 text-sm text-sphere-grey-600">
+          You are adding paid add-ons to your subscription. Enter your password to confirm.
+        </p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-semibold text-sphere-grey-700">Password</label>
+            <input
+              type="password"
+              autoFocus
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              placeholder="Enter password to confirm"
+              className="w-full rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-sphere-primary-500 focus:ring-1 focus:ring-sphere-primary-500"
+            />
+            {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">Cancel</button>
+            <button type="submit" disabled={isSaving || !password} className="rounded-md bg-sphere-primary-800 px-4 py-2 text-sm font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-50">
+              {isSaving ? 'Saving…' : 'Confirm'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function RemoveAddOnModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [confirmText, setConfirmText] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleConfirm = () => {
+    if (confirmText.trim().toUpperCase() !== 'CONFIRM') return;
+    setIsSaving(true);
+    onConfirm();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-sphere-grey-800">Remove add-ons</h2>
+          <button onClick={onClose} className="text-sphere-grey-400 hover:text-sphere-grey-700">
+            <Iconify icon="mdi:close" width={20} />
+          </button>
+        </div>
+        {step === 1 ? (
+          <>
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              <p className="font-semibold">⚠️ Reducing add-ons will lower your resource limits immediately. Resources exceeding the new limits will become inaccessible.</p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={onClose} className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">Cancel</button>
+              <button type="button" onClick={() => setStep(2)} className="rounded-md border border-red-400 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50">I understand, proceed</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="mb-3 text-sm text-sphere-grey-600">Type <strong>CONFIRM</strong> to remove the selected add-ons.</p>
+            <input
+              type="text"
+              autoFocus
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="CONFIRM"
+              className="mb-4 w-full rounded-md border border-sphere-grey-300 px-3 py-2 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400"
+            />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setStep(1)} className="rounded-md border border-sphere-grey-300 px-4 py-2 text-sm font-semibold text-sphere-grey-700 hover:bg-sphere-grey-100">Back</button>
+              <button type="button" disabled={isSaving || confirmText.trim().toUpperCase() !== 'CONFIRM'} onClick={handleConfirm} className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                {isSaving ? 'Saving…' : 'Remove'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Plan Modals ───────────────────────────────────────────────────────────────
 
 const PLAN_META: Record<OrgPlan, { label: string; price: string; features: string[] }> = {
@@ -1178,6 +1285,7 @@ export default function OrganizationDetailPage() {
   const { orgName } = useParams<{ orgName: string }>();
   const { authUser } = useAuth();
   const router = useRouter();
+  const spaceClient = useSpaceClient();
 
   const [org, setOrg] = useState<Organization | null>(null);
   const [myRole, setMyRole] = useState<'owner' | 'admin' | 'member' | null>(null);
@@ -1214,6 +1322,15 @@ export default function OrganizationDetailPage() {
   const [downgradePlanModalOpen, setDowngradePlanModalOpen] = useState(false);
   const [targetPlan, setTargetPlan] = useState<OrgPlan | null>(null);
 
+  // Add-on management state
+  const [currentAddOns, setCurrentAddOns] = useState<OrgAddOns>({});
+  const [pendingAddOns, setPendingAddOns] = useState<OrgAddOns>({});
+  const [addOnsLoading, setAddOnsLoading] = useState(false);
+  const [addOnsSaving, setAddOnsSaving] = useState(false);
+  const [addOnsError, setAddOnsError] = useState<string | null>(null);
+  const [addAddOnModalOpen, setAddAddOnModalOpen] = useState(false);
+  const [removeAddOnModalOpen, setRemoveAddOnModalOpen] = useState(false);
+
   const {
     getOrganizationByName,
     getMyMemberships,
@@ -1224,6 +1341,8 @@ export default function OrganizationDetailPage() {
     removeMember,
     getOrgPlan,
     changeOrgPlan,
+    getOrgAddOns,
+    updateOrgAddOns,
   } = useOrganizationsApi();
 
   const { getPricings, getGroupPricings, removeOrgPricing } = usePricingsApi();
@@ -1448,6 +1567,20 @@ export default function OrganizationDetailPage() {
       .finally(() => setPlanLoading(false));
   }, [activeTab, org?.id, myRole]);
 
+  // Load add-ons when settings tab opens (owner-only)
+  useEffect(() => {
+    if (activeTab !== 'settings' || !org?.id || myRole !== 'owner') return;
+    setAddOnsLoading(true);
+    setAddOnsError(null);
+    getOrgAddOns(org.id)
+      .then((addOns) => {
+        setCurrentAddOns(addOns);
+        setPendingAddOns(addOns);
+      })
+      .catch((err: Error) => setAddOnsError(err.message))
+      .finally(() => setAddOnsLoading(false));
+  }, [activeTab, org?.id, myRole]);
+
   const handleChangePlan = async (newPlan: OrgPlan) => {
     if (!org?.id) return;
     try {
@@ -1461,6 +1594,40 @@ export default function OrganizationDetailPage() {
       setUpgradePlanModalOpen(false);
       setDowngradePlanModalOpen(false);
     }
+  };
+
+  const openAddOnModal = () => {
+    const hasReduction = (Object.keys(pendingAddOns) as OrgAddOnKey[]).some(
+      (k) => (pendingAddOns[k] ?? 0) < (currentAddOns[k] ?? 0)
+    ) || (Object.keys(currentAddOns) as OrgAddOnKey[]).some(
+      (k) => (pendingAddOns[k] ?? 0) < (currentAddOns[k] ?? 0)
+    );
+    if (hasReduction) {
+      setRemoveAddOnModalOpen(true);
+    } else {
+      setAddAddOnModalOpen(true);
+    }
+  };
+
+  const handleConfirmAddOns = async () => {
+    if (!org?.id) return;
+    setAddAddOnModalOpen(false);
+    setRemoveAddOnModalOpen(false);
+    setAddOnsSaving(true);
+    setAddOnsError(null);
+    try {
+      await updateOrgAddOns(org.id, pendingAddOns);
+      setCurrentAddOns(pendingAddOns);
+      spaceClient.setUserId(org.id).catch(() => {});
+    } catch (err: any) {
+      setAddOnsError(err.message ?? 'Failed to update add-ons');
+    } finally {
+      setAddOnsSaving(false);
+    }
+  };
+
+  const setAddOnQty = (key: OrgAddOnKey, qty: number) => {
+    setPendingAddOns((prev) => ({ ...prev, [key]: Math.max(0, Math.min(10, qty)) }));
   };
 
   const openPlanModal = (plan: OrgPlan) => {
@@ -1967,6 +2134,110 @@ export default function OrganizationDetailPage() {
               </>
             )}
           </div>
+
+          {/* Add-ons section — only for PRO / ENTERPRISE */}
+          {currentPlan && (currentPlan === 'PRO' || currentPlan === 'ENTERPRISE') && (
+            <div className="rounded-lg border border-sphere-grey-200 bg-white p-5">
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-sphere-grey-500">
+                Add-ons
+              </h2>
+              <p className="mb-4 text-xs text-sphere-grey-500">
+                Extend resource limits for your organization. Each unit costs €2/month.
+              </p>
+              {addOnsLoading && (
+                <p className="text-sm text-sphere-grey-400">Loading add-ons…</p>
+              )}
+              {addOnsError && (
+                <p className="text-sm text-red-600">{addOnsError}</p>
+              )}
+              {!addOnsLoading && (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {(
+                      [
+                        {
+                          key: 'extraPricings' as OrgAddOnKey,
+                          label: 'Extra Pricings',
+                          description: '+50 pricing models per unit',
+                          icon: 'mdi:file-chart-outline',
+                        },
+                        {
+                          key: 'extraCollections' as OrgAddOnKey,
+                          label: 'Extra Collections',
+                          description: '+10 collections per unit',
+                          icon: 'mdi:folder-multiple-outline',
+                        },
+                      ]
+                    ).map(({ key, label, description, icon }) => {
+                      const qty = pendingAddOns[key] ?? 0;
+                      return (
+                        <div
+                          key={key}
+                          className="flex flex-col gap-3 rounded-lg border border-sphere-grey-200 bg-white p-4"
+                        >
+                          <div className="flex items-start gap-3">
+                            <Iconify icon={icon} width={20} className="mt-0.5 text-sphere-primary-600 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sphere-grey-800 text-sm">{label}</p>
+                              <p className="text-xs text-sphere-grey-500">{description}</p>
+                              <p className="text-xs text-sphere-grey-400 mt-0.5">€2/month per unit · max 10</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setAddOnQty(key, qty - 1)}
+                              disabled={qty === 0}
+                              className="flex h-7 w-7 items-center justify-center rounded-md border border-sphere-grey-300 text-sphere-grey-600 hover:bg-sphere-grey-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Iconify icon="mdi:minus" width={14} />
+                            </button>
+                            <span className="w-6 text-center text-sm font-semibold text-sphere-grey-800">
+                              {qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setAddOnQty(key, qty + 1)}
+                              disabled={qty >= 10}
+                              className="flex h-7 w-7 items-center justify-center rounded-md border border-sphere-grey-300 text-sphere-grey-600 hover:bg-sphere-grey-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Iconify icon="mdi:plus" width={14} />
+                            </button>
+                            {qty > 0 && (
+                              <span className="ml-auto text-xs text-sphere-grey-500">
+                                €{qty * 2}/month
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {JSON.stringify(pendingAddOns) !== JSON.stringify(currentAddOns) && (
+                    <div className="mt-4 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={openAddOnModal}
+                        disabled={addOnsSaving}
+                        className="rounded-md bg-sphere-primary-800 px-4 py-2 text-xs font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-60"
+                      >
+                        {addOnsSaving ? 'Saving…' : 'Save add-ons'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPendingAddOns(currentAddOns)}
+                        disabled={addOnsSaving}
+                        className="text-xs text-sphere-grey-500 hover:text-sphere-grey-700 disabled:opacity-60"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -2032,6 +2303,20 @@ export default function OrganizationDetailPage() {
           groups={groups}
           onClose={() => setAssignCollectionToGroupModalOpen(false)}
           onAssigned={() => { setAssignCollectionToGroupModalOpen(false); refreshCollections(); }}
+        />
+      )}
+
+      {/* Add-on confirmation modals */}
+      {addAddOnModalOpen && (
+        <AddAddOnModal
+          onClose={() => setAddAddOnModalOpen(false)}
+          onConfirm={handleConfirmAddOns}
+        />
+      )}
+      {removeAddOnModalOpen && (
+        <RemoveAddOnModal
+          onClose={() => setRemoveAddOnModalOpen(false)}
+          onConfirm={handleConfirmAddOns}
         />
       )}
 
