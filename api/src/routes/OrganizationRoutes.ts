@@ -136,6 +136,22 @@ const loadFileRoutes = function (app: express.Application) {
       organizationController.changePlan
     );
 
+  // ── Add-on management ──────────────────────────────────────────────────────
+  app
+    .route(baseUrl + '/organizations/:organizationId/add-ons')
+    .get(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('readOrganization', 'Organization', 'organizationId'),
+      organizationController.getAddOns
+    )
+    .put(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      checkCedar('manageSubscription', 'Organization', 'organizationId'),
+      organizationController.updateAddOns
+    );
+
   // ── User-scoped organization routes ───────────────────────────────────────
   app
     .route(baseUrl + '/users/me/organizations')

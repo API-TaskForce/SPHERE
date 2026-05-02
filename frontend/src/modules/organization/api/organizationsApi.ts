@@ -75,6 +75,9 @@ export interface UserLookup {
 
 export type OrgPlan = 'FREE' | 'PRO' | 'ENTERPRISE';
 
+export type OrgAddOnKey = 'extraPricings' | 'extraCollections';
+export type OrgAddOns = Partial<Record<OrgAddOnKey, number>>;
+
 export interface CreateOrganizationPayload {
   name: string;
   displayName: string;
@@ -452,6 +455,48 @@ export function useOrganizationsApi() {
     [fetchWithInterceptor, token]
   );
 
+  const getOrgAddOns = useCallback(async (orgId: string): Promise<OrgAddOns> => {
+    const response = await fetchWithInterceptor(
+      `${ORGANIZATIONS_BASE_PATH}/${orgId}/add-ons`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch add-ons');
+    }
+
+    const data = await response.json();
+    return data.addOns as OrgAddOns;
+  }, [fetchWithInterceptor, token]);
+
+  const updateOrgAddOns = useCallback(
+    async (orgId: string, addOns: OrgAddOns): Promise<void> => {
+      const response = await fetchWithInterceptor(
+        `${ORGANIZATIONS_BASE_PATH}/${orgId}/add-ons`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ addOns }),
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error((err as any).error ?? 'Failed to update add-ons');
+      }
+    },
+    [fetchWithInterceptor, token]
+  );
+
   const getOrgPlan = useCallback(async (orgId: string): Promise<OrgPlan> => {
     const response = await fetchWithInterceptor(
       `${ORGANIZATIONS_BASE_PATH}/${orgId}/plan`,
@@ -514,5 +559,7 @@ export function useOrganizationsApi() {
     createGroup,
     getOrgPlan,
     changeOrgPlan,
+    getOrgAddOns,
+    updateOrgAddOns,
   };
 }

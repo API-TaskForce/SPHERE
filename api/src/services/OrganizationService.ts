@@ -126,7 +126,38 @@ class OrganizationService {
     if (!org) {
       throw new Error('Organization not found');
     }
-    await this.spaceService.updateContract(organizationId, plan);
+    const ADDON_PLANS = ['PRO', 'ENTERPRISE'];
+    const existingAddOns = ADDON_PLANS.includes(plan)
+      ? await this.spaceService.getAddOns(organizationId)
+      : {};
+    await this.spaceService.updateContract(organizationId, plan, existingAddOns);
+  }
+
+  async getAddOns(organizationId: string): Promise<Record<string, number>> {
+    return this.spaceService.getAddOns(organizationId);
+  }
+
+  async updateAddOns(organizationId: string, addOns: Record<string, number>): Promise<void> {
+    const VALID_ADDON_PLANS = ['PRO', 'ENTERPRISE'];
+    const VALID_ADDONS = ['extraPricings', 'extraCollections'];
+    const ADDON_MAX = 10;
+
+    const plan = await this.spaceService.getPlan(organizationId);
+    if (!VALID_ADDON_PLANS.includes(plan)) {
+      throw new Error('Add-ons are only available on PRO or ENTERPRISE plans');
+    }
+
+    for (const [key, qty] of Object.entries(addOns)) {
+      if (!VALID_ADDONS.includes(key)) {
+        throw new Error(`Invalid add-on: ${key}`);
+      }
+      if (!Number.isInteger(qty) || qty < 0 || qty > ADDON_MAX) {
+        throw new Error(`Add-on quantity must be between 0 and ${ADDON_MAX}`);
+      }
+    }
+
+    const filtered = Object.fromEntries(Object.entries(addOns).filter(([, qty]) => qty > 0));
+    await this.spaceService.updateContract(organizationId, plan, filtered);
   }
 
   // ── Member management ───────────────────────────────────────────────────────

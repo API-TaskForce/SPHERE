@@ -25,6 +25,8 @@ class OrganizationController {
     this.joinViaInvitation = this.joinViaInvitation.bind(this);
     this.getPlan = this.getPlan.bind(this);
     this.changePlan = this.changePlan.bind(this);
+    this.getAddOns = this.getAddOns.bind(this);
+    this.updateAddOns = this.updateAddOns.bind(this);
   }
 
   // ── Organization CRUD ───────────────────────────────────────────────────────
@@ -257,6 +259,36 @@ class OrganizationController {
         res.status(400).send({ error: err.message });
       } else if (err.message.toLowerCase().includes('not found')) {
         res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  async getAddOns(req: any, res: any) {
+    try {
+      const addOns = await this.organizationService.getAddOns(req.params.organizationId);
+      res.json({ addOns });
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async updateAddOns(req: any, res: any) {
+    try {
+      const { addOns } = req.body;
+      if (!addOns || typeof addOns !== 'object') {
+        return res.status(400).send({ error: 'addOns object is required' });
+      }
+      await this.organizationService.updateAddOns(req.params.organizationId, addOns);
+      res.json({ addOns });
+    } catch (err: any) {
+      if (
+        err.message.toLowerCase().includes('invalid add-on') ||
+        err.message.toLowerCase().includes('quantity') ||
+        err.message.toLowerCase().includes('only available')
+      ) {
+        res.status(400).send({ error: err.message });
       } else {
         res.status(500).send({ error: err.message });
       }
