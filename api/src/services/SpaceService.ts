@@ -36,6 +36,11 @@ class SpaceService {
     return (contract as any)?.subscriptionPlans?.[SPACE_SERVICE_NAME] ?? FREE_PLAN;
   }
 
+  async getAddOns(organizationId: string): Promise<Record<string, number>> {
+    const contract = await this.spaceClient.contracts.getContract(organizationId);
+    return (contract as any)?.subscriptionAddOns?.[SPACE_SERVICE_NAME] ?? {};
+  }
+
   /**
    * Evaluates whether the organization's current plan allows the given feature.
    *
