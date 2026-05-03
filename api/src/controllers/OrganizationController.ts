@@ -257,6 +257,8 @@ class OrganizationController {
     } catch (err: any) {
       if (err.message.toLowerCase().includes('invalid plan')) {
         res.status(400).send({ error: err.message });
+      } else if (err.message.toLowerCase().includes('cannot downgrade')) {
+        res.status(422).send({ error: err.message });
       } else if (err.message.toLowerCase().includes('not found')) {
         res.status(404).send({ error: err.message });
       } else {

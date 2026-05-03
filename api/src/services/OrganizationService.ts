@@ -5,16 +5,26 @@ import { OrganizationMembershipRepository } from '../types/repositories/Organiza
 import { OrganizationInvitationRepository } from '../types/repositories/OrganizationInvitationRepository';
 import SpaceService from './SpaceService';
 
+const PLAN_ORDER: Record<string, number> = { FREE: 0, PRO: 1, ENTERPRISE: 2 };
+
 class OrganizationService {
   private organizationRepository: OrganizationRepository;
   private organizationMembershipRepository: OrganizationMembershipRepository;
   private organizationInvitationRepository: OrganizationInvitationRepository;
+  private pricingRepository: any;
+  private pricingCollectionRepository: any;
+  private groupRepository: any;
+  private groupMembershipRepository: any;
   private spaceService: SpaceService;
 
   constructor() {
     this.organizationRepository = container.resolve('organizationRepository');
     this.organizationMembershipRepository = container.resolve('organizationMembershipRepository');
     this.organizationInvitationRepository = container.resolve('organizationInvitationRepository');
+    this.pricingRepository = container.resolve('pricingRepository');
+    this.pricingCollectionRepository = container.resolve('pricingCollectionRepository');
+    this.groupRepository = container.resolve('groupRepository');
+    this.groupMembershipRepository = container.resolve('groupMembershipRepository');
     this.spaceService = container.resolve('spaceService');
   }
 
@@ -117,6 +127,56 @@ class OrganizationService {
     return this.spaceService.getPlan(organizationId);
   }
 
+  private async getCurrentUsage(organizationId: string) {
+    const [pricings, collections, members, groups, groupMemberships] = await Promise.all([
+      this.pricingRepository.findAll({ organizationId }),
+      this.pricingCollectionRepository.findByOrganizationId(organizationId),
+      this.organizationMembershipRepository.findByOrganizationId(organizationId),
+      this.groupRepository.findByOrganizationId(organizationId),
+      this.groupMembershipRepository.findByOrganizationId(organizationId),
+    ]);
+
+    return {
+      maxPricings: (pricings as any[]).length,
+      maxCollections: (collections as any[]).length,
+      maxOrgMembers: (members as any[]).length,
+      maxGroups: (groups as any[]).length,
+      maxGroupMembers: (groupMemberships as any[]).length,
+    };
+  }
+
+  private async validateDowngrade(
+    organizationId: string,
+    targetPlan: string,
+    targetAddOns: Record<string, number>
+  ): Promise<void> {
+    const currentPlan = await this.spaceService.getPlan(organizationId);
+
+    if ((PLAN_ORDER[targetPlan] ?? 0) >= (PLAN_ORDER[currentPlan] ?? 0)) {
+      return;
+    }
+
+    const [targetLimits, usage] = await Promise.all([
+      this.spaceService.getPlanLimits(targetPlan, targetAddOns),
+      this.getCurrentUsage(organizationId),
+    ]);
+
+    const violations: string[] = [];
+    for (const [key, limit] of Object.entries(targetLimits)) {
+      const current = usage[key as keyof typeof usage] ?? 0;
+      if (current > limit) {
+        violations.push(`${key} (current: ${current}, limit: ${limit})`);
+      }
+    }
+
+    if (violations.length > 0) {
+      throw new Error(
+        `Cannot downgrade to ${targetPlan}: current usage exceeds plan limits. ` +
+        `Reduce the following resources first: ${violations.join(', ')}`
+      );
+    }
+  }
+
   async changePlan(organizationId: string, plan: string): Promise<void> {
     const VALID_PLANS = ['FREE', 'PRO', 'ENTERPRISE'];
     if (!VALID_PLANS.includes(plan)) {
@@ -127,10 +187,13 @@ class OrganizationService {
       throw new Error('Organization not found');
     }
     const ADDON_PLANS = ['PRO', 'ENTERPRISE'];
-    const existingAddOns = ADDON_PLANS.includes(plan)
+    const targetAddOns = ADDON_PLANS.includes(plan)
       ? await this.spaceService.getAddOns(organizationId)
       : {};
-    await this.spaceService.updateContract(organizationId, plan, existingAddOns);
+
+    await this.validateDowngrade(organizationId, plan, targetAddOns);
+
+    await this.spaceService.updateContract(organizationId, plan, targetAddOns);
   }
 
   async getAddOns(organizationId: string): Promise<Record<string, number>> {
