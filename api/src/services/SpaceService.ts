@@ -166,6 +166,65 @@ class SpaceService {
   }
 
   /**
+   * Fetches the active pricing definition for this service from SPACE and returns
+   * the effective usage limits for the given plan, factoring in any add-on extensions.
+   *
+   * Limits are resolved as: plan override → defaultValue fallback → 0.
+   * Add-on extensions are summed on top of the plan limits.
+   */
+  async getPlanLimits(
+    plan: string,
+    addOns: Record<string, number> = {}
+  ): Promise<Record<string, number>> {
+    const response = await fetch(
+      `${SPACE_URL}/api/v1/services/${SPACE_SERVICE_NAME}/pricings?pricingStatus=active`,
+      {
+        headers: {
+          'x-api-key': SPACE_API_KEY,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch pricing from SPACE: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const pricings = await response.json() as any[];
+    if (!pricings.length) {
+      throw new Error('No active pricing found in SPACE for this service');
+    }
+    const pricing = pricings[0] as any;
+
+    const defaults: Record<string, number> = {};
+    for (const [key, def] of Object.entries(pricing.usageLimits ?? {})) {
+      defaults[key] = (def as any).defaultValue ?? 0;
+    }
+
+    const planOverrides: Record<string, { value: number }> | null =
+      pricing.plans?.[plan]?.usageLimits ?? null;
+
+    const limits: Record<string, number> = { ...defaults };
+    if (planOverrides) {
+      for (const [key, override] of Object.entries(planOverrides)) {
+        limits[key] = override.value ?? defaults[key] ?? 0;
+      }
+    }
+
+    for (const [addonName, qty] of Object.entries(addOns)) {
+      if (qty <= 0) continue;
+      const extension = pricing.addOns?.[addonName]?.usageLimitsExtensions ?? {};
+      for (const [limitKey, ext] of Object.entries(extension)) {
+        limits[limitKey] = (limits[limitKey] ?? 0) + (ext as any).value * qty;
+      }
+    }
+
+    return limits;
+  }
+
+  /**
    * Permanently removes the organization's contract from SPACE.
    * Use this when an organization is deleted.
    *
