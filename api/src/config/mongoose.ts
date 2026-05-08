@@ -26,7 +26,7 @@ const initMongoose = () => {
 
 const disconnectMongoose = async () => {
   console.log('Disconnecting from MongoDB')
-  mongoose.connection.db!.dropDatabase();
+  await mongoose.connection.db!.dropDatabase();
   return mongoose.disconnect();
 }
 
