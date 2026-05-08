@@ -1,6 +1,15 @@
 import { Pricing } from "../types/database/Pricing";
 
 export const calculateAnalyticsForPricings = (pricings: any) => {
+  if (!pricings?.length) {
+    return {
+      evolutionOfPlans: { dates: [], values: [] },
+      evolutionOfAddOns: { dates: [], values: [] },
+      evolutionOfFeatures: { dates: [], values: [] },
+      evolutionOfConfigurationSpaceSize: { dates: [], values: [] },
+    };
+  }
+
   const extractionDates = _simulateCollectionEvolution(pricings);
 
   const analyticsByMonth = _getAnalyticsEvolution(extractionDates);
@@ -67,22 +76,23 @@ function _getAnalyticsEvolution(extractionDates: Record<string, any>) {
 
   for (const date in extractionDates) {
     const pricings = extractionDates[date];
+    const metric = (pricing: any, key: string) => pricing.analytics?.[key] ?? 0;
     
     analyticsEvolution[date] = {
       avgPlans:
-        pricings.reduce((acc: number, pricing: any) => acc + pricing.analytics.numberOfPlans, 0) /
+        pricings.reduce((acc: number, pricing: any) => acc + metric(pricing, 'numberOfPlans'), 0) /
         pricings.length,
       avgAddOns:
-        pricings.reduce((acc: number, pricing: any) => acc + pricing.analytics.numberOfAddOns, 0) /
+        pricings.reduce((acc: number, pricing: any) => acc + metric(pricing, 'numberOfAddOns'), 0) /
         pricings.length,
       avgFeatures:
         pricings.reduce(
-          (acc: number, pricing: any) => acc + pricing.analytics.numberOfFeatures,
+          (acc: number, pricing: any) => acc + metric(pricing, 'numberOfFeatures'),
           0
         ) / pricings.length,
       avgConfigurationSpaceSize:
         pricings.reduce(
-          (acc: number, pricing: any) => acc + pricing.analytics.configurationSpaceSize,
+          (acc: number, pricing: any) => acc + metric(pricing, 'configurationSpaceSize'),
           0
         ) / pricings.length,
     };

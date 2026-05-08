@@ -58,6 +58,15 @@ class PricingCollectionService {
   ) {
     let collection: any;
     try {
+      const existingCollection = await this.pricingCollectionRepository.findByNameAndUserId(
+        newCollection.name,
+        userId,
+        organizationId
+      );
+      if (existingCollection) {
+        throw new Error('A collection with this name already exists. Please choose another name.');
+      }
+
       newCollection._ownerId = new mongoose.Types.ObjectId(userId);
       newCollection._organizationId = new mongoose.Types.ObjectId(organizationId);
       if (groupId) {
@@ -284,7 +293,7 @@ class PricingCollectionService {
         collection._id.toString()
       );
 
-      fs.rmdirSync(this._getExtractPath(ownerId, collectionName), { recursive: true });
+      fs.rmSync(this._getExtractPath(ownerId, collectionName), { recursive: true, force: true });
     } else {
       await this.pricingRepository.removePricingsFromCollection(collection._id.toString());
       result = await this.pricingCollectionRepository.destroy(collection._id.toString());
@@ -303,12 +312,14 @@ class PricingCollectionService {
     if (collectionPricings.length === 0) return null;
 
     // Compute the new average analytics
+    const metric = (pricing: any, key: string) => pricing.analytics?.[key] ?? 0;
+
     const aggregated = collectionPricings.reduce(
       (acc: any, pricing: any) => {
-        acc.numberOfPlans += pricing.analytics.numberOfPlans / numberOfPricings;
-        acc.numberOfAddOns += pricing.analytics.numberOfAddOns / numberOfPricings;
-        acc.configurationSpaceSize += pricing.analytics.configurationSpaceSize / numberOfPricings;
-        acc.numberOfFeatures += pricing.analytics.numberOfFeatures / numberOfPricings;
+        acc.numberOfPlans += metric(pricing, 'numberOfPlans') / numberOfPricings;
+        acc.numberOfAddOns += metric(pricing, 'numberOfAddOns') / numberOfPricings;
+        acc.configurationSpaceSize += metric(pricing, 'configurationSpaceSize') / numberOfPricings;
+        acc.numberOfFeatures += metric(pricing, 'numberOfFeatures') / numberOfPricings;
         return acc;
       },
       {
