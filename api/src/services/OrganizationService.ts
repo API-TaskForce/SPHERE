@@ -201,21 +201,23 @@ class OrganizationService {
   }
 
   async updateAddOns(organizationId: string, addOns: Record<string, number>): Promise<void> {
-    const VALID_ADDON_PLANS = ['PRO', 'ENTERPRISE'];
-    const VALID_ADDONS = ['extraPricings', 'extraCollections'];
+    const PLAN_GATED_ADDONS = ['extraPricings', 'extraCollections'];
+    const BOOLEAN_ADDONS = ['groundTruth'];
+    const VALID_ADDONS = [...PLAN_GATED_ADDONS, ...BOOLEAN_ADDONS];
     const ADDON_MAX = 10;
 
     const plan = await this.spaceService.getPlan(organizationId);
-    if (!VALID_ADDON_PLANS.includes(plan)) {
-      throw new Error('Add-ons are only available on PRO or ENTERPRISE plans');
-    }
 
     for (const [key, qty] of Object.entries(addOns)) {
       if (!VALID_ADDONS.includes(key)) {
         throw new Error(`Invalid add-on: ${key}`);
       }
-      if (!Number.isInteger(qty) || qty < 0 || qty > ADDON_MAX) {
-        throw new Error(`Add-on quantity must be between 0 and ${ADDON_MAX}`);
+      if (PLAN_GATED_ADDONS.includes(key) && !['PRO', 'ENTERPRISE'].includes(plan)) {
+        throw new Error('This add-on is only available on PRO or ENTERPRISE plans');
+      }
+      const max = BOOLEAN_ADDONS.includes(key) ? 1 : ADDON_MAX;
+      if (!Number.isInteger(qty) || qty < 0 || qty > max) {
+        throw new Error(`Add-on quantity must be between 0 and ${max}`);
       }
     }
 

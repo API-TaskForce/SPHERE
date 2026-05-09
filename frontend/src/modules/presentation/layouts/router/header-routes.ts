@@ -16,6 +16,11 @@ export const headerRoutes: HeaderRoute[] = [
         to: '/editor',
       },
       {
+        name: 'Datasheet Editor',
+        disabled: false,
+        to: '/datasheet-editor',
+      },
+      {
         name: 'HARVEY',
         disabled: false,
         to: '/harvey',
@@ -44,6 +49,22 @@ export const headerRoutes: HeaderRoute[] = [
     ],
   },
   {
+    name: 'Datasheets',
+    disabled: false,
+    children: [
+      {
+        name: 'Datasheets',
+        disabled: false,
+        to: '/datasheets',
+      },
+      {
+        name: 'Collections',
+        disabled: false,
+        to: '/datasheets/collections',
+      },
+    ],
+  },
+  {
     name: 'Team',
     disabled: false,
     to: '/team',
@@ -52,6 +73,11 @@ export const headerRoutes: HeaderRoute[] = [
     name: 'Research',
     disabled: false,
     to: '/research',
+  },
+  {
+    name: 'Ground Truth',
+    disabled: false,
+    to: '/ground-truth',
   },
   // {
   //   name: 'Contribute',

@@ -9,7 +9,13 @@ import { useRouter } from '../../core/hooks/useRouter';
 import { useResponsive } from '../../core/hooks/useResponsive';
 import OrgSelector from './components/org-selector';
 
-const Header = ({ setUploadModalOpen }: { setUploadModalOpen: (state: boolean) => void }) => {
+const Header = ({
+  setUploadModalOpen,
+  setUploadDatasheetModalOpen,
+}: {
+  setUploadModalOpen: (state: boolean) => void;
+  setUploadDatasheetModalOpen: (state: boolean) => void;
+}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const userMenuContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -27,6 +33,13 @@ const Header = ({ setUploadModalOpen }: { setUploadModalOpen: (state: boolean) =
       },
     },
     {
+      name: 'My Datasheets',
+      onClick: () => {
+        router.push('/me/datasheets');
+        handleCloseUserMenu();
+      },
+    },
+    {
       name: 'My Organizations',
       onClick: () => {
         router.push('/me/organizations');
@@ -37,6 +50,13 @@ const Header = ({ setUploadModalOpen }: { setUploadModalOpen: (state: boolean) =
       name: 'Upload pricing',
       onClick: () => {
         setUploadModalOpen(true);
+        handleCloseUserMenu();
+      },
+    },
+    {
+      name: 'Upload datasheet',
+      onClick: () => {
+        setUploadDatasheetModalOpen(true);
         handleCloseUserMenu();
       },
     },

@@ -1,0 +1,188 @@
+import { useAuth } from '../../auth/hooks/useAuth';
+import { useCallback, useMemo } from 'react';
+import { CollectionToCreate } from '../types/profile-types';
+
+export const DATASHEET_COLLECTIONS_BASE_PATH = import.meta.env.VITE_API_URL + '/datasheets/collections';
+
+export function useDatasheetCollectionsApi() {
+  const { fetchWithInterceptor, authUser } = useAuth();
+
+  const token = authUser?.token;
+
+  const basicHeaders = useMemo(
+    () => ({
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    }),
+    [token]
+  );
+
+  const getLoggedUserCollections = useCallback(async () => {
+    return fetchWithInterceptor(`${import.meta.env.VITE_API_URL}/me/datasheetCollections`, {
+      method: 'GET',
+      headers: basicHeaders,
+    })
+      .then(response => response.json())
+      .catch(error => Promise.reject(error as Error));
+  }, [fetchWithInterceptor, basicHeaders]);
+
+  const createCollection = useCallback(
+    async (collection: CollectionToCreate) => {
+      return fetchWithInterceptor(DATASHEET_COLLECTIONS_BASE_PATH, {
+        method: 'POST',
+        headers: basicHeaders,
+        body: JSON.stringify(collection),
+      })
+        .then(async response => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            const message =
+              data?.error || data?.message || response.statusText || 'Error creating collection';
+            type ErrorWithStatus = Error & { status?: number };
+            const e = new Error(message) as ErrorWithStatus;
+            e.status = response.status;
+            return Promise.reject(e);
+          }
+          return data;
+        })
+        .catch(error =>
+          Promise.reject(error instanceof Error ? error : new Error(String(error)))
+        );
+    },
+    [fetchWithInterceptor, basicHeaders]
+  );
+
+  const createBulkCollection = useCallback(
+    async (formData: FormData) => {
+      return fetchWithInterceptor(DATASHEET_COLLECTIONS_BASE_PATH + '/bulk', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      })
+        .then(async response => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            const message =
+              data?.error || data?.message || response.statusText || 'Error creating collection';
+            type ErrorWithStatus = Error & { status?: number };
+            const e = new Error(message) as ErrorWithStatus;
+            e.status = response.status;
+            return Promise.reject(e);
+          }
+          if (data.error) {
+            type ErrorWithStatus = Error & { status?: number };
+            const e = new Error(data.error) as ErrorWithStatus;
+            e.status = 500;
+            return Promise.reject(e);
+          }
+          return data;
+        })
+        .catch(error =>
+          Promise.reject(error instanceof Error ? error : new Error(String(error)))
+        );
+    },
+    [fetchWithInterceptor, token]
+  );
+
+  const getCollectionByOwnerAndName = useCallback(
+    async (ownerId: string, collectionName: string) => {
+      return fetchWithInterceptor(`${DATASHEET_COLLECTIONS_BASE_PATH}/${ownerId}/${collectionName}`, {
+        method: 'GET',
+        headers: basicHeaders,
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.error) {
+            return Promise.reject(new Error(data.error));
+          }
+          return data;
+        })
+        .catch(error => {
+          return Promise.reject(error as Error);
+        });
+    },
+    [fetchWithInterceptor, basicHeaders]
+  );
+
+  const downloadCollection = useCallback(
+    async (ownerId: string, collectionName: string) => {
+      return fetchWithInterceptor(
+        `${DATASHEET_COLLECTIONS_BASE_PATH}/${ownerId}/${collectionName}/download`,
+        {
+          method: 'GET',
+          headers: basicHeaders,
+        }
+      )
+        .then(async response => {
+          if (!response.ok) {
+            return Promise.reject(new Error('Error downloading collection'));
+          }
+
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = collectionName + '.zip';
+          a.click();
+
+          URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        })
+        .catch(error => {
+          return Promise.reject(error as Error);
+        });
+    },
+    [fetchWithInterceptor, basicHeaders]
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateCollection = useCallback(async (collectionName: string, collectionData: any) => {
+    return fetchWithInterceptor(`${DATASHEET_COLLECTIONS_BASE_PATH}/${authUser.user!.id}/${collectionName}`, {
+      method: 'PUT',
+      headers: basicHeaders,
+      body: JSON.stringify(collectionData),
+    })
+      .then(async response => response.json())
+      .catch(error => {
+        return Promise.reject(error as Error);
+      });
+  }, [fetchWithInterceptor, basicHeaders, authUser]);
+
+  const deleteCollection = useCallback(
+    async (collectionName: string, deleteCascade: boolean) => {
+      return fetchWithInterceptor(
+        `${DATASHEET_COLLECTIONS_BASE_PATH}/${authUser.user!.id}/${collectionName}?deleteCascade=${deleteCascade}`,
+        {
+          method: 'DELETE',
+          headers: basicHeaders,
+        }
+      )
+        .then(async response => response.json())
+        .catch(error => Promise.reject(error as Error));
+    },
+    [fetchWithInterceptor, basicHeaders, authUser]
+  );
+
+  return useMemo(
+    () => ({
+      getLoggedUserCollections,
+      createCollection,
+      createBulkCollection,
+      getCollectionByOwnerAndName,
+      downloadCollection,
+      updateCollection,
+      deleteCollection,
+    }),
+    [
+      getLoggedUserCollections,
+      createCollection,
+      createBulkCollection,
+      getCollectionByOwnerAndName,
+      downloadCollection,
+      updateCollection,
+      deleteCollection,
+    ]
+  );
+}
