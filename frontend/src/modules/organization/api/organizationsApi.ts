@@ -75,7 +75,7 @@ export interface UserLookup {
 
 export type OrgPlan = 'FREE' | 'PRO' | 'ENTERPRISE';
 
-export type OrgAddOnKey = 'extraPricings' | 'extraCollections';
+export type OrgAddOnKey = 'extraPricings' | 'extraCollections' | 'groundTruth';
 export type OrgAddOns = Partial<Record<OrgAddOnKey, number>>;
 
 export interface CreateOrganizationPayload {

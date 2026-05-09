@@ -36,6 +36,7 @@ import CreateOrganizationPage from '../modules/organization/pages/create-organiz
 import OrganizationDetailPage from '../modules/organization/pages/organization-detail';
 import OrganizationJoinPage from '../modules/organization/pages/organization-join';
 import GroupDetailPage from '../modules/organization/pages/group-detail';
+import GroundTruthPage from '../modules/presentation/pages/ground-truth';
 
 
 export default function Router() {
@@ -99,7 +100,8 @@ export default function Router() {
           ],
         },
         { element: <PricingAssistantPage />, path: "/harvey"},
-        { element: <PricingAssistantPage playground />, path: "/harvey-play"}
+        { element: <PricingAssistantPage playground />, path: "/harvey-play"},
+        { element: <GroundTruthPage />, path: "/ground-truth" }
       ],
         },
         {
