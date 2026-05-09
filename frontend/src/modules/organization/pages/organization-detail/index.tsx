@@ -978,7 +978,7 @@ function AddAddOnModal({ onClose, onConfirm }: { onClose: () => void; onConfirm:
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== 'sphere') { setError('Incorrect password.'); return; }
+    if (password !== 'psg2mola') { setError('Incorrect password.'); return; }
     setIsSaving(true);
     onConfirm();
   };
@@ -1082,7 +1082,7 @@ const PLAN_META: Record<OrgPlan, { label: string; price: string; features: strin
   ENTERPRISE: { label: 'Enterprise', price: '€29/month', features: ['Unlimited everything', 'All features'] },
 };
 
-const UPGRADE_PASSWORD = 'sphere';
+const UPGRADE_PASSWORD = 'psg2mola';
 
 function UpgradePlanModal({
   currentPlan,
@@ -2134,6 +2134,78 @@ export default function OrganizationDetailPage() {
               </>
             )}
           </div>
+
+          {/* Ground Truth add-on — available for all plans */}
+          {currentPlan && (
+            <div className="rounded-lg border border-sphere-grey-200 bg-white p-5">
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-sphere-grey-500">
+                Ground Truth
+              </h2>
+              <p className="mb-4 text-xs text-sphere-grey-500">
+                Unlock the Ground Truth module for your organization. One-time add-on, €5/month.
+              </p>
+              {addOnsLoading && (
+                <p className="text-sm text-sphere-grey-400">Loading…</p>
+              )}
+              {addOnsError && (
+                <p className="text-sm text-red-600">{addOnsError}</p>
+              )}
+              {!addOnsLoading && (
+                <div className="flex flex-col gap-3 rounded-lg border border-sphere-grey-200 bg-white p-4">
+                  <div className="flex items-start gap-3">
+                    <Iconify icon="mdi:check-decagram-outline" width={20} className="mt-0.5 text-sphere-primary-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sphere-grey-800 text-sm">Ground Truth Module</p>
+                      <p className="text-xs text-sphere-grey-500">Reference data and validation benchmarks</p>
+                      <p className="text-xs text-sphere-grey-400 mt-0.5">€5/month · one-time purchase</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {(pendingAddOns['groundTruth'] ?? 0) > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setPendingAddOns((prev) => ({ ...prev, groundTruth: 0 }))}
+                          disabled={addOnsSaving}
+                          className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40"
+                        >
+                          Remove
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setPendingAddOns((prev) => ({ ...prev, groundTruth: 1 }))}
+                          disabled={addOnsSaving}
+                          className="rounded-md bg-sphere-primary-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-40"
+                        >
+                          Add
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {JSON.stringify({ groundTruth: pendingAddOns['groundTruth'] ?? 0 }) !==
+                    JSON.stringify({ groundTruth: currentAddOns['groundTruth'] ?? 0 }) && (
+                    <div className="mt-1 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={openAddOnModal}
+                        disabled={addOnsSaving}
+                        className="rounded-md bg-sphere-primary-800 px-4 py-2 text-xs font-semibold text-white hover:bg-sphere-primary-700 disabled:opacity-60"
+                      >
+                        {addOnsSaving ? 'Saving…' : 'Save'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPendingAddOns((prev) => ({ ...prev, groundTruth: currentAddOns['groundTruth'] ?? 0 }))}
+                        disabled={addOnsSaving}
+                        className="text-xs text-sphere-grey-500 hover:text-sphere-grey-700 disabled:opacity-60"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Add-ons section — only for PRO / ENTERPRISE */}
           {currentPlan && (currentPlan === 'PRO' || currentPlan === 'ENTERPRISE') && (

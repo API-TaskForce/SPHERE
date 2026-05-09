@@ -74,6 +74,11 @@ export const headerRoutes: HeaderRoute[] = [
     disabled: false,
     to: '/research',
   },
+  {
+    name: 'Ground Truth',
+    disabled: false,
+    to: '/ground-truth',
+  },
   // {
   //   name: 'Contribute',
   //   disabled: false,
