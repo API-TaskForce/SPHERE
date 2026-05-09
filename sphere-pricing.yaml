@@ -1,0 +1,323 @@
+saasName: SPHERE
+syntaxVersion: "3.0"
+version: "3.0"
+createdAt: "2026-04-02"
+currency: EUR
+
+features:
+
+  # ── DOMAIN ────────────────────────────────────────────────────────────────
+
+  pricingManagement:
+    description: >
+      Upload, view, edit and delete pricing YAML files within your organization.
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: pricingContext['features']['pricingManagement']
+    type: DOMAIN
+
+  pricings:
+    description: >
+      Number of individual pricing models the organization can store.
+      Gated by the maxPricings usage limit.
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: subscriptionContext['maxPricings'] < pricingContext['usageLimits']['maxPricings']
+    serverExpression: subscriptionContext['maxPricings'] <= pricingContext['usageLimits']['maxPricings']
+    type: DOMAIN
+
+  pricingVersioning:
+    description: >
+      Maintain multiple versions of a pricing model and navigate its full
+      version history.
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: pricingContext['features']['pricingVersioning']
+    type: DOMAIN
+
+  pricingEditor:
+    description: >
+      Edit pricing YAML files directly in the browser using the built-in
+      Monaco-based editor.
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: pricingContext['features']['pricingEditor']
+    type: DOMAIN
+
+  configurationSpaceAnalysis:
+    description: >
+      Compute and explore the full configuration space of a pricing model
+      via constraint solving (MiniZinc).
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: pricingContext['features']['configurationSpaceAnalysis']
+    type: DOMAIN
+
+  collectionManagement:
+    description: >
+      Create, organize and manage collections of pricing models within
+      your organization.
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: pricingContext['features']['collectionManagement']
+    type: DOMAIN
+
+  collections:
+    description: >
+      Number of pricing collections the organization can store.
+      Gated by the maxCollections usage limit.
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: subscriptionContext['maxCollections'] < pricingContext['usageLimits']['maxCollections']
+    serverExpression: subscriptionContext['maxCollections'] <= pricingContext['usageLimits']['maxCollections']
+    type: DOMAIN
+
+  bulkImport:
+    description: >
+      Import multiple pricing YAML files at once by uploading a ZIP archive
+      to create a collection in a single operation.
+    valueType: BOOLEAN
+    defaultValue: false
+    expression: pricingContext['features']['bulkImport']
+    type: DOMAIN
+
+  collectionExport:
+    description: >
+      Download a pricing collection as a ZIP archive containing all its
+      YAML files.
+    valueType: BOOLEAN
+    defaultValue: false
+    expression: pricingContext['features']['collectionExport']
+    type: DOMAIN
+
+  # ── INFORMATION ───────────────────────────────────────────────────────────
+
+  pricingAnalytics:
+    description: >
+      View analytical metrics for individual pricing models, including
+      feature counts, plan distribution, add-on breakdown and price ranges.
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: pricingContext['features']['pricingAnalytics']
+    type: INFORMATION
+
+  collectionAnalytics:
+    description: >
+      Access evolution analytics for pricing collections, tracking changes
+      in plans, features, add-ons and configuration space size over time.
+    valueType: BOOLEAN
+    defaultValue: false
+    expression: pricingContext['features']['collectionAnalytics']
+    type: INFORMATION
+
+  # ── MANAGEMENT ────────────────────────────────────────────────────────────
+
+  orgMembers:
+    description: >
+      Number of members the organization can have.
+      Gated by the maxOrgMembers usage limit.
+    valueType: BOOLEAN
+    defaultValue: true
+    expression: subscriptionContext['maxOrgMembers'] < pricingContext['usageLimits']['maxOrgMembers']
+    serverExpression: subscriptionContext['maxOrgMembers'] <= pricingContext['usageLimits']['maxOrgMembers']
+    type: MANAGEMENT
+
+  groupManagement:
+    description: >
+      Create and manage groups within an organization, assign members with
+      granular roles (admin, editor, viewer) and control collection access
+      per group.
+    valueType: BOOLEAN
+    defaultValue: false
+    expression: pricingContext['features']['groupManagement']
+    type: MANAGEMENT
+
+  groups:
+    description: >
+      Number of groups the organization can create.
+      Gated by the maxGroups usage limit.
+    valueType: BOOLEAN
+    defaultValue: false
+    expression: subscriptionContext['maxGroups'] < pricingContext['usageLimits']['maxGroups']
+    serverExpression: subscriptionContext['maxGroups'] <= pricingContext['usageLimits']['maxGroups']
+    type: MANAGEMENT
+
+  groupMembers:
+    description: >
+      Number of members that can be added to each group.
+      Gated by the maxGroupMembers usage limit.
+    valueType: BOOLEAN
+    defaultValue: false
+    expression: subscriptionContext['maxGroupMembers'] < pricingContext['usageLimits']['maxGroupMembers']
+    serverExpression: subscriptionContext['maxGroupMembers'] <= pricingContext['usageLimits']['maxGroupMembers']
+    type: MANAGEMENT
+
+  sharedCollections:
+    description: >
+      Assign a single collection to multiple groups within an organization,
+      enabling cross-team access to the same pricing resources.
+    valueType: BOOLEAN
+    defaultValue: false
+    expression: pricingContext['features']['sharedCollections']
+    type: MANAGEMENT
+
+usageLimits:
+
+  maxGroups:
+    description: Maximum number of groups allowed within the organization.
+    valueType: NUMERIC
+    defaultValue: 0
+    unit: group
+    type: NON_RENEWABLE
+    trackable: true
+    linkedFeatures:
+      - groups
+
+  maxOrgMembers:
+    description: Maximum number of members allowed in the organization.
+    valueType: NUMERIC
+    defaultValue: 1
+    unit: member
+    type: NON_RENEWABLE
+    trackable: true
+    linkedFeatures:
+      - orgMembers
+
+  maxGroupMembers:
+    description: Maximum number of members allowed in each group within the organization.
+    valueType: NUMERIC
+    defaultValue: 0
+    unit: member
+    type: NON_RENEWABLE
+    trackable: true
+    linkedFeatures:
+      - groupMembers
+
+  maxCollections:
+    description: Maximum number of pricing collections allowed within the organization.
+    valueType: NUMERIC
+    defaultValue: 5
+    unit: collection
+    type: NON_RENEWABLE
+    trackable: true
+    linkedFeatures:
+      - collections
+
+  maxPricings:
+    description: Maximum number of individual pricing models allowed within the organization.
+    valueType: NUMERIC
+    defaultValue: 15
+    unit: pricing
+    type: NON_RENEWABLE
+    trackable: true
+    linkedFeatures:
+      - pricings
+
+plans:
+
+  FREE:
+    description: >
+      For individual researchers and personal use. Includes core pricing
+      analysis tools with no collaboration features.
+    price: 0
+    unit: org/month
+    features: null
+    usageLimits: null
+
+  PRO:
+    description: >
+      For teams and collaborative organizations. Unlocks group management,
+      collection sharing, evolution analytics and bulk operations.
+    price: 9
+    unit: org/month
+    features:
+      collectionAnalytics:
+        value: true
+      bulkImport:
+        value: true
+      collectionExport:
+        value: true
+      groupManagement:
+        value: true
+      sharedCollections:
+        value: true
+    usageLimits:
+      maxGroups:
+        value: 5
+      maxOrgMembers:
+        value: 15
+      maxGroupMembers:
+        value: 10
+      maxCollections:
+        value: 30
+      maxPricings:
+        value: 200
+
+  ENTERPRISE:
+    description: >
+      For large organizations with no resource restrictions. Includes
+      priority support and unlimited usage across all limits.
+    price: 29
+    unit: org/month
+    features:
+      collectionAnalytics:
+        value: true
+      bulkImport:
+        value: true
+      collectionExport:
+        value: true
+      groupManagement:
+        value: true
+      sharedCollections:
+        value: true
+    usageLimits:
+      maxGroups:
+        value: 9999
+      maxOrgMembers:
+        value: 9999
+      maxGroupMembers:
+        value: 9999
+      maxCollections:
+        value: 9999
+      maxPricings:
+        value: 9999
+
+addOns:
+
+  extraPricings:
+    description: >
+      Increase the pricing model limit by 50 for the current organization.
+      Can be stacked up to 10 times.
+    availableFor:
+      - PRO
+      - ENTERPRISE
+    price: 2
+    unit: org/month
+    subscriptionConstraints:
+      min: 1
+      max: 10
+      step: 1
+    features: null
+    usageLimits: null
+    usageLimitsExtensions:
+      maxPricings:
+        value: 50
+
+  extraCollections:
+    description: >
+      Increase the collection limit by 10 for the current organization.
+      Can be stacked up to 10 times.
+    availableFor:
+      - PRO
+      - ENTERPRISE
+    price: 2
+    unit: org/month
+    subscriptionConstraints:
+      min: 1
+      max: 10
+      step: 1
+    features: null
+    usageLimits: null
+    usageLimitsExtensions:
+      maxCollections:
+        value: 10

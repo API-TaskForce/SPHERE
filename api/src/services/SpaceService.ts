@@ -1,0 +1,272 @@
+import { connect } from 'space-node-client';
+import process from 'node:process';
+
+const SPACE_URL = process.env.SPACE_URL || 'http://localhost:5403/';
+const SPACE_API_KEY = process.env.SPACE_API_KEY || '';
+const SPACE_SERVICE_NAME = process.env.SPACE_SERVICE_NAME || 'SPHERE';
+const SPACE_SERVICE_VERSION = process.env.SPACE_SERVICE_VERSION || '2.0';
+const FREE_PLAN = 'FREE';
+const ENTERPRISE_PLAN = 'ENTERPRISE';
+
+class SpaceService {
+
+  private spaceClient: ReturnType<typeof connect>;
+
+  constructor() {
+    this.spaceClient = connect({
+      url: SPACE_URL,
+      apiKey: SPACE_API_KEY,
+    });
+  }
+
+  /**
+   * Retrieves the SPACE contract for the given organization.
+   * Throws if the contract does not exist or SPACE is unreachable.
+   */
+  async getContract(organizationId: string): Promise<any> {
+    return this.spaceClient.contracts.getContract(organizationId);
+  }
+
+  /**
+   * Returns the current plan name for the given organization (e.g. 'FREE', 'PRO', 'ENTERPRISE').
+   * Falls back to FREE if the contract or plan field is missing.
+   */
+  async getPlan(organizationId: string): Promise<string> {
+    const contract = await this.spaceClient.contracts.getContract(organizationId);
+    return (contract as any)?.subscriptionPlans?.[SPACE_SERVICE_NAME] ?? FREE_PLAN;
+  }
+
+  async getAddOns(organizationId: string): Promise<Record<string, number>> {
+    const contract = await this.spaceClient.contracts.getContract(organizationId);
+    return (contract as any)?.subscriptionAddOns?.[SPACE_SERVICE_NAME] ?? {};
+  }
+
+  /**
+   * Evaluates whether the organization's current plan allows the given feature.
+   *
+   * SPACE resolves the evaluation internally using the registered pricing YAML,
+   * the organization's contracted plan, add-ons and current usage levels.
+   *
+   * @param organizationId  The organization whose contract is evaluated.
+   * @param featureName     Feature name as defined in sphere-pricing.yaml (e.g. 'collectionManagement').
+   * @param expectedConsumption  Optional — increment to check against usage-limited features
+   *                             (e.g. pass 1 when about to create a new resource).
+   * @returns Object with `eval: boolean` and optionally `used` and `limit`.
+   */
+  async evaluateFeature(
+    organizationId: string,
+    featureName: string,
+    expectedConsumption?: number
+  ): Promise<{ eval: boolean; used?: number; limit?: number }> {
+    const featureId = `${SPACE_SERVICE_NAME}-${featureName}`;
+    let consumptionBody: Record<string, number> = {};
+
+    if (expectedConsumption !== undefined) {
+      const usageLimitName = `max${featureName.charAt(0).toUpperCase()}${featureName.slice(1)}`;
+      consumptionBody = { [`${SPACE_SERVICE_NAME}-${usageLimitName}`]: expectedConsumption };
+    }
+
+    return this.spaceClient.features.evaluate(organizationId, featureId, consumptionBody);
+  }
+
+  /**
+   * Reverts the usage update produced by a previous evaluateFeature call.
+   * Only effective within 2 minutes of the original evaluation.
+   * Use this as a safety net when a request fails after evaluation.
+   */
+  async revertFeatureEvaluation(organizationId: string, featureName: string): Promise<void> {
+    const featureId = `${SPACE_SERVICE_NAME}-${featureName}`;
+    await this.spaceClient.features.revertEvaluation(organizationId, featureId);
+  }
+
+  /**
+   * Updates the subscription plan and add-ons of an existing contract.
+   * Use this when an organization upgrades or changes its plan.
+   *
+   * @param organizationId  The organization whose contract is updated.
+   * @param plan            New plan name (e.g. 'PRO', 'ENTERPRISE').
+   * @param addOns          Add-ons map: { addonName: quantity }. Defaults to empty.
+   */
+  async updateContract(
+    organizationId: string,
+    plan: string,
+    addOns: Record<string, number> = {}
+  ): Promise<void> {
+    await this.spaceClient.contracts.updateContractSubscription(organizationId, {
+      contractedServices: { [SPACE_SERVICE_NAME]: SPACE_SERVICE_VERSION },
+      subscriptionPlans: { [SPACE_SERVICE_NAME]: plan },
+      subscriptionAddOns: { [SPACE_SERVICE_NAME]: addOns },
+    });
+  }
+
+  /**
+   * Downgrades the organization's contract to FREE, effectively cancelling
+   * the active paid plan while keeping the contract alive in SPACE.
+   */
+  async cancelContract(organizationId: string): Promise<void> {
+    await this.updateContract(organizationId, FREE_PLAN);
+  }
+
+  /**
+   * Ensures a contract exists in SPACE for the given organization under
+   * the requested plan. If the contract already exists, it is updated.
+   * Errors are swallowed to avoid blocking local seed/bootstrap flows.
+   */
+  async ensureContract(
+    organizationId: string,
+    organizationName: string,
+    plan: string,
+    addOns: Record<string, number> = {}
+  ): Promise<void> {
+    let contractExists = false;
+
+    try {
+      await this.spaceClient.contracts.getContract(organizationId);
+      contractExists = true;
+    } catch (error: any) {
+      const isNotFound =
+        error?.message?.includes('not found') ||
+        error?.response?.status === 404 ||
+        error?.status === 404;
+
+      if (!isNotFound) {
+        console.error(
+          `[SpaceService] Error checking contract for organization ${organizationId}:`,
+          error?.message
+        );
+      }
+    }
+
+    if (contractExists) {
+      try {
+        await this.updateContract(organizationId, plan, addOns);
+        return;
+      } catch (updateError: any) {
+        console.error(
+          `[SpaceService] Error updating ${plan} contract for organization ${organizationId}:`,
+          updateError?.message
+        );
+      }
+    }
+
+    try {
+      await this.spaceClient.contracts.addContract({
+        userContact: { userId: organizationId, username: organizationName },
+        billingPeriod: { autoRenew: true, renewalDays: 30 },
+        contractedServices: { [SPACE_SERVICE_NAME]: SPACE_SERVICE_VERSION },
+        subscriptionPlans: { [SPACE_SERVICE_NAME]: plan },
+        subscriptionAddOns: { [SPACE_SERVICE_NAME]: addOns },
+      });
+    } catch (createError: any) {
+      console.error(
+        `[SpaceService] Error creating ${plan} contract for organization ${organizationId}:`,
+        createError?.message
+      );
+    }
+  }
+
+  /**
+   * Fetches the active pricing definition for this service from SPACE and returns
+   * the effective usage limits for the given plan, factoring in any add-on extensions.
+   *
+   * Limits are resolved as: plan override → defaultValue fallback → 0.
+   * Add-on extensions are summed on top of the plan limits.
+   */
+  async getPlanLimits(
+    plan: string,
+    addOns: Record<string, number> = {}
+  ): Promise<Record<string, number>> {
+    const response = await fetch(
+      `${SPACE_URL}/api/v1/services/${SPACE_SERVICE_NAME}/pricings?pricingStatus=active`,
+      {
+        headers: {
+          'x-api-key': SPACE_API_KEY,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch pricing from SPACE: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const pricings = await response.json() as any[];
+    if (!pricings.length) {
+      throw new Error('No active pricing found in SPACE for this service');
+    }
+    const pricing = pricings[0] as any;
+
+    const defaults: Record<string, number> = {};
+    for (const [key, def] of Object.entries(pricing.usageLimits ?? {})) {
+      defaults[key] = (def as any).defaultValue ?? 0;
+    }
+
+    const planOverrides: Record<string, { value: number }> | null =
+      pricing.plans?.[plan]?.usageLimits ?? null;
+
+    const limits: Record<string, number> = { ...defaults };
+    if (planOverrides) {
+      for (const [key, override] of Object.entries(planOverrides)) {
+        limits[key] = override.value ?? defaults[key] ?? 0;
+      }
+    }
+
+    for (const [addonName, qty] of Object.entries(addOns)) {
+      if (qty <= 0) continue;
+      const extension = pricing.addOns?.[addonName]?.usageLimitsExtensions ?? {};
+      for (const [limitKey, ext] of Object.entries(extension)) {
+        limits[limitKey] = (limits[limitKey] ?? 0) + (ext as any).value * qty;
+      }
+    }
+
+    return limits;
+  }
+
+  /**
+   * Permanently removes the organization's contract from SPACE.
+   * Use this when an organization is deleted.
+   *
+   * A 404 response is treated as a no-op (contract already gone).
+   *
+   * NOTE: Uses raw fetch instead of spaceClient because the space-node-client SDK
+   * does not expose a deleteContract method. Raw fetch is the only available path.
+   */
+  async deleteContract(organizationId: string): Promise<void> {
+    const response = await fetch(`${SPACE_URL}api/v1/contracts/${organizationId}`, {
+      method: 'DELETE',
+      headers: {
+        'x-api-key': SPACE_API_KEY,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok || response.status === 404) {
+      return;
+    }
+
+    const errorText = await response.text();
+    throw new Error(`Failed to delete contract for organization ${organizationId}: ${response.status} ${errorText}`);
+  }
+
+  /**
+   * Ensures a FREE contract exists in SPACE for the given organization.
+   * If a contract already exists, it does nothing.
+   * If no contract exists (404), it creates a new FREE one.
+   * Errors are swallowed to avoid blocking organization creation.
+   */
+  async ensureFreeContract(organizationId: string, organizationName: string): Promise<void> {
+    await this.ensureContract(organizationId, organizationName, FREE_PLAN);
+  }
+
+  /**
+   * Helper for seeded/demo organizations that need all SPACE-gated
+   * functionality enabled during development and testing.
+   */
+  async ensureEnterpriseContract(organizationId: string, organizationName: string): Promise<void> {
+    await this.ensureContract(organizationId, organizationName, ENTERPRISE_PLAN);
+  }
+}
+
+export default SpaceService;

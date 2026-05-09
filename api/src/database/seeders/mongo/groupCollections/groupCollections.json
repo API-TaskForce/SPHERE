@@ -1,0 +1,42 @@
+[
+  {
+    "_id": { "$oid": "6800000000000000000003c1" },
+    "_groupId": { "$oid": "6800000000000000000000b1" },
+    "_pricingCollectionId": { "$oid": "6787d0facaeb2b25748bc12a" },
+    "_organizationId": { "$oid": "6800000000000000000000a2" },
+    "accessRole": "editor",
+    "createdAt": { "$date": "2026-01-12T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "6800000000000000000003c2" },
+    "_groupId": { "$oid": "6800000000000000000000b3" },
+    "_pricingCollectionId": { "$oid": "6787d0facaeb2b25748bc12a" },
+    "_organizationId": { "$oid": "6800000000000000000000a2" },
+    "accessRole": "viewer",
+    "createdAt": { "$date": "2026-01-17T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "6800000000000000000003c3" },
+    "_groupId": { "$oid": "6800000000000000000000b4" },
+    "_pricingCollectionId": { "$oid": "6787d0facaeb2b25748bc12a" },
+    "_organizationId": { "$oid": "6800000000000000000000a1" },
+    "accessRole": "editor",
+    "createdAt": { "$date": "2026-01-06T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "6800000000000000000003c4" },
+    "_groupId": { "$oid": "6800000000000000000000b1" },
+    "_pricingCollectionId": { "$oid": "6787d0facaeb2b25748bc12b" },
+    "_organizationId": { "$oid": "6800000000000000000000a2" },
+    "accessRole": "editor",
+    "createdAt": { "$date": "2026-01-12T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "6800000000000000000003c5" },
+    "_groupId": { "$oid": "6800000000000000000000b2" },
+    "_pricingCollectionId": { "$oid": "6787d0facaeb2b25748bc12b" },
+    "_organizationId": { "$oid": "6800000000000000000000a2" },
+    "accessRole": "viewer",
+    "createdAt": { "$date": "2026-01-12T00:00:00.000Z" }
+  }
+]

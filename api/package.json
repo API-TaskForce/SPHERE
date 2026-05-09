@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "npx tsc --project ./tsconfig.json",
-    "dev": "npx migrate up && npx tsx --tsconfig tsconfig.json src/backend.ts"
+    "dev": "export MINIZINC_PATH=${MINIZINC_PATH:-/Applications/MiniZincIDE.app/Contents/Resources} && export PATH=\"$MINIZINC_PATH:$PATH\" && npx migrate up && npx tsx --tsconfig tsconfig.json src/backend.ts",
+    "test": "vitest run --typecheck false"
   },
   "dependencies": {
+    "@cedar-policy/cedar-wasm": "^4.9.1",
     "@faker-js/faker": "^9.3.0",
     "@types/archiver": "^6.0.3",
     "@types/bcryptjs": "^2.4.6",
@@ -37,6 +39,7 @@
     "pricing4ts": "^0.10.4",
     "prop-types": "^15.8.1",
     "redis": "^4.7.0",
+    "space-node-client": "^0.3.0",
     "supertest": "^7.0.0",
     "unzipper": "^0.12.3",
     "uuid": "^10.0.0"

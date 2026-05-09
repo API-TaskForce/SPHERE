@@ -1,11 +1,13 @@
 import { useCallback, useMemo } from 'react';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { useOrgFetch } from '../../organization/hooks/useOrganization';
 import { FilterValues } from '../pages/list';
 
 export const PRICINGS_BASE_PATH = import.meta.env.VITE_API_URL + '/pricings';
 
 export function usePricingsApi() {
   const { fetchWithInterceptor, authUser } = useAuth();
+  const { fetchWithOrgContext } = useOrgFetch();
   const token = authUser?.token;
   const username = authUser?.user?.username;
 
@@ -14,7 +16,7 @@ export function usePricingsApi() {
     Authorization: `Bearer ${token}`,
   }), [token]);
 
-  const getPricings = useCallback(async (filters: Record<string, string | FilterValues | number> = {}) => {
+  const getPricings = useCallback(async (filters: Record<string, string | FilterValues | number> = {}, orgId?: string) => {
     let requestUrl;
 
     if (Object.keys(filters).length === 0) {
@@ -48,9 +50,12 @@ export function usePricingsApi() {
       requestUrl = `${PRICINGS_BASE_PATH}?${filterParams.toString()}`;
     }
 
+    const headers: Record<string, string> = { ...basicHeaders };
+    if (orgId) headers['X-Organization-Id'] = orgId;
+
     return fetch(requestUrl as string, {
       method: 'GET',
-      headers: basicHeaders,
+      headers,
     })
       .then(response => {
         if (!response.ok) {
@@ -65,7 +70,11 @@ export function usePricingsApi() {
   }, [basicHeaders]);
 
   const getPricingByName = useCallback(async (name: string, owner: string, collectionName: string | null) => {
-    return fetch(
+    // fetchWithOrgContext is required so the backend's orgContext middleware resolves
+    // the correct organization instead of defaulting to the personal org. Without the
+    // X-Organization-Id header the query filters by personal-org and misses pricings
+    // that are scoped to a team org (e.g. pricings assigned to a group).
+    return fetchWithOrgContext(
       `${PRICINGS_BASE_PATH}/${owner}/${name}${
         collectionName && collectionName !== 'undefined' ? `?collectionName=${collectionName}` : ''
       }`,
@@ -84,10 +93,10 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [basicHeaders]);
+  }, [fetchWithOrgContext, basicHeaders]);
 
   const getLoggedUserPricings = useCallback(async () => {
-    return fetchWithInterceptor(`${import.meta.env.VITE_API_URL}/me/pricings`, {
+    return fetchWithOrgContext(`${import.meta.env.VITE_API_URL}/me/pricings`, {
       method: 'GET',
       headers: basicHeaders,
     })
@@ -101,18 +110,21 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders]);
+  }, [fetchWithOrgContext, basicHeaders]);
 
   const getConfigurationSpace = useCallback(async (pricingId: string, limit?: number, offset?: number) => {
-    
     const params = new URLSearchParams();
 
     if (limit !== undefined) params.set('limit', limit.toString());
     if (offset !== undefined) params.set('offset', offset.toString());
 
-    const queryString = params.toString(); 
-    
-    return fetchWithInterceptor(
+    const queryString = params.toString();
+
+    // fetchWithOrgContext is required: the backend's checkCedar('readPricing') resolves
+    // authorization against req.organizationId. Without X-Organization-Id the org context
+    // defaults to the personal org, which causes Cedar to deny access for pricings that
+    // belong to a team organization.
+    return fetchWithOrgContext(
       `${PRICINGS_BASE_PATH}/${pricingId}/configuration-space${queryString ? `?${queryString}` : ''}`,
       {
         method: 'GET',
@@ -132,8 +144,16 @@ export function usePricingsApi() {
       });
   }, [fetchWithInterceptor, basicHeaders]);
 
-  const createPricing = useCallback(async (formData: FormData, setErrors: (errors: string[]) => void = () => {}) => {
-    return fetchWithInterceptor(PRICINGS_BASE_PATH, {
+  const createPricing = useCallback(async (formData: FormData, setErrors: (errors: string[]) => void = () => {}, orgId?: string) => {
+    const fetchFn = orgId
+      ? (url: RequestInfo | URL, opts?: RequestInit) =>
+          fetchWithInterceptor(url, {
+            ...opts,
+            headers: { ...(opts?.headers as Record<string, string>), 'X-Organization-Id': orgId },
+          })
+      : fetchWithOrgContext;
+
+    return fetchFn(PRICINGS_BASE_PATH, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -141,21 +161,22 @@ export function usePricingsApi() {
       body: formData,
     })
       .then(async response => {
-        const parsedResponse = await response.json();
+        const parsedResponse = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(parsedResponse.error);
+          throw new Error((parsedResponse as any).error ?? 'Failed to create pricing');
         }
 
         return parsedResponse;
       })
       .catch((error: Error) => {
         setErrors([error.message]);
+        throw error;
       });
-  }, [fetchWithInterceptor, token]);
+  }, [fetchWithOrgContext, token]);
 
   const addPricingToCollection = useCallback(async (pricingName: string, collectionId: string) => {
-    return fetchWithInterceptor(`${import.meta.env.VITE_API_URL}/me/pricings`, {
+    return fetchWithOrgContext(`${import.meta.env.VITE_API_URL}/me/pricings`, {
       method: 'PUT',
       headers: basicHeaders,
       body: JSON.stringify({ pricingName, collectionId }),
@@ -170,11 +191,11 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders]);
+  }, [fetchWithOrgContext, basicHeaders]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updatePricing = useCallback((pricingName: string, pricingData: any) => {
-    return fetchWithInterceptor(`${PRICINGS_BASE_PATH}/${username}/${pricingName}`, {
+    return fetchWithOrgContext(`${PRICINGS_BASE_PATH}/${username}/${pricingName}`, {
       method: 'PUT',
       headers: basicHeaders,
       body: JSON.stringify(pricingData),
@@ -189,7 +210,7 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders, username]);
+  }, [fetchWithOrgContext, basicHeaders, username]);
 
   const updateClientPricingVersion = useCallback(async (pricingString: string) => {
     return fetchWithInterceptor(`${PRICINGS_BASE_PATH}`, {
@@ -210,7 +231,7 @@ export function usePricingsApi() {
   }, [fetchWithInterceptor, basicHeaders]);
 
   const removePricingVersion = useCallback(async (pricingName: string, pricingVersion: string) => {
-    return fetchWithInterceptor(
+    return fetchWithOrgContext(
       `${PRICINGS_BASE_PATH}/${username}/${pricingName}/${pricingVersion}`,
       {
         method: 'DELETE',
@@ -227,10 +248,10 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders, username]);
+  }, [fetchWithOrgContext, basicHeaders, username]);
 
   const removePricingFromCollection = useCallback(async (pricingName: string) => {
-    return fetchWithInterceptor(
+    return fetchWithOrgContext(
       `${import.meta.env.VITE_API_URL}/me/collections/pricings/${pricingName}`,
       {
         method: 'DELETE',
@@ -247,10 +268,113 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
+  }, [fetchWithOrgContext, basicHeaders]);
+
+  const getAllByOwner = useCallback(async () => {
+    return fetchWithInterceptor(`${import.meta.env.VITE_API_URL}/me/pricings/all`, {
+      method: 'GET',
+      headers: basicHeaders,
+    })
+      .then(response => {
+        if (!response.ok) return Promise.reject(response);
+        return response.json();
+      })
+      .catch(error => Promise.reject(error as Error));
   }, [fetchWithInterceptor, basicHeaders]);
 
-  const removePricingByName = useCallback(async (name: string, collectionName?: string) => {
+  const assignPricingToOrg = useCallback(async (organizationId: string, pricingId: string) => {
     return fetchWithInterceptor(
+      `${import.meta.env.VITE_API_URL}/organizations/${organizationId}/pricings/assign`,
+      {
+        method: 'POST',
+        headers: basicHeaders,
+        body: JSON.stringify({ pricingId }),
+      }
+    )
+      .then(async response => {
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error((err as any).error ?? 'Failed to assign pricing to organization');
+        }
+        return response.json();
+      })
+      .catch(error => Promise.reject(error as Error));
+  }, [fetchWithInterceptor, basicHeaders]);
+
+  const createGroupPricing = useCallback(async (groupId: string, formData: FormData) => {
+    return fetchWithOrgContext(`${import.meta.env.VITE_API_URL}/groups/${groupId}/pricings`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    })
+      .then(async response => {
+        const parsed = await response.json();
+        if (!response.ok) throw new Error(parsed.error);
+        return parsed;
+      })
+      .catch(error => Promise.reject(error as Error));
+  }, [fetchWithOrgContext, token]);
+
+  const assignExistingPricingToGroup = useCallback(async (groupId: string, pricingId: string) => {
+    return fetchWithOrgContext(`${import.meta.env.VITE_API_URL}/groups/${groupId}/pricings`, {
+      method: 'PUT',
+      headers: basicHeaders,
+      body: JSON.stringify({ pricingId }),
+    })
+      .then(async response => {
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error((err as any).error ?? 'Failed to assign pricing to group');
+        }
+        return response.json();
+      })
+      .catch(error => Promise.reject(error as Error));
+  }, [fetchWithOrgContext, basicHeaders]);
+
+  const removeGroupPricing = useCallback(async (groupId: string, pricingId: string) => {
+    return fetchWithOrgContext(`${import.meta.env.VITE_API_URL}/groups/${groupId}/pricings/${pricingId}`, {
+      method: 'DELETE',
+      headers: basicHeaders,
+    })
+      .then(async response => {
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error((err as any).error ?? 'Failed to remove pricing from group');
+        }
+        return response.json();
+      })
+      .catch(error => Promise.reject(error as Error));
+  }, [fetchWithOrgContext, basicHeaders]);
+
+  const removeOrgPricing = useCallback(async (orgId: string, owner: string, pricingName: string) => {
+    return fetchWithOrgContext(
+      `${import.meta.env.VITE_API_URL}/organizations/${orgId}/pricings/${owner}/${pricingName}`,
+      { method: 'DELETE', headers: basicHeaders }
+    )
+      .then(async response => {
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error((err as any).error ?? 'Failed to remove pricing from organization');
+        }
+        return response.json();
+      })
+      .catch(error => Promise.reject(error as Error));
+  }, [fetchWithOrgContext, basicHeaders]);
+
+  const getGroupPricings = useCallback(async (groupId: string) => {
+    return fetchWithOrgContext(`${import.meta.env.VITE_API_URL}/groups/${groupId}/pricings`, {
+      method: 'GET',
+      headers: basicHeaders,
+    })
+      .then(response => {
+        if (!response.ok) return Promise.reject(response);
+        return response.json();
+      })
+      .catch(error => Promise.reject(error as Error));
+  }, [fetchWithOrgContext, basicHeaders]);
+
+  const removePricingByName = useCallback(async (name: string, collectionName?: string) => {
+    return fetchWithOrgContext(
       `${PRICINGS_BASE_PATH}/${username}/${name}${
         collectionName ? `?collectionName=${collectionName}` : ''
       }`,
@@ -270,7 +394,7 @@ export function usePricingsApi() {
       .catch(error => {
         return Promise.reject(error as Error);
       });
-  }, [fetchWithInterceptor, basicHeaders, username]);
+  }, [fetchWithOrgContext, basicHeaders, username]);
 
   return useMemo(
     () => ({
@@ -285,6 +409,13 @@ export function usePricingsApi() {
       updatePricing,
       updateClientPricingVersion,
       removePricingVersion,
+      getAllByOwner,
+      assignPricingToOrg,
+      createGroupPricing,
+      assignExistingPricingToGroup,
+      getGroupPricings,
+      removeGroupPricing,
+      removeOrgPricing,
     }),
     [
       getPricings,
@@ -298,6 +429,13 @@ export function usePricingsApi() {
       updatePricing,
       updateClientPricingVersion,
       removePricingVersion,
+      getAllByOwner,
+      assignPricingToOrg,
+      createGroupPricing,
+      assignExistingPricingToGroup,
+      getGroupPricings,
+      removeGroupPricing,
+      removeOrgPricing,
     ]
   );
 }

@@ -6,6 +6,7 @@ import type { Server } from "http";
 import type { AddressInfo } from "net";
 import { disconnectMongoose, initMongoose } from "./config/mongoose";
 import { seedDatabase } from "./database/seeders/mongo/seeder";
+import { provisionEnterpriseContractsForSeededOrgs } from "./database/seeders/mongo/provision-space-contracts";
 import { initRedis } from "./config/redis";
 import container from "./config/container";
 
@@ -57,6 +58,8 @@ const initializeDatabase = async () => {
         connection = await initMongoose();
         if (process.env.ENVIRONMENT === "development") {
           await seedDatabase();
+          const provisionedOrgs = await provisionEnterpriseContractsForSeededOrgs();
+          console.log(`  ${green}➜${reset}  ${bold}SPACE:${reset}   ENTERPRISE contracts provisioned for ${provisionedOrgs} organizations`);
         }
         break
       default:

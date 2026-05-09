@@ -4,6 +4,7 @@ import PricingService from '../services/PricingService.js';
 import { CollectionIndexQueryParams } from '../types/services/PricingCollection.js';
 import path from 'path';
 import archiver from 'archiver';
+import { revertPendingSpaceEvals } from '../middlewares/SpacePlanMiddleware.js';
 
 class PricingCollectionController {
   private readonly pricingCollectionService: PricingCollectionService;
@@ -21,11 +22,15 @@ class PricingCollectionController {
     this.generateAnalytics = this.generateAnalytics.bind(this);
     this.update = this.update.bind(this);
     this.destroy = this.destroy.bind(this);
+    this.getAllByUser = this.getAllByUser.bind(this);
+    this.assignToOrg = this.assignToOrg.bind(this);
+    this.removeFromOrg = this.removeFromOrg.bind(this);
   }
 
   async index(req: any, res: any) {
     try {
       const queryParams: CollectionIndexQueryParams = this._transformIndexQueryParams(req.query);
+      queryParams.organizationId = req.organizationId;
 
       const result = await this.pricingCollectionService.index(queryParams);
       // result contains { collections, total }
@@ -39,7 +44,8 @@ class PricingCollectionController {
     try {
       const collection = await this.pricingCollectionService.showByNameAndUserId(
         req.params.collectionName,
-        req.params.userId
+        req.params.userId,
+        req.organizationId
       );
       res.json(collection);
     } catch (err: any) {
@@ -53,7 +59,10 @@ class PricingCollectionController {
 
   async showByUserId(req: any, res: any) {
     try {
-      const collections = await this.pricingCollectionService.showByUserId(req.user.id);
+      const collections = await this.pricingCollectionService.showByUserId(
+        req.user.id,
+        req.organizationId
+      );
       res.json({ collections: collections });
     } catch (err: any) {
       res.status(500).send({ error: err.message });
@@ -66,7 +75,8 @@ class PricingCollectionController {
       const userId = req.params.userId;
       const collection = await this.pricingCollectionService.showByNameAndUserId(
         collectionName,
-        userId
+        userId,
+        req.organizationId
       );
       const pricings = await this.pricingService.indexByCollection(collection._id.toString());
       const pricingsToDownload = pricings.map(pricing => pricing.yaml);
@@ -108,7 +118,6 @@ class PricingCollectionController {
         throw new Error(err);
       });
       archive.finalize();
-
     } catch (err: any) {
       res.status(500).send({ error: err.message });
     }
@@ -119,14 +128,17 @@ class PricingCollectionController {
       const pricing = await this.pricingCollectionService.create(
         req.body,
         req.user.id,
-        req.user.username
+        req.user.username,
+        req.organizationId,
+        req.params.groupId
       );
       res.json(pricing);
     } catch (err: any) {
+      // Revert SPACE usage counter incremented by checkSpacePlan('collections', 1)
+      await revertPendingSpaceEvals(req);
       const msg = (err as Error).message || '';
-      if (msg.includes('Ya existe una colección')) {
-        res.status(409).send({ error: msg });
-        return;
+      if (msg.toLowerCase().includes('already exists')) {
+        return res.status(409).send({ error: msg });
       }
       res.status(500).send({ error: msg });
     }
@@ -134,18 +146,27 @@ class PricingCollectionController {
 
   async bulkCreate(req: any, res: any) {
     try {
+      if (!req.file) {
+        return res.status(400).send({ error: 'A ZIP file is required.' });
+      }
+      if (!req.body?.name?.trim()) {
+        return res.status(400).send({ error: 'Collection name is required.' });
+      }
       const [collection, pricingsWithErrors] = await this.pricingCollectionService.bulkCreate(
         req.file,
         req.body,
         req.user.id,
-        req.user.username
+        req.user.username,
+        req.organizationId,
+        req.params.groupId
       );
-      res.json({collection, pricingsWithErrors});
+      res.json({ collection, pricingsWithErrors });
     } catch (err: any) {
+      // Revert SPACE usage counter incremented by checkSpacePlan('collections', 1)
+      await revertPendingSpaceEvals(req);
       const msg = (err as Error).message || '';
-      if (msg.includes('Ya existe una colección')) {
-        res.status(409).send({ error: msg });
-        return;
+      if (msg.toLowerCase().includes('already exists')) {
+        return res.status(409).send({ error: msg });
       }
       res.status(500).send({ error: msg });
     }
@@ -156,13 +177,14 @@ class PricingCollectionController {
       try {
         await this.pricingCollectionService.generateCollectionAnalytics(
           req.params.collectionName,
-          req.user.id
+          req.user.id,
+          req.organizationId
         );
         res.status(200).send({ message: 'Analytics generated successfully.' });
       } catch (err: any) {
-        res.status(500).send({ error: err.message});
+        res.status(500).send({ error: err.message });
       }
-    }else{
+    } else {
       res.status(403).send({ error: 'This collection is not yours.' });
     }
   }
@@ -172,7 +194,8 @@ class PricingCollectionController {
       const collection = await this.pricingCollectionService.update(
         req.params.collectionName,
         req.user.id,
-        req.body
+        req.body,
+        req.organizationId
       );
       await this.pricingService.updatePricingsCollectionName(
         req.params.collectionName,
@@ -194,12 +217,52 @@ class PricingCollectionController {
       const result = await this.pricingCollectionService.destroy(
         req.params.collectionName,
         req.user.id,
-        deleteCascade
+        deleteCascade,
+        false,
+        req.organizationId
       );
       const message = result ? 'Successfully deleted.' : 'Could not delete collection.';
       res.json({ message: message });
     } catch (err: any) {
       res.status(400).send({ error: err.message });
+    }
+  }
+
+  async getAllByUser(req: any, res: any) {
+    try {
+      const collections = await this.pricingCollectionService.getAllByUser(req.user.id);
+      res.json({ collections });
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async removeFromOrg(req: any, res: any) {
+    try {
+      await this.pricingCollectionService.removeFromOrg(req.params.collectionId);
+      res.json({ message: 'Collection removed from organization.' });
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
+    }
+  }
+
+  async assignToOrg(req: any, res: any) {
+    try {
+      const { collectionId } = req.body;
+      await this.pricingCollectionService.assignToOrg(collectionId, req.params.organizationId, req.user.id);
+      res.json({ message: 'Collection assigned to organization.' });
+    } catch (err: any) {
+      if (err.message.toLowerCase().includes('not found')) {
+        res.status(404).send({ error: err.message });
+      } else if (err.message.toLowerCase().includes('do not own')) {
+        res.status(403).send({ error: err.message });
+      } else {
+        res.status(500).send({ error: err.message });
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Feature, On, Default, Loading } from 'space-react-client';
 import VisibilityOptions from '../../../pricing/components/visibility-options';
 import CollectionNameInput from '../collection-name-input';
 import CollectionDescriptionInput from '../collection-description-input';
@@ -8,6 +9,7 @@ import { useRouter } from '../../../core/hooks/useRouter';
 import FileUpload from '../../../core/components/file-upload-input';
 import customAlert from '../../../core/utils/custom-alert';
 import customConfirm from '../../../core/utils/custom-confirm';
+import UpgradeBanner from '../../../space/components/UpgradeBanner';
 
 export type CreateCollectionFormProps = {
   readonly setShowLoading: (show: boolean) => void;
@@ -24,6 +26,10 @@ export default function CreateCollectionForm({setShowLoading}: CreateCollectionF
   const router = useRouter();
 
   const handleSubmit = (file?: File | null) => {
+    if (!collectionName.trim()) {
+      customAlert('Collection name is required.');
+      return;
+    }
 
     const fileToUpload = file instanceof File ? file : null;
 
@@ -135,14 +141,24 @@ export default function CreateCollectionForm({setShowLoading}: CreateCollectionF
           </div>
         </>
       ) : (
-        <FileUpload
-          onSubmit={handleSubmit}
-          submitButtonText="Add Collection"
-          submitButtonWidth={400}
-          isDragActiveText="Drop a .zip file containing all the pricings of the collection"
-          isNotDragActiveText="Drag and drop a .zip file containing all the pricings of the collection"
-          accept={{ 'application/zip': ['.zip'] }}
-        />
+        <Feature id="sphere-bulkImport">
+          <On>
+            <FileUpload
+              onSubmit={handleSubmit}
+              submitButtonText="Add Collection"
+              submitButtonWidth={400}
+              isDragActiveText="Drop a .zip file containing all the pricings of the collection"
+              isNotDragActiveText="Drag and drop a .zip file containing all the pricings of the collection"
+              accept={{ 'application/zip': ['.zip'] }}
+            />
+          </On>
+          <Default>
+            <UpgradeBanner feature="Bulk Import" />
+          </Default>
+          <Loading>
+            <div className="h-32 animate-pulse rounded-lg bg-slate-100" />
+          </Loading>
+        </Feature>
       )}
     </form>
   );

@@ -4,13 +4,16 @@ import { UserRepository } from "../types/repositories/UserRepository";
 import { processFileUris } from "./FileService";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import OrganizationService from "./OrganizationService";
 
 class UserService {
-    
+
     private userRepository: UserRepository;
+    private organizationService: OrganizationService;
 
     constructor () {
       this.userRepository = container.resolve('userRepository');
+      this.organizationService = container.resolve('organizationService');
     }
 
     _createUserTokenDTO () {
@@ -27,6 +30,9 @@ class UserService {
 
       const registeredUser = await this.userRepository.create(newUser)
       // processFileUris(registeredUser, ['avatar'])
+
+      await this.organizationService.createPersonal(registeredUser.id, registeredUser.username)
+
       return registeredUser
     }
   
@@ -36,6 +42,21 @@ class UserService {
   
     async registerAdmin (data: any) {
       return this._register(data, 'admin')
+    }
+
+    async _ensurePersonalOrg (userId: string, username: string) {
+      const orgs = await this.organizationService.indexByUser(userId)
+      const hasPersonal = orgs.some((o: any) => o.isPersonal)
+      if (!hasPersonal) {
+        try {
+          await this.organizationService.createPersonal(userId, username)
+        } catch (err: any) {
+          // Concurrent request already created the personal org — not an error
+          if (err.code !== 11000 && !err.message?.includes('duplicate')) {
+            throw err
+          }
+        }
+      }
     }
 
     async loginByToken (token: string) {
@@ -84,6 +105,7 @@ class UserService {
         throw new Error('Invalid credentials')
       }
       const updatedUser = await this.userRepository.updateToken(user.id, this._createUserTokenDTO())
+      await this._ensurePersonalOrg(updatedUser!.id, updatedUser!.username)
       processFileUris(updatedUser, ['avatar'])
       return updatedUser
     }
@@ -144,6 +166,20 @@ class UserService {
   
     async exists (id: string) {
       return await this.userRepository.findById(id)
+    }
+
+    async findByUsername (username: string) {
+      const user = await (this.userRepository as any).findUserByUsernamePublic(username);
+      if (!user) {
+        throw new Error('User not found');
+      }
+      return {
+        id: user.id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar ?? null,
+      };
     }
   }
   

@@ -1,11 +1,12 @@
 import { IoMdAddCircleOutline } from 'react-icons/io';
 import { FaSortAlphaDown, FaSortAlphaUpAlt } from "react-icons/fa";
 import { usePricingCollectionsApi } from '../../api/pricingCollectionsApi';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from '../../../core/hooks/useRouter';
 import CollectionsGrid from '../collections-grid';
 import AddPricingToCollectionModal from '../add-pricing-to-collection-modal';
 import { useAuth } from '../../../auth/hooks/useAuth';
+import { useOrganization } from '../../../organization/hooks/useOrganization';
 
 export default function CollectionSection({
   pricingToAdd,
@@ -25,6 +26,8 @@ export default function CollectionSection({
 
   const { getLoggedUserCollections } = usePricingCollectionsApi();
   const { authUser } = useAuth();
+  const { activeOrganization, isLoading: isOrgLoading } = useOrganization();
+  const getLoggedUserCollectionsRef = useRef(getLoggedUserCollections);
   const router = useRouter();
 
   function handleAddCollection() {
@@ -41,11 +44,24 @@ export default function CollectionSection({
   };
 
   useEffect(() => {
-    if (!authUser.isAuthenticated) {
+    getLoggedUserCollectionsRef.current = getLoggedUserCollections;
+  }, [getLoggedUserCollections]);
+
+  useEffect(() => {
+    setCollections([]);
+  }, [activeOrganization?.id]);
+
+  useEffect(() => {
+    if (authUser.isLoading || !authUser.isAuthenticated || isOrgLoading || !activeOrganization?.id) {
       return;
     }
-    getLoggedUserCollections()
+
+    let isCurrentRequest = true;
+
+    getLoggedUserCollectionsRef.current()
       .then(data => {
+        if (!isCurrentRequest) return;
+
         if (data.error) {
           throw new Error(data.error);
         } else if (data.collections) {
@@ -53,9 +69,20 @@ export default function CollectionSection({
         }
       })
       .catch(error => {
+        if (!isCurrentRequest) return;
         console.error('Cannot GET collections. Error:', error);
       });
-  }, [renderFlag, authUser]);
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [
+    renderFlag,
+    authUser.isLoading,
+    authUser.isAuthenticated,
+    isOrgLoading,
+    activeOrganization?.id,
+  ]);
 
   const sortedCollections = useMemo(() => {
     return [...collections].sort((a, b) => {

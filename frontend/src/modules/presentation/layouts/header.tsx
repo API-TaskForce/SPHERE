@@ -7,6 +7,7 @@ import DesktopHeaderItems from './components/desktop-header-items';
 import { headerRoutes } from './router/header-routes';
 import { useRouter } from '../../core/hooks/useRouter';
 import { useResponsive } from '../../core/hooks/useResponsive';
+import OrgSelector from './components/org-selector';
 
 const Header = ({
   setUploadModalOpen,
@@ -35,6 +36,13 @@ const Header = ({
       name: 'My Datasheets',
       onClick: () => {
         router.push('/me/datasheets');
+        handleCloseUserMenu();
+      },
+    },
+    {
+      name: 'My Organizations',
+      onClick: () => {
+        router.push('/me/organizations');
         handleCloseUserMenu();
       },
     },
@@ -110,6 +118,8 @@ const Header = ({
           )}
 
           <div className="flex items-center gap-2">
+            {authUser.isAuthenticated && <OrgSelector />}
+
             <div className="hidden items-center gap-4 md:flex">
               {authUser.isAuthenticated ? (
                 <div ref={userMenuContainerRef} className="relative">

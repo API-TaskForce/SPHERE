@@ -12,20 +12,21 @@ import { calculateAnalyticsForPricings } from '../utils/pricing-collections-util
 class PricingCollectionService {
   private readonly pricingCollectionRepository: PricingCollectionRepository;
   private readonly pricingRepository: PricingRepository;
+  private readonly groupCollectionRepository: any;
 
   constructor() {
     this.pricingCollectionRepository = container.resolve('pricingCollectionRepository');
     this.pricingRepository = container.resolve('pricingRepository');
+    this.groupCollectionRepository = container.resolve('groupCollectionRepository');
   }
 
   async index(queryParams: CollectionIndexQueryParams) {
     const result = await this.pricingCollectionRepository.findAll(queryParams);
-    // result is { collections, total }
     return result;
   }
 
-  async showByNameAndUserId(name: string, userId: string) {
-    const collection = await this.pricingCollectionRepository.findByNameAndUserId(name, userId);
+  async showByNameAndUserId(name: string, userId: string, organizationId?: string) {
+    const collection = await this.pricingCollectionRepository.findByNameAndUserId(name, userId, organizationId);
     if (!collection) {
       throw new Error('Pricing collection not found');
     }
@@ -33,8 +34,8 @@ class PricingCollectionService {
     return collection;
   }
 
-  async showByUserId(userId: string) {
-    const collections = await this.pricingCollectionRepository.findByUserId(userId);
+  async showByUserId(userId: string, organizationId: string) {
+    const collections = await this.pricingCollectionRepository.findByUserId(userId, organizationId);
 
     return collections;
   }
@@ -48,10 +49,30 @@ class PricingCollectionService {
     return collection;
   }
 
-  async create(newCollection: any, userId: string, username: string) {
+  async create(
+    newCollection: any,
+    userId: string,
+    username: string,
+    organizationId: string,
+    groupId?: string
+  ) {
     let collection: any;
     try {
+      const existingCollection = await this.pricingCollectionRepository.findByNameAndUserId(
+        newCollection.name,
+        userId,
+        organizationId
+      );
+      if (existingCollection) {
+        throw new Error('A collection with this name already exists. Please choose another name.');
+      }
+
       newCollection._ownerId = new mongoose.Types.ObjectId(userId);
+      newCollection._organizationId = new mongoose.Types.ObjectId(organizationId);
+      if (groupId) {
+        newCollection._groupId = new mongoose.Types.ObjectId(groupId);
+      }
+
       newCollection.analytics = {
         evolutionOfPlans: {
           dates: [],
@@ -79,15 +100,32 @@ class PricingCollectionService {
         newCollection.pricings
       );
 
+      if (groupId) {
+        await this.groupCollectionRepository.create({
+          _groupId: groupId,
+          _pricingCollectionId: collection._id,
+          _organizationId: organizationId,
+          accessRole: 'editor',
+          createdAt: new Date(),
+        });
+      }
+
       await this.updateCollectionAnalytics(collection._id.toString());
 
       return collection;
     } catch (err) {
-      await this._handleCollectionCreationError(err as Error, collection, newCollection, userId);
+      await this._handleCollectionCreationError(err as Error, collection, newCollection, userId, organizationId);
     }
   }
 
-  async bulkCreate(file: any, newCollectionData: any, userId: string, username: string) {
+  async bulkCreate(
+    file: any,
+    newCollectionData: any,
+    userId: string,
+    username: string,
+    organizationId: string,
+    groupId?: string
+  ) {
     let collection: any;
     try {
       const extractPath = this._getExtractPath(userId, newCollectionData.name);
@@ -96,9 +134,20 @@ class PricingCollectionService {
       const extractedFiles = await decompressZip(zipPath, extractPath);
 
       newCollectionData._ownerId = new mongoose.Types.ObjectId(userId);
+      newCollectionData._organizationId = new mongoose.Types.ObjectId(organizationId);
 
       // Create collection and keep reference so we only attempt cleanup if it was created
       collection = await this.pricingCollectionRepository.create(newCollectionData);
+
+      if (groupId) {
+        await this.groupCollectionRepository.create({
+          _groupId: groupId,
+          _pricingCollectionId: collection._id,
+          _organizationId: organizationId,
+          accessRole: 'editor',
+          createdAt: new Date(),
+        });
+      }
 
       const pricingDatas = [];
       const pricingsWithErrors = [];
@@ -125,6 +174,7 @@ class PricingCollectionService {
               uploadedPricing.saasName.split(' ')[0].slice(1).toLowerCase(),
             version: uploadedPricing.version,
             _collectionId: collection._id,
+            _organizationId: new mongoose.Types.ObjectId(organizationId),
             owner: username,
             currency: uploadedPricing.currency,
             extractionDate: new Date(uploadedPricing.createdAt),
@@ -135,7 +185,9 @@ class PricingCollectionService {
           pricingDatas.push(pricingData);
         } catch (err) {
           pricingsWithErrors.push({
-            name: `${pricing.split('/')[pricing.split('/').length - 2]}/${pricing.split('/')[pricing.split('/').length - 1]}`,
+            name: `${pricing.split('/')[pricing.split('/').length - 2]}/${
+              pricing.split('/')[pricing.split('/').length - 1]
+            }`,
             error: err,
           });
         }
@@ -151,16 +203,18 @@ class PricingCollectionService {
         err as Error,
         collection,
         newCollectionData,
-        userId
+        userId,
+        organizationId
       );
     }
   }
 
-  async generateCollectionAnalytics(collectionName: string, ownerId: string) {
+  async generateCollectionAnalytics(collectionName: string, ownerId: string, organizationId?: string) {
     try {
       const collectionPricings = await this.pricingCollectionRepository.findCollectionPricings(
         collectionName,
-        ownerId
+        ownerId,
+        organizationId
       );
       if (!collectionPricings) {
         throw new Error('Collection not found');
@@ -178,10 +232,11 @@ class PricingCollectionService {
     }
   }
 
-  async update(collectionName: string, ownerId: string, data: any) {
+  async update(collectionName: string, ownerId: string, data: any, organizationId?: string) {
     const collection = await this.pricingCollectionRepository.findByNameAndUserId(
       collectionName,
-      ownerId
+      ownerId,
+      organizationId
     );
     if (!collection) {
       throw new Error('Either the collection does not exist or you are not its owner');
@@ -219,11 +274,13 @@ class PricingCollectionService {
     collectionName: string,
     ownerId: string,
     deleteCascade: boolean,
-    ignoreResult: boolean = false
+    ignoreResult: boolean = false,
+    organizationId?: string
   ) {
     const collection = await this.pricingCollectionRepository.findByNameAndUserId(
       collectionName,
-      ownerId
+      ownerId,
+      organizationId
     );
     if (!collection) {
       throw new Error('Either the collection does not exist or you are not its owner');
@@ -236,7 +293,7 @@ class PricingCollectionService {
         collection._id.toString()
       );
 
-      fs.rmdirSync(this._getExtractPath(ownerId, collectionName), { recursive: true });
+      fs.rmSync(this._getExtractPath(ownerId, collectionName), { recursive: true, force: true });
     } else {
       await this.pricingRepository.removePricingsFromCollection(collection._id.toString());
       result = await this.pricingCollectionRepository.destroy(collection._id.toString());
@@ -255,12 +312,14 @@ class PricingCollectionService {
     if (collectionPricings.length === 0) return null;
 
     // Compute the new average analytics
+    const metric = (pricing: any, key: string) => pricing.analytics?.[key] ?? 0;
+
     const aggregated = collectionPricings.reduce(
       (acc: any, pricing: any) => {
-        acc.numberOfPlans += pricing.analytics.numberOfPlans / numberOfPricings;
-        acc.numberOfAddOns += pricing.analytics.numberOfAddOns / numberOfPricings;
-        acc.configurationSpaceSize += pricing.analytics.configurationSpaceSize / numberOfPricings;
-        acc.numberOfFeatures += pricing.analytics.numberOfFeatures / numberOfPricings;
+        acc.numberOfPlans += metric(pricing, 'numberOfPlans') / numberOfPricings;
+        acc.numberOfAddOns += metric(pricing, 'numberOfAddOns') / numberOfPricings;
+        acc.configurationSpaceSize += metric(pricing, 'configurationSpaceSize') / numberOfPricings;
+        acc.numberOfFeatures += metric(pricing, 'numberOfFeatures') / numberOfPricings;
         return acc;
       },
       {
@@ -286,28 +345,44 @@ class PricingCollectionService {
     return evolution;
   }
 
-  // async destroy (id: string) {
-  //   const result = await this.pricingRepository.destroy(id)
-  //   if (!result) {
-  //     throw new Error('Pricing not found')
-  //   }
-  //   return true
-  // }
-
   _getExtractPath(userId: string, collectionName: string) {
     return `${process.env.COLLECTIONS_FOLDER}/${userId}/${collectionName}`;
+  }
+
+  async removeFromOrg(collectionId: string) {
+    const collection = await this.pricingCollectionRepository.findById(collectionId);
+    if (!collection) throw new Error('Collection not found');
+    await this.pricingCollectionRepository.clearOrganizationId(collectionId);
+    return true;
+  }
+
+  async getAllByUser(userId: string) {
+    return this.pricingCollectionRepository.findAllByUserId(userId);
+  }
+
+  async assignToOrg(collectionId: string, organizationId: string, userId: string) {
+    const collection = await this.pricingCollectionRepository.findById(collectionId);
+    if (!collection) {
+      throw new Error('Collection not found');
+    }
+    if (collection._ownerId?.toString() !== userId && collection.owner?.id !== userId) {
+      throw new Error('You do not own this collection');
+    }
+    await this.pricingCollectionRepository.updateOrganizationId(collectionId, organizationId);
+    return true;
   }
 
   async _handleCollectionCreationError(
     err: Error,
     collection: any,
     newCollectionData: any,
-    userId: string
+    userId: string,
+    organizationId?: string
   ): Promise<Error> {
     // If a collection was created before the error, remove it (cleanup of partial state)
     try {
       if (collection?._id) {
-        await this.destroy(newCollectionData.name, userId, true, true);
+        await this.destroy(newCollectionData.name, userId, true, true, organizationId);
       }
     } catch (cleanupErr) {
       // If cleanup fails, log it but continue to throw the original error

@@ -1,40 +1,68 @@
 @startuml
 
+title Modelo de datos SPHERE actualizado
+
+skinparam shadowing false
+skinparam linetype polyline
+skinparam class {
+    BackgroundColor White
+    BorderColor #A0A0A0
+    ArrowColor #555555
+}
+
+legend top right
+|= Simbolo |= Significado |
+|<#FFFFFF>  | Sin cambios |
+|<#FFF2B6>  | Modificada |
+|<#C8E6C9>  | Nueva |
+endlegend
+
 ' Classes
-class User {
+class "«modificada»\nUser" as User #FFF2B6 {
     firstName: String
     lastName: String
     email: String
+    username: String
     password: String
     phone: String
     avatar: String [Optional]
     address: String [Optional]
     postalCode: String [Optional]
     userType: UserType
+    createdAt: Date
+    updatedAt: Date
 }
 
-class PricingCollection {
+class "«modificada»\nPricingCollection" as PricingCollection #FFF2B6 {
     name: String
-    lastUpdate: Date
+    description: String [Optional]
+    private: Boolean
 }
 
-class CollectionAnalytics {
-    evolutionOfPlans: double[][]
-    evolutionOfFeatures: double[][]
-    evolutionOfAddOns: double[][]
-    evolutionOfConfigurationSpaceSize: double[][]
+class "«modificada»\nCollectionAnalytics" as CollectionAnalytics #FFF2B6 {
+    evolutionOfPlans: ParameterEvolution [Optional]
+    evolutionOfFeatures: ParameterEvolution [Optional]
+    evolutionOfAddOns: ParameterEvolution [Optional]
+    evolutionOfConfigurationSpaceSize: ParameterEvolution [Optional]
 }
 
-class Pricing {
+class "«nueva»\nParameterEvolution" as ParameterEvolution #C8E6C9 {
+    dates: Date[]
+    values: Number[]
+}
+
+class "«modificada»\nPricing" as Pricing #FFF2B6 {
     name: String
+    owner: String
     version: String
     extractionDate: Date
     url: String [Optional]
     currency: String
     yaml: String
+    private: Boolean
 }
 
-class PricingAnalytics {
+class "«sin cambios»\nPricingAnalytics" as PricingAnalytics #FFFFFF {
     numberOfFeatures: integer
     numberOfInformationFeatures: integer
     numberOfIntegrationFeatures: integer
@@ -70,19 +98,101 @@ class PricingAnalytics {
     maxSubscriptionPrice: double
 }
 
-' Relationships
+class "«nueva»\nOrganization" as Organization #C8E6C9 {
+    name: String
+    displayName: String
+    description: String [Optional]
+    avatarUrl: String [Optional]
+    isPersonal: Boolean
+    createdAt: Date
+    updatedAt: Date
+}
 
+class "«nueva»\nOrganizationMembership" as OrganizationMembership #C8E6C9 {
+    role: OrgRole
+    joinedAt: Date
+}
+
+class "«nueva»\nOrganizationInvitation" as OrganizationInvitation #C8E6C9 {
+    code: String
+    expiresAt: Date [Optional]
+    maxUses: integer [Optional]
+    useCount: integer
+    createdAt: Date
+    updatedAt: Date
+}
+
+class "«nueva»\nGroup" as Group #C8E6C9 {
+    name: String
+    displayName: String [Optional]
+    description: String [Optional]
+    createdAt: Date
+    updatedAt: Date
+}
+
+class "«nueva»\nGroupMembership" as GroupMembership #C8E6C9 {
+    role: GroupRole
+    joinedAt: Date
+}
+
+class "«nueva»\nGroupCollection" as GroupCollection #C8E6C9 {
+    accessRole: GroupAccessRole [Optional]
+    createdAt: Date
+}
+
+' Relationships
 User "1" --> "0..*" Pricing : owns
 User "1" --> "0..*" PricingCollection : owns
+User "1" --> "0..*" OrganizationMembership : member of
+User "1" --> "0..*" GroupMembership : member of
+User "1" --> "0..*" OrganizationInvitation : creates
+
+Organization "0..1" <-- "0..*" Pricing : belongsTo
+Organization "1" --> "0..*" PricingCollection : contains
+Organization "1" --> "0..*" OrganizationMembership : has
+Organization "1" --> "0..*" OrganizationInvitation : has
+Organization "1" --> "0..*" Group : contains
+Organization "1" --> "0..*" GroupMembership : scopes
+Organization "1" --> "0..*" GroupCollection : scopes
+
+Group "0..1" <-- "0..*" Pricing : belongsTo
+Group "0..1" <-- "0..*" PricingCollection : createdIn
+Group "0..1" <-- "0..*" Group : parent of
+Group "1" --> "0..*" GroupMembership : has
+Group "1" --> "0..*" GroupCollection : gives access
+
+PricingCollection "0..1" <-- "0..*" Pricing : belongsTo
+PricingCollection "1" --> "0..*" GroupCollection : is accessed by
 PricingCollection *-- CollectionAnalytics
-PricingCollection "0..1" <-- "1..*" Pricing : belongsTo
+CollectionAnalytics *-- ParameterEvolution
 Pricing *-- PricingAnalytics
 
 ' Enums
-
-enum UserType {
-    ADMIN
-    USER
+enum "«modificada»\nUserType" as UserType #FFF2B6 {
+    user
+    admin
 }
+
+enum "«nueva»\nOrgRole" as OrgRole #C8E6C9 {
+    owner
+    admin
+    member
+}
+
+enum "«nueva»\nGroupRole" as GroupRole #C8E6C9 {
+    admin
+    editor
+    viewer
+}
+
+enum "«nueva»\nGroupAccessRole" as GroupAccessRole #C8E6C9 {
+    editor
+    viewer
+}
+
+User ..> UserType : type
+OrganizationMembership ..> OrgRole : role
+GroupMembership ..> GroupRole : role
+GroupCollection ..> GroupAccessRole : accessRole
 
 @enduml

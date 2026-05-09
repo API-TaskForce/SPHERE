@@ -2,6 +2,7 @@ import { Navigate, Outlet, useRoutes } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import LoadingView from '../modules/core/pages/loading';
 import PresentationLayout from '../modules/presentation/layouts';
+import OrgScopeProvider from '../modules/organization/components/OrgScopeProvider';
 
 export const HomePage = lazy(() => import('../modules/presentation/pages/home'));
 export const TeamPage = lazy(() => import('../modules/presentation/pages/team'));
@@ -30,6 +31,11 @@ import CreateDatasheetPage from '../modules/datasheet/pages/create';
 import DatasheetCollectionsListPage from '../modules/datasheet/pages/collections-list';
 import DatasheetCollectionCardPage from '../modules/datasheet/pages/collection-card';
 import DatasheetEditorPage from '../modules/datasheet/pages/editor';
+import OrganizationsListPage from '../modules/organization/pages/organizations-list';
+import CreateOrganizationPage from '../modules/organization/pages/create-organization';
+import OrganizationDetailPage from '../modules/organization/pages/organization-detail';
+import OrganizationJoinPage from '../modules/organization/pages/organization-join';
+import GroupDetailPage from '../modules/organization/pages/group-detail';
 
 
 export default function Router() {
@@ -64,6 +70,34 @@ export default function Router() {
         { element: <DatasheetCollectionCardPage />, path: "/datasheets/collections/:ownerId/:collectionName" },
         { element: <MyPricingsPage />, path: "/me/pricings" },
         { element: <MyDatasheetsPage />, path: "/me/datasheets" },
+        { element: <OrganizationsListPage />, path: "/me/organizations" },
+        { element: <CreateOrganizationPage />, path: "/organizations/new" },
+        { element: <OrganizationJoinPage />, path: "/organizations/join/:code" },
+        {
+          path: "/me/organizations/:orgName",
+          element: (
+            <OrgScopeProvider>
+              <Outlet />
+            </OrgScopeProvider>
+          ),
+          children: [
+            { element: <OrganizationDetailPage />, index: true },
+            { element: <GroupDetailPage />, path: "groups/:groupId" },
+          ],
+        },
+        {
+          path: "/orgs/:orgName",
+          element: (
+            <OrgScopeProvider>
+              <Outlet />
+            </OrgScopeProvider>
+          ),
+          children: [
+            { element: <MyPricingsPage />, path: "pricings" },
+            { element: <CollectionsListPage />, path: "collections" },
+            { element: <CollectionCardPage />, path: "collections/:ownerId/:collectionName" },
+          ],
+        },
         { element: <PricingAssistantPage />, path: "/harvey"},
         { element: <PricingAssistantPage playground />, path: "/harvey-play"}
       ],

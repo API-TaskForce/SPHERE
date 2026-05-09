@@ -1,0 +1,370 @@
+{
+  "info": {
+    "name": "SPHERE API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",   "value": "http://localhost:8080/api" },
+    { "key": "token",     "value": "" },
+    { "key": "orgId",     "value": "6800000000000000000000a2", "description": "acme-corp" },
+    { "key": "orgIdPersonal", "value": "6800000000000000000000a1", "description": "sphere (personal)" },
+    { "key": "groupId",   "value": "6800000000000000000000b1", "description": "engineering" },
+    { "key": "userId",    "value": "63f74bf8eeed64054274b529", "description": "TestUser" },
+    { "key": "collectionId", "value": "6787d0facaeb2b25748bc12a", "description": "IEEE TSC 2025" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (user)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) pm.collectionVariables.set('token', json.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/users/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loginField\": \"sphere@sphere.com\",\n  \"password\": \"secret\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/users/loginAdmin",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loginField\": \"admin1@admin.com\",\n  \"password\": \"secret\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organizations",
+      "item": [
+        {
+          "name": "List all organizations",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/organizations"
+          }
+        },
+        {
+          "name": "Get my organizations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/users/me/organizations"
+          }
+        },
+        {
+          "name": "Get organization by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/organizations/{{orgId}}"
+          }
+        },
+        {
+          "name": "Get organization by name",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/organizations/by-name/acme-corp"
+          }
+        },
+        {
+          "name": "Create organization",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/organizations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"my-new-org\",\n  \"displayName\": \"My New Organization\",\n  \"description\": \"Optional description\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Create personal organization",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/organizations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isPersonal\": true,\n  \"displayName\": \"My Personal Org\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update organization",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/organizations/{{orgId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Acme Corp Updated\",\n  \"description\": \"Updated description\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete organization",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/organizations/{{orgId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organization Members",
+      "item": [
+        {
+          "name": "List members",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/organizations/{{orgId}}/members"
+          }
+        },
+        {
+          "name": "Add member",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/organizations/{{orgId}}/members",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"63f74bf8eeed64054274b531\",\n  \"role\": \"member\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update member role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/organizations/{{orgId}}/members/{{userId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove member",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/organizations/{{orgId}}/members/{{userId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Groups",
+      "item": [
+        {
+          "name": "List all groups",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/groups"
+          }
+        },
+        {
+          "name": "List groups by organization",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/organizations/{{orgId}}/groups"
+          }
+        },
+        {
+          "name": "Get group by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/groups/{{groupId}}"
+          }
+        },
+        {
+          "name": "Create group in organization",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/organizations/{{orgId}}/groups",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"devops\",\n  \"displayName\": \"DevOps\",\n  \"description\": \"Infrastructure and deployments\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update group",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/groups/{{groupId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Engineering Team\",\n  \"description\": \"Updated description\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete group",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/groups/{{groupId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Group Members",
+      "item": [
+        {
+          "name": "List group members",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/groups/{{groupId}}/members"
+          }
+        },
+        {
+          "name": "Add member to group",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/groups/{{groupId}}/members",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"63f74bf8eeed64054274b531\",\n  \"role\": \"viewer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update group member role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/groups/{{groupId}}/members/{{userId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"editor\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove group member",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/groups/{{groupId}}/members/{{userId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Group Collections",
+      "item": [
+        {
+          "name": "List group collections",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/groups/{{groupId}}/collections"
+          }
+        },
+        {
+          "name": "Add collection to group",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/organizations/{{orgId}}/groups/{{groupId}}/collections",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pricingCollectionId\": \"{{collectionId}}\",\n  \"accessRole\": \"viewer\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update collection access role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/groups/{{groupId}}/collections/{{collectionId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accessRole\": \"editor\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove collection from group",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/groups/{{groupId}}/collections/{{collectionId}}"
+          }
+        },
+        {
+          "name": "List org group collections",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/organizations/{{orgId}}/group-collections"
+          }
+        }
+      ]
+    }
+  ]
+}
