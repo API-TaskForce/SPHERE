@@ -1,0 +1,301 @@
+/* ── Ground Truth Playground ─────────────────────────────────────────────── */
+/* Self-contained styles scoped to .gt-playground. Uses its own CSS vars      */
+/* so it doesn't interfere with SPHERE's Tailwind theme.                       */
+
+.gt-playground {
+  --gt-text: #0f172a;
+  --gt-muted: #475569;
+  --gt-card-bg: rgba(255, 255, 255, 0.95);
+  --gt-border: rgba(148, 163, 184, 0.2);
+  --gt-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15);
+  --gt-pre-bg: rgba(15, 23, 42, 0.08);
+  --gt-input-bg: rgba(255, 255, 255, 0.9);
+  --gt-accent: #667eea;
+  --gt-accent-grad: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gt-success: #10b981;
+  --gt-danger: #ef4444;
+
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--gt-text);
+  line-height: 1.6;
+}
+
+/* Header */
+.gt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.gt-title {
+  margin: 0 0 0.3rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: var(--gt-accent-grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+
+.gt-subtitle {
+  margin: 0;
+  color: var(--gt-muted);
+  font-size: 0.88rem;
+}
+
+.gt-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--gt-accent-grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  vertical-align: middle;
+}
+
+/* Scenario tabs */
+.gt-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.gt-tab {
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--gt-border);
+  background: transparent;
+  color: var(--gt-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.gt-tab:hover {
+  color: var(--gt-text);
+  border-color: var(--gt-accent);
+  background: rgba(102, 126, 234, 0.08);
+}
+
+.gt-tab--active {
+  background: var(--gt-accent-grad) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+}
+
+/* Questions */
+.gt-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gt-section-heading {
+  margin: 1.25rem 0 0.4rem;
+  padding-bottom: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gt-muted);
+  border-bottom: 1px solid var(--gt-border);
+}
+
+/* Question card */
+.gt-card {
+  background: var(--gt-card-bg);
+  border: 1.5px solid var(--gt-border);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.gt-card--open {
+  border-color: var(--gt-accent);
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15);
+}
+
+.gt-card-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--gt-text);
+  transition: background 0.2s ease;
+}
+
+.gt-card-header:hover {
+  background: rgba(102, 126, 234, 0.04);
+}
+
+.gt-card-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.gt-card-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.gt-card-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--gt-text);
+}
+
+.gt-card-desc {
+  font-size: 0.8rem;
+  color: var(--gt-muted);
+}
+
+.gt-card-chevron {
+  font-size: 0.7rem;
+  color: var(--gt-muted);
+  flex-shrink: 0;
+}
+
+/* Card body */
+.gt-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 1.25rem 1.25rem;
+  border-top: 1px solid var(--gt-border);
+  padding-top: 1rem;
+  animation: gt-fade 0.2s ease-out;
+}
+
+@keyframes gt-fade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Response block */
+.gt-response {
+  background: var(--gt-pre-bg);
+  border: 1px solid var(--gt-border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gt-response-title {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--gt-muted);
+}
+
+.gt-response-pre {
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--gt-text);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Chart buttons */
+.gt-charts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.gt-chart-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: var(--gt-accent);
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.gt-chart-btn:hover {
+  opacity: 0.85;
+}
+
+/* Chart modal */
+.gt-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.gt-modal {
+  position: relative;
+  width: 92vw;
+  height: 88vh;
+  background: var(--gt-card-bg);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--gt-shadow);
+}
+
+.gt-modal-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.75rem;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.gt-modal-close:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.gt-modal-iframe {
+  width: 100%;
+  flex: 1;
+  border: none;
+}
