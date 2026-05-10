@@ -9,10 +9,12 @@ import { revertPendingSpaceEvals } from '../middlewares/SpacePlanMiddleware.js';
 class PricingCollectionController {
   private readonly pricingCollectionService: PricingCollectionService;
   private readonly pricingService: PricingService;
+  private readonly organizationMembershipRepository: any;
 
   constructor() {
     this.pricingCollectionService = container.resolve('pricingCollectionService');
     this.pricingService = container.resolve('pricingService');
+    this.organizationMembershipRepository = container.resolve('organizationMembershipRepository');
     this.index = this.index.bind(this);
     this.showByNameAndUserId = this.showByNameAndUserId.bind(this);
     this.showByUserId = this.showByUserId.bind(this);
@@ -25,6 +27,7 @@ class PricingCollectionController {
     this.getAllByUser = this.getAllByUser.bind(this);
     this.assignToOrg = this.assignToOrg.bind(this);
     this.removeFromOrg = this.removeFromOrg.bind(this);
+    this.indexByOrganization = this.indexByOrganization.bind(this);
   }
 
   async index(req: any, res: any) {
@@ -34,6 +37,22 @@ class PricingCollectionController {
 
       const result = await this.pricingCollectionService.index(queryParams);
       // result contains { collections, total }
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).send({ error: err.message });
+    }
+  }
+
+  async indexByOrganization(req: any, res: any) {
+    try {
+      const membership = await this.organizationMembershipRepository.findByUserAndOrganization(
+        req.user.id,
+        req.organizationId
+      );
+      if (!membership) {
+        return res.status(403).send({ error: 'Access denied' });
+      }
+      const result = await this.pricingCollectionService.indexByOrganization(req.organizationId);
       res.json(result);
     } catch (err: any) {
       res.status(500).send({ error: err.message });

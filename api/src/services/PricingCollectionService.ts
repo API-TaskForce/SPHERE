@@ -25,6 +25,11 @@ class PricingCollectionService {
     return result;
   }
 
+  async indexByOrganization(organizationId: string) {
+    const collections = await this.pricingCollectionRepository.findByOrganizationId(organizationId);
+    return { collections };
+  }
+
   async showByNameAndUserId(name: string, userId: string, organizationId?: string) {
     const collection = await this.pricingCollectionRepository.findByNameAndUserId(name, userId, organizationId);
     if (!collection) {

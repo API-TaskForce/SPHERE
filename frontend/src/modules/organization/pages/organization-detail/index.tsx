@@ -1346,7 +1346,7 @@ export default function OrganizationDetailPage() {
   } = useOrganizationsApi();
 
   const { getPricings, getGroupPricings, removeOrgPricing } = usePricingsApi();
-  const { getCollections, removeOrgCollection } = usePricingCollectionsApi();
+  const { getOrgCollections, removeOrgCollection } = usePricingCollectionsApi();
   const { getGroupCollections, getMyGroupMemberships } = useGroupsApi();
 
   const canManage = myRole === 'owner' || myRole === 'admin';
@@ -1425,7 +1425,7 @@ export default function OrganizationDetailPage() {
         getOrgGroups(orgData.id),
         isManager ? listInvitations(orgData.id) : Promise.resolve([]),
         getPricings({}, orgData.id).catch(() => ({ pricings: [] })),
-        getCollections({}, orgData.id).catch(() => ({ collections: [] })),
+        getOrgCollections(orgData.id).catch(() => ({ collections: [] })),
       ]);
 
       setMembers(membersData);
@@ -1510,12 +1510,12 @@ export default function OrganizationDetailPage() {
   const refreshCollections = useCallback(async () => {
     if (!org?.id) return;
     try {
-      const data = await getCollections({}, org.id);
+      const data = await getOrgCollections(org.id);
       setOrgCollections(data?.collections ?? []);
     } catch {
       // ignore
     }
-  }, [getCollections, org]);
+  }, [getOrgCollections, org]);
 
   const refreshInvitations = useCallback(async () => {
     if (!org) return;
@@ -2025,7 +2025,15 @@ export default function OrganizationDetailPage() {
                 <Iconify icon="mdi:view-grid-outline" width={18} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-sphere-grey-800">{collection.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-sphere-grey-800">{collection.name}</p>
+                  {collection.private && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-sphere-grey-100 px-2 py-0.5 text-xs text-sphere-grey-500">
+                      <Iconify icon="mdi:lock-outline" width={11} />
+                      Private
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-sphere-grey-500">{collection.numberOfPricings ?? 0} pricing{collection.numberOfPricings !== 1 ? 's' : ''} · @{collection.owner?.username}</p>
               </div>
               {canAccessCollection(collection) ? (
