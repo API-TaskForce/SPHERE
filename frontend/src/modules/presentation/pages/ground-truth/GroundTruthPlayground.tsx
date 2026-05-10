@@ -1,21 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import './styles.css';
 
-// Imported as raw strings so the iframes never depend on static-file serving.
-// Vite bundles these at build time — no public-folder routing needed.
-import freeCap from '../../../../../public/ground-truth/sendgrid-2025/capacity/free-50k.html?raw';
-import proCap from '../../../../../public/ground-truth/sendgrid-2025/capacity/pro-50k.html?raw';
-import ultraCap from '../../../../../public/ground-truth/sendgrid-2025/capacity/ultra-50k.html?raw';
-import megaCap from '../../../../../public/ground-truth/sendgrid-2025/capacity/mega-50k.html?raw';
-import freeExh from '../../../../../public/ground-truth/sendgrid-2025/exhaustions/free.html?raw';
-import proExh from '../../../../../public/ground-truth/sendgrid-2025/exhaustions/pro.html?raw';
-import ultraExh from '../../../../../public/ground-truth/sendgrid-2025/exhaustions/ultra.html?raw';
-import megaExh from '../../../../../public/ground-truth/sendgrid-2025/exhaustions/mega.html?raw';
-import rec1 from '../../../../../public/ground-truth/sendgrid-2025/recommendations/first.html?raw';
-import rec2 from '../../../../../public/ground-truth/sendgrid-2025/recommendations/second.html?raw';
-import rec3 from '../../../../../public/ground-truth/sendgrid-2025/recommendations/third.html?raw';
-import rec4 from '../../../../../public/ground-truth/sendgrid-2025/recommendations/fourth.html?raw';
-import demands from '../../../../../public/ground-truth/sendgrid-2025/demands.html?raw';
+const CHARTS_BASE = import.meta.env.VITE_CHARTS_BASE_URL ?? '';
+const chart = (path: string) => `${CHARTS_BASE}${path}`;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -25,7 +12,7 @@ interface PlaygroundQuestion {
   label: string;
   description?: string;
   response: string;
-  charts?: { label: string; key: string }[];
+  charts?: { label: string; url: string }[];
   sectionStart?: string;
 }
 
@@ -34,21 +21,6 @@ interface ApiScenario {
   name: string;
   icon: string;
   questions: PlaygroundQuestion[];
-}
-
-// ── Chart HTML map ─────────────────────────────────────────────────────────
-
-const CHART_HTML: Record<string, string> = {
-  freeCap, proCap, ultraCap, megaCap,
-  freeExh, proExh, ultraExh, megaExh,
-  rec1, rec2, rec3, rec4,
-  demands,
-};
-
-function makeBlobUrl(key: string): string {
-  const html = CHART_HTML[key];
-  if (!html) return '';
-  return URL.createObjectURL(new Blob([html], { type: 'text/html' }));
 }
 
 // ── Ground truth data ──────────────────────────────────────────────────────
@@ -72,10 +44,10 @@ Endpoint: /mail/send
 
 ${DISCLAIMER}`,
     charts: [
-      { label: 'Free',  key: 'freeCap' },
-      { label: 'Pro',   key: 'proCap' },
-      { label: 'Ultra', key: 'ultraCap' },
-      { label: 'Mega',  key: 'megaCap' },
+      { label: 'Free',  url: chart('/ground-truth/sendgrid-2025/capacity/single-free-50k.html') },
+      { label: 'Pro',   url: chart('/ground-truth/sendgrid-2025/capacity/single-pro-50k.html') },
+      { label: 'Ultra', url: chart('/ground-truth/sendgrid-2025/capacity/single-ultra-50k.html') },
+      { label: 'Mega',  url: chart('/ground-truth/sendgrid-2025/capacity/single-mega-50k.html') },
     ],
   },
   {
@@ -83,10 +55,10 @@ ${DISCLAIMER}`,
     icon: '⚡',
     label: '¿A qué velocidad máxima puedo enviar peticiones y durante cuánto tiempo?',
     charts: [
-      { label: 'Free',  key: 'freeExh' },
-      { label: 'Pro',   key: 'proExh' },
-      { label: 'Ultra', key: 'ultraExh' },
-      { label: 'Mega',  key: 'megaExh' },
+      { label: 'Free',  url: chart('/ground-truth/sendgrid-2025/exhaustions/free.html') },
+      { label: 'Pro',   url: chart('/ground-truth/sendgrid-2025/exhaustions/pro.html') },
+      { label: 'Ultra', url: chart('/ground-truth/sendgrid-2025/exhaustions/ultra.html') },
+      { label: 'Mega',  url: chart('/ground-truth/sendgrid-2025/exhaustions/mega.html') },
     ],
     response:
       `Velocidad máxima de envío y tiempo hasta agotar la cuota
@@ -110,7 +82,7 @@ ${DISCLAIMER}`,
     id: 'supports-demand-over-time',
     icon: '📈',
     label: '¿Puedo enviar 10 peticiones por segundo (10RPS) y 2000 peticiones al día (RPD)?',
-    charts: [{ label: 'Comprueba la demanda', key: 'demands' }],
+    charts: [{ label: 'Comprueba la demanda', url: chart('/ground-truth/sendgrid-2025/demands-ground-truth.html') }],
     response:
       `¿Puedo enviar 10 RPS y 2000 RPD?
 Endpoint: /mail/send
@@ -146,7 +118,7 @@ const SENDGRID_2025_OPTIMAL: PlaygroundQuestion[] = [
     icon: '💰',
     label: '¿Cuál es la suscripción óptima para 50.000 correos/mes (overage permitido)?',
     description: 'optimal · desired_capacity=50.000 · overage permitido',
-    charts: [{ label: 'Ver recomendación', key: 'rec1' }],
+    charts: [{ label: 'Ver recomendación', url: chart('/ground-truth/sendgrid-2025/recommendations/first.html') }],
     response:
       `Suscripción óptima · 50.000 correos/mes · overage permitido
 Endpoint: /mail/send
@@ -163,7 +135,7 @@ ${DISCLAIMER}`,
     icon: '🚫',
     label: '¿Y si no quiero incurrir en costes de overage?',
     description: 'optimal · desired_capacity=50.000 · sin overage',
-    charts: [{ label: 'Ver recomendación', key: 'rec2' }],
+    charts: [{ label: 'Ver recomendación', url: chart('/ground-truth/sendgrid-2025/recommendations/second.html') }],
     response:
       `Suscripción óptima · 50.000 correos/mes · sin overage
 Endpoint: /mail/send
@@ -179,7 +151,7 @@ ${DISCLAIMER}`,
     icon: '🏷️',
     label: '¿Y si además tengo un presupuesto máximo de $40/mes?',
     description: 'optimal · desired_capacity=50.000 · max_budget=$40',
-    charts: [{ label: 'Ver recomendación', key: 'rec3' }],
+    charts: [{ label: 'Ver recomendación', url: chart('/ground-truth/sendgrid-2025/recommendations/third.html') }],
     response:
       `Suscripción óptima · 50.000 correos/mes · presupuesto $40
 Endpoint: /mail/send
@@ -194,7 +166,7 @@ ${DISCLAIMER}`,
     icon: '🔀',
     label: '¿Cuál es la mejor suscripción para 100.000 correos al mes?',
     description: 'optimal · desired_capacity=100.000',
-    charts: [{ label: 'Ver recomendación', key: 'rec4' }],
+    charts: [{ label: 'Ver recomendación', url: chart('/ground-truth/sendgrid-2025/recommendations/fourth.html') }],
     response:
       `Suscripción óptima · 100.000 correos/mes
 Endpoint: /mail/send
@@ -261,20 +233,6 @@ const SCENARIOS: ApiScenario[] = [
 function QuestionCard({ question }: { question: PlaygroundQuestion }) {
   const [open, setOpen] = useState(false);
   const [activeUrl, setActiveUrl] = useState<string | null>(null);
-  const blobUrls = useRef<Record<string, string>>({});
-
-  useEffect(() => {
-    return () => {
-      Object.values(blobUrls.current).forEach(URL.revokeObjectURL);
-    };
-  }, []);
-
-  function openChart(key: string) {
-    if (!blobUrls.current[key]) {
-      blobUrls.current[key] = makeBlobUrl(key);
-    }
-    setActiveUrl(blobUrls.current[key]);
-  }
 
   return (
     <>
@@ -305,10 +263,10 @@ function QuestionCard({ question }: { question: PlaygroundQuestion }) {
               <div className="gt-charts">
                 {question.charts.map((chart) => (
                   <button
-                    key={chart.key}
+                    key={chart.url}
                     type="button"
                     className="gt-chart-btn"
-                    onClick={() => openChart(chart.key)}
+                    onClick={() => setActiveUrl(chart.url)}
                   >
                     📈 {chart.label}
                   </button>
@@ -346,12 +304,10 @@ export default function GroundTruthPlayground() {
   return (
     <div className="gt-playground">
       <div className="gt-header">
-        <div>
-          <h2 className="gt-title">
-            PRIME4API <span className="gt-badge">Ground Truth</span>
-          </h2>
-          <p className="gt-subtitle">Reference responses for validating H.A.R.V.E.Y. answers.</p>
-        </div>
+        <h2 className="gt-title">
+          PRIME4API <span className="gt-badge">Ground Truth</span>
+        </h2>
+        <p className="gt-subtitle">Reference responses for validating H.A.R.V.E.Y. answers.</p>
       </div>
 
       <div className="gt-tabs">
