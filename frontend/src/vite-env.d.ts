@@ -2,7 +2,10 @@
 
 declare module "*.md";
 
-declare module "*.html?raw" {
-  const content: string;
-  export default content;
+interface ImportMetaEnv {
+  readonly VITE_CHARTS_BASE_URL: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
 }
