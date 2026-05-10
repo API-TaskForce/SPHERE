@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useRoutes } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
+import { useAuth } from '../modules/auth/hooks/useAuth';
 import LoadingView from '../modules/core/pages/loading';
 import PresentationLayout from '../modules/presentation/layouts';
 import OrgScopeProvider from '../modules/organization/components/OrgScopeProvider';
@@ -38,6 +39,11 @@ import OrganizationJoinPage from '../modules/organization/pages/organization-joi
 import GroupDetailPage from '../modules/organization/pages/group-detail';
 import GroundTruthPage from '../modules/presentation/pages/ground-truth';
 
+
+function PrivateRoute() {
+  const { authUser } = useAuth();
+  return authUser.isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+}
 
 export default function Router() {
   const routes = useRoutes([
@@ -101,7 +107,12 @@ export default function Router() {
         },
         { element: <PricingAssistantPage />, path: "/harvey"},
         { element: <PricingAssistantPage playground />, path: "/harvey-play"},
-        { element: <GroundTruthPage />, path: "/ground-truth" }
+        {
+          element: <PrivateRoute />,
+          children: [
+            { element: <GroundTruthPage />, path: "/ground-truth" },
+          ],
+        },
       ],
         },
         {
