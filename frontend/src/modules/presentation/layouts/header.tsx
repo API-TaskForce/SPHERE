@@ -112,9 +112,9 @@ const Header = ({
           <Logo sx="fill-sphere-primary-800" />
 
           {isMobile ? (
-            <MobileHeaderItems headerRoutes={headerRoutes} />
+            <MobileHeaderItems headerRoutes={headerRoutes.filter(r => r.to !== '/ground-truth' || authUser.isAuthenticated)} />
           ) : (
-            <DesktopHeaderItems headerRoutes={headerRoutes} />
+            <DesktopHeaderItems headerRoutes={headerRoutes.filter(r => r.to !== '/ground-truth' || authUser.isAuthenticated)} />
           )}
 
           <div className="flex items-center gap-2">
