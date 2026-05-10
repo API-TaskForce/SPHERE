@@ -229,6 +229,18 @@ export function usePricingCollectionsApi() {
       .catch(error => Promise.reject(error instanceof Error ? error : new Error(String(error))));
   }, [fetchWithOrgContext, basicHeaders]);
 
+  const getOrgCollections = useCallback(async (orgId: string) => {
+    return fetchWithInterceptor(
+      `${import.meta.env.VITE_API_URL}/organizations/${orgId}/collections`,
+      { method: 'GET', headers: basicHeaders }
+    )
+      .then(async response => {
+        if (!response.ok) return Promise.reject(response);
+        return response.json();
+      })
+      .catch(error => Promise.reject(error as Error));
+  }, [fetchWithInterceptor, basicHeaders]);
+
   const createGroupCollection = useCallback(async (groupId: string, collection: CollectionToCreate) => {
     return fetchWithOrgContext(`${import.meta.env.VITE_API_URL}/groups/${groupId}/collections`, {
       method: 'POST',
@@ -255,6 +267,7 @@ export function usePricingCollectionsApi() {
     createBulkCollection,
     getCollectionByOwnerAndName,
     getCollections,
+    getOrgCollections,
     downloadCollection,
     updateCollection,
     deleteCollection,
@@ -268,6 +281,7 @@ export function usePricingCollectionsApi() {
     createBulkCollection,
     getCollectionByOwnerAndName,
     getCollections,
+    getOrgCollections,
     downloadCollection,
     updateCollection,
     deleteCollection,

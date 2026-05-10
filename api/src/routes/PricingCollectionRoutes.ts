@@ -117,6 +117,14 @@ const loadFileRoutes = function (app: express.Application) {
     .get(isLoggedIn, pricingCollectionController.getAllByUser);
 
   app
+    .route(baseUrl + '/organizations/:organizationId/collections')
+    .get(
+      isLoggedIn,
+      orgContextFromParam('organizationId'),
+      pricingCollectionController.indexByOrganization
+    );
+
+  app
     .route(baseUrl + '/organizations/:organizationId/collections/assign')
     .post(
       isLoggedIn,
