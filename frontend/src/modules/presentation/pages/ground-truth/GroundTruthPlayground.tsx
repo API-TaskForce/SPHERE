@@ -181,52 +181,97 @@ ${DISCLAIMER}`,
   },
 ];
 
-const SENDGRID_2026_QUESTIONS: PlaygroundQuestion[] = [
+const SENDGRID_2025_NO_OVERAGE: PlaygroundQuestion[] = [
   {
-    id: 'min-time-1000',
-    icon: '⏱',
-    label: 'How much time to send 1,000 requests?',
-    description: 'min-time · capacity_goal=1000 · datasheet: sendgrid-2026',
-    response: '_Pending ground truth — run in Bruno and fill in._',
+    id: 'exhaustion-crf',
+    icon: '⏳',
+    label: '¿Cuánto tardo en agotar mi cuota?',
+    response:
+      `Tiempo hasta agotar la cuota · Sin overage
+Endpoint: /mail/send
+
+3 casuísticas según el número de emails por llamada (CRF):
+
+  CRF = 1    →  1 email por petición
+  CRF = 500  →  500 emails por petición
+  Variable   →  número variable de emails por petición
+
+Consulta cada gráfico para ver el desglose de agotamiento por plan.`,
+    charts: [
+      { label: 'CRF = 1', url: chart('/ground-truth/sendgrid-2025-no-overage/exhaustions/crf-1.html') },
+      { label: 'CRF = 500', url: chart('/ground-truth/sendgrid-2025-no-overage/exhaustions/crf-500.html') },
+      { label: 'CRF Variable', url: chart('/ground-truth/sendgrid-2025-no-overage/exhaustions/crf-variable.html') },
+    ],
+  },
+  {
+    id: 'consume-40k-pro',
+    icon: '📬',
+    label: '¿Cuánto tardo en consumir 40.000 correos? (Plan PRO)',
+    description: 'capacity · quota=40.000 · plan PRO · sin overage',
+    response:
+      `Tiempo para consumir 40.000 correos · Plan PRO · Sin overage
+Endpoint: /mail/send
+
+  Plan Pro  →  Consulta el gráfico para el desglose temporal detallado.
+
+Cuota del plan PRO: 40.000 emails/mes`,
+    charts: [
+      { label: 'PRO · 40k emails', url: chart('/ground-truth/sendgrid-2025-no-overage/capacity/pro-40k.html') },
+    ],
   },
 ];
 
-const MAILERSEND_QUESTIONS: PlaygroundQuestion[] = [
+const DBLP_QUESTIONS: PlaygroundQuestion[] = [
   {
-    id: 'min-time-1000',
-    icon: '⏱',
-    label: 'How much time to send 1,000 requests?',
-    description: 'min-time · capacity_goal=1000 · datasheet: mailersend',
-    response: '_Pending ground truth — run in Bruno and fill in._',
-  },
-];
+    id: 'dblp-20s-1m',
+    sectionStart: '⏱ Rate limits',
+    icon: '🔢',
+    label: '¿Cuántas peticiones puedo hacer en 20 segundos? (período de análisis: 1 min)',
+    description: 'rate-limit · window=20s · analysis_period=1m',
+    response:
+      `Peticiones posibles en 20 s · Período de análisis: 1 minuto
+Endpoint: DBLP API
 
-const PEERTUBE_QUESTIONS: PlaygroundQuestion[] = [
-  {
-    id: 'min-time-1000',
-    icon: '⏱',
-    label: 'How much time to send 1,000 requests?',
-    description: 'min-time · capacity_goal=1000 · datasheet: peertube',
-    response: '_Pending ground truth — run in Bruno and fill in._',
+Consulta el gráfico para ver el número máximo de peticiones alcanzables en una ventana de 20 segundos bajo un período de análisis de 1 minuto.`,
+    charts: [
+      { label: '20s / 1m', url: chart('/ground-truth/dblp/20seg.html') },
+    ],
   },
-];
-
-const DAILYMOTION_QUESTIONS: PlaygroundQuestion[] = [
   {
-    id: 'min-time-1000',
-    icon: '⏱',
-    label: 'How much time to send 1,000 requests?',
-    description: 'min-time · capacity_goal=1000 · datasheet: dailymotion',
-    response: '_Pending ground truth — run in Bruno and fill in._',
+    id: 'dblp-5m-10m',
+    icon: '🔢',
+    label: '¿Cuántas peticiones puedo hacer en 5 minutos? (período de análisis: 10 min)',
+    description: 'rate-limit · window=5m · analysis_period=10m',
+    response:
+      `Peticiones posibles en 5 min · Período de análisis: 10 minutos
+Endpoint: DBLP API
+
+Consulta el gráfico para ver el número máximo de peticiones alcanzables en una ventana de 5 minutos bajo un período de análisis de 10 minutos.`,
+    charts: [
+      { label: '5m / 10m', url: chart('/ground-truth/dblp/5min.html') },
+    ],
+  },
+  {
+    id: 'dblp-40m-60m',
+    icon: '🔢',
+    label: '¿Cuántas peticiones puedo hacer en 40 minutos? (período de análisis: 60 min)',
+    description: 'rate-limit · window=40m · analysis_period=60m',
+    response:
+      `Peticiones posibles en 40 min · Período de análisis: 60 minutos
+Endpoint: DBLP API
+
+Consulta el gráfico para ver el número máximo de peticiones alcanzables en una ventana de 40 minutos bajo un período de análisis de 60 minutos.`,
+    charts: [
+      { label: '40m / 60m', url: chart('/ground-truth/dblp/40min.html') },
+    ],
   },
 ];
 
 const SCENARIOS: ApiScenario[] = [
   { id: 'sendgrid-2025', name: 'Sendgrid - Fresno Phd.', icon: '📧', questions: [...SENDGRID_2025_QUESTIONS, ...SENDGRID_2025_OPTIMAL] },
-  { id: 'sendgrid-2026', name: 'Sendgrid 2026', icon: '📧', questions: SENDGRID_2026_QUESTIONS },
-  { id: 'mailersend', name: 'Mailersend', icon: '✉️', questions: MAILERSEND_QUESTIONS },
-  { id: 'peertube', name: 'PeerTube', icon: '📹', questions: PEERTUBE_QUESTIONS },
-  { id: 'dailymotion', name: 'Dailymotion', icon: '🎬', questions: DAILYMOTION_QUESTIONS },
+  { id: 'sendgrid-2025-no-overage', name: 'Sendgrid 2025', icon: '📧', questions: SENDGRID_2025_NO_OVERAGE },
+  { id: 'sendgrid-2026', name: 'Sendgrid 2026', icon: '📧', questions: [] },
+  { id: 'dblp', name: 'DBLP - API', icon: '📚', questions: DBLP_QUESTIONS },
 ];
 
 // ── Question card ──────────────────────────────────────────────────────────
