@@ -44,10 +44,10 @@ Endpoint: /mail/send
 
 ${DISCLAIMER}`,
     charts: [
-      { label: 'Free',  url: chart('/ground-truth/sendgrid-2025/capacity/single-free-50k.html') },
-      { label: 'Pro',   url: chart('/ground-truth/sendgrid-2025/capacity/single-pro-50k.html') },
+      { label: 'Free', url: chart('/ground-truth/sendgrid-2025/capacity/single-free-50k.html') },
+      { label: 'Pro', url: chart('/ground-truth/sendgrid-2025/capacity/single-pro-50k.html') },
       { label: 'Ultra', url: chart('/ground-truth/sendgrid-2025/capacity/single-ultra-50k.html') },
-      { label: 'Mega',  url: chart('/ground-truth/sendgrid-2025/capacity/single-mega-50k.html') },
+      { label: 'Mega', url: chart('/ground-truth/sendgrid-2025/capacity/single-mega-50k.html') },
     ],
   },
   {
@@ -55,10 +55,11 @@ ${DISCLAIMER}`,
     icon: '⚡',
     label: '¿A qué velocidad máxima puedo enviar peticiones y durante cuánto tiempo?',
     charts: [
-      { label: 'Free',  url: chart('/ground-truth/sendgrid-2025/exhaustions/free.html') },
-      { label: 'Pro',   url: chart('/ground-truth/sendgrid-2025/exhaustions/pro.html') },
+      { label: 'Free', url: chart('/ground-truth/sendgrid-2025/exhaustions/free.html') },
+      { label: 'Pro', url: chart('/ground-truth/sendgrid-2025/exhaustions/pro.html') },
       { label: 'Ultra', url: chart('/ground-truth/sendgrid-2025/exhaustions/ultra.html') },
-      { label: 'Mega',  url: chart('/ground-truth/sendgrid-2025/exhaustions/mega.html') },
+      { label: 'Mega', url: chart('/ground-truth/sendgrid-2025/exhaustions/mega.html') },
+      { label: 'Full Pricing', url: chart('/ground-truth/sendgrid-2025/exhaustions/combined.html') },
     ],
     response:
       `Velocidad máxima de envío y tiempo hasta agotar la cuota
@@ -221,11 +222,11 @@ const DAILYMOTION_QUESTIONS: PlaygroundQuestion[] = [
 ];
 
 const SCENARIOS: ApiScenario[] = [
-  { id: 'sendgrid-2025', name: 'Sendgrid 2025', icon: '📧', questions: [...SENDGRID_2025_QUESTIONS, ...SENDGRID_2025_OPTIMAL] },
+  { id: 'sendgrid-2025', name: 'Sendgrid - Fresno Phd.', icon: '📧', questions: [...SENDGRID_2025_QUESTIONS, ...SENDGRID_2025_OPTIMAL] },
   { id: 'sendgrid-2026', name: 'Sendgrid 2026', icon: '📧', questions: SENDGRID_2026_QUESTIONS },
-  { id: 'mailersend',    name: 'Mailersend',    icon: '✉️',  questions: MAILERSEND_QUESTIONS },
-  { id: 'peertube',      name: 'PeerTube',      icon: '📹',  questions: PEERTUBE_QUESTIONS },
-  { id: 'dailymotion',   name: 'Dailymotion',   icon: '🎬',  questions: DAILYMOTION_QUESTIONS },
+  { id: 'mailersend', name: 'Mailersend', icon: '✉️', questions: MAILERSEND_QUESTIONS },
+  { id: 'peertube', name: 'PeerTube', icon: '📹', questions: PEERTUBE_QUESTIONS },
+  { id: 'dailymotion', name: 'Dailymotion', icon: '🎬', questions: DAILYMOTION_QUESTIONS },
 ];
 
 // ── Question card ──────────────────────────────────────────────────────────
