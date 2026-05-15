@@ -33,7 +33,7 @@ export interface AuthorizationRequest {
   resource: { type: ResourceType; id: string };
   /**
    * Requerido para acciones sobre Pricing: ID de la colección que contiene el pricing,
-   * necesario para resolver el effectiveRole del usuario sobre esa colección
+   * necesario para resolver el effectiveRole del usuario sobre esa colección.
    */
   collectionId?: string;
   /**

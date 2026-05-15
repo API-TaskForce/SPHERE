@@ -357,7 +357,7 @@ const SENDGRID_2026_QUESTIONS: PlaygroundQuestion[] = [
   Emails enviados:      40.000  ✅
   Datos consumidos:     10.240 MB  ✅
 
-Sin overage cost. Las dos cuotas se consumen en paralelo.`,
+Sin overage. Las dos cuotas se consumen en paralelo.`,
     assumptions:
 `Asunciones
   Concurrencia = 1  ·  una petición a la vez
