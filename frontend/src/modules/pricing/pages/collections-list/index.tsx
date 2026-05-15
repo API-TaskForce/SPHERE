@@ -49,11 +49,11 @@ export default function CollectionsListPage() {
   useEffect(() => {
     getCollections({ limit, offset })
       .then(data => {
-        setCollectionsList(data.collections);
+        const collections = data.collections ?? [];
+        setCollectionsList(collections);
         setTotalCount(data.total || 0);
-
         setFilterLimits({
-          owners: data.collections.map((collection: CollectionEntry) => collection.owner),
+          owners: collections.map((collection: CollectionEntry) => collection.owner),
         });
       })
       .catch(error => {
@@ -71,12 +71,12 @@ export default function CollectionsListPage() {
 
     getCollections(filters)
       .then(data => {
-        setCollectionsList(data.collections);
+        const collections = data.collections ?? [];
+        setCollectionsList(collections);
         setTotalCount(data.total || 0);
-
-        if (data.collections.length > 0) {
+        if (collections.length > 0) {
           setFilterLimits({
-            owners: data.collections.map((collection: CollectionEntry) => collection.owner),
+            owners: collections.map((collection: CollectionEntry) => collection.owner),
           });
         }
       })

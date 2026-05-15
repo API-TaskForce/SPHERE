@@ -132,13 +132,9 @@ export default class AuthorizationService {
       if (action === 'createCollection') {
         return { orgRole, groupRole: 'none' };
       }
-      // createPricing standalone: member necesita ser admin/editor en al menos un grupo
+      // createPricing en org: solo owner/admin (políticas globales). hasGroupEditorRole requerido por schema.
       if (action === 'createPricing') {
-        const groupMemberships = await this.groupMembershipRepository.findByUserId(userId);
-        const hasGroupEditorRole = groupMemberships.some(
-          (gm: any) => gm.role === 'editor' || gm.role === 'admin'
-        );
-        return { orgRole, effectiveRole: 'none', isCreator: false, hasGroupEditorRole, isGroupRestricted: false };
+        return { orgRole, effectiveRole: 'none', isCreator: false, hasGroupEditorRole: false, isGroupRestricted: false };
       }
       return { orgRole };
     }
