@@ -6,17 +6,28 @@ import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from '../../../core/hooks/useRouter';
 import { Link } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_URL as string;
+
 export type LoginFormProps = {
   loginField: string;
   password: string;
 }
 
 const LoginForm: React.FC = () => {
-  
+
   const [errors, setErrors] = React.useState<string[]>([]);
 
   const {login} = useAuth();
   const router = useRouter();
+
+  const handleSSOLogin = () => {
+    window.location.href = `${API_URL}/auth/sso/us`;
+  };
+
+  const ssoErrorParam = new URLSearchParams(window.location.search).get('sso_error');
+  const ssoErrors = ssoErrorParam
+    ? ['Universidad de Sevilla SSO failed. Please try again or use your credentials.']
+    : [];
 
   function handleLogin(e: any) {
     e.preventDefault();
@@ -57,14 +68,14 @@ const LoginForm: React.FC = () => {
   }
   
   return (
-    <div className="flex h-[95dvh] max-h-[600px] w-[95dvw] max-w-[450px] flex-col items-center justify-center rounded-lg bg-white p-3 shadow-[rgba(0,0,0,0.35)_0px_5px_15px]">
+    <div className="flex h-[95dvh] max-h-[720px] w-[95dvw] max-w-[450px] flex-col items-center justify-center rounded-lg bg-white p-3 shadow-[rgba(0,0,0,0.35)_0px_5px_15px]">
       <h1 className="mb-4 text-center text-[30px] font-extrabold text-sphere-grey-900">
         Welcome back!
       </h1>
       
-      {errors.length > 0 && (
+      {(errors.length > 0 || ssoErrors.length > 0) && (
         <div className="mb-2 w-full rounded-[20px] bg-[rgba(255,0,0,0.8)] p-2 text-center text-white">
-          {errors.map((error, index) => (
+          {[...ssoErrors, ...errors].map((error, index) => (
             <p key={index}>{error}</p>
           ))}
         </div>
@@ -115,6 +126,43 @@ const LoginForm: React.FC = () => {
           Sign up
         </Link>
       </p>
+
+      <div className="flex items-center gap-3">
+        <div className="flex-1 border-t border-gray-200" />
+        <span className="text-xs text-gray-400">or</span>
+        <div className="flex-1 border-t border-gray-200" />
+      </div>
+
+      <button
+        type="button"
+        onClick={handleSSOLogin}
+        className="flex w-full items-center justify-center gap-3 rounded-[20px] border border-gray-300 bg-white p-2 shadow-sm transition-colors hover:bg-gray-50"
+      >
+        <svg
+          className="h-5 w-5 flex-shrink-0"
+          viewBox="0 0 40 40"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
+          <circle cx="20" cy="20" r="20" fill="#007BC4" />
+          <text
+            x="50%"
+            y="55%"
+            dominantBaseline="middle"
+            textAnchor="middle"
+            fill="white"
+            fontSize="14"
+            fontWeight="bold"
+            fontFamily="Arial, sans-serif"
+          >
+            US
+          </text>
+        </svg>
+        <span className="text-sm font-semibold text-gray-700">
+          Login with Universidad de Sevilla
+        </span>
+      </button>
 
       {/* <Box
         sx={{

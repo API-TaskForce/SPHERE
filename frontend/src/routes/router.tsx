@@ -16,6 +16,7 @@ import ContributionsPage from '../modules/presentation/pages/contributions';
 import PricingListPage from '../modules/pricing/pages/list';
 import LoginPage from '../modules/auth/pages/login-page';
 import RegisterPage from '../modules/auth/pages/register-page';
+import SSOCallbackPage from '../modules/auth/pages/sso-callback';
 import CardPage from '../modules/pricing/pages/card';
 // import LegacyPricingCard from '../modules/pricing/pages/legacy-pricing-card';
 import CreatePricingPage from '../modules/pricing/pages/create';
@@ -59,6 +60,7 @@ export default function Router() {
         { element: <HomePage />, index: true },
         { element: <LoginPage />, path: "/login" },
         { element: <RegisterPage />, path: "/register" },
+        { element: <SSOCallbackPage />, path: "/sso/callback" },
         { element: <PricingListPage />, path: "/pricings" },
         { element: <DatasheetListPage />, path: "/datasheets" },
         { element: <CreatePricingPage />, path: "/pricings/new" },
