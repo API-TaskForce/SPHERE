@@ -42,7 +42,11 @@ export function usePricingCollectionsApi() {
       method: 'GET',
       headers,
     })
-      .then(response => response.json())
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok) return Promise.reject(new Error(data?.error ?? response.statusText));
+        return data;
+      })
       .catch(error => {
         return Promise.reject(error as Error);
       });

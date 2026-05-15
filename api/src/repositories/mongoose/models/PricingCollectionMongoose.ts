@@ -43,8 +43,8 @@ pricingCollectionSchema.virtual('owner', {
   justOne: true,
 });
 
-// Adding unique index for [name, owner, version]
-pricingCollectionSchema.index({ name: 1, _ownerId: 1 }, { unique: true });
+// Unique per (name, owner, organization) — same user can reuse a name across different orgs
+pricingCollectionSchema.index({ name: 1, _ownerId: 1, _organizationId: 1 }, { unique: true });
 
 const pricingCollectionModel = mongoose.model(
   'PricingCollection',

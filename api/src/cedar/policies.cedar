@@ -197,13 +197,7 @@ permit (
 
 // ── Pricings ────────────────────────────────────────────────────
 
-// Crear pricing standalone (sin colección): requiere ser admin/editor de algún grupo,
-// además de owner/admin de org que ya están cubiertos por las políticas globales
-permit (
-  principal is SPHERE::User,
-  action == SPHERE::Action::"createPricing",
-  resource is SPHERE::Organization
-) when { context.orgRole == "member" && context.hasGroupEditorRole };
+// Crear pricing en org: solo owner/admin (ya cubiertos por las políticas globales)
 
 // Crear pricing en contexto de grupo: admin o editor del grupo concreto
 permit (

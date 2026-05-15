@@ -20,10 +20,11 @@ const loadFileRoutes = function (app: express.Application) {
 
   app
     .route(baseUrl + '/pricings')
-    .get(isLoggedIn, orgContext, pricingController.index)
+    .get(pricingController.index)
     .post(
       isLoggedIn,
       orgContext,
+      checkCedar('createPricing', 'Organization'),
       // Pricing creation is gated on the user's personal org, not on the
       // active org context: pricings are owned by users, so the plan tier
       // and maxPricings limit that apply are those of the owner's personal org.
