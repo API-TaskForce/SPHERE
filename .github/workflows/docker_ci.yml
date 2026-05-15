@@ -1,0 +1,74 @@
+name: Docker CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'api/**'
+            frontend:
+              - 'frontend/**'
+
+  build-server:
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push sphere-server
+        uses: docker/build-push-action@v6
+        with:
+          context: ./api
+          file: ./api/docker/production/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/sphere-server:main
+
+  build-client:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push sphere-client
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/docker/production/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/sphere-client:main
+          build-args: |
+            VITE_API_URL=/api
+            VITE_ASSETS_URL=/static
+            VITE_HARVEY_URL=/harvey-api
+            VITE_SECRET_KEY=${{ secrets.VITE_SECRET_KEY }}
+            VITE_SPACE_API_KEY=${{ secrets.VITE_SPACE_API_KEY }}
+            VITE_SPACE_URL=${{ secrets.VITE_SPACE_URL }}
+            VITE_SPHERE_URL=${{ secrets.VITE_SPHERE_URL }}
+            VITE_CHARTS_BASE_URL=${{ secrets.VITE_CHARTS_BASE_URL }}
