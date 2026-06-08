@@ -30,6 +30,11 @@ export const headerRoutes: HeaderRoute[] = [
         disabled: false,
         to: 'harvey-play',
       },
+      {
+        name: 'HARVEY4API',
+        disabled: false,
+        to: '/harvey4api',
+      },
     ],
   },
   {

@@ -130,6 +130,19 @@ const cards: ToolCard[] = [
       },
     ],
   },
+  {
+    title: 'HARVEY4API',
+    description:
+      'AI-powered assistant for analyzing APIs and their datasheets: plans, usage limits and capabilities.',
+    logo: '/assets/logos/harvey.webp',
+    badge: 'Inside SPHERE',
+    primary: {
+      label: 'Open HARVEY4API',
+      href: '/harvey4api',
+      kind: 'internal',
+    },
+    links: [{ label: 'Use in SPHERE', href: '/harvey4api', kind: 'internal' }],
+  },
 ];
 
 export default function ToolsCatalogSection() {
