@@ -27,6 +27,7 @@ import CreateDatasheetCollectionPage from '../modules/profile/pages/create-datas
 import MyDatasheetsPage from '../modules/profile/pages/datasheets';
 import CollectionsListPage from '../modules/pricing/pages/collections-list';
 import PricingAssistantPage from '../modules/harvey/pages/pricing-assistant';
+import ApiAssistantPage from '../modules/harvey4api/pages/api-assistant';
 import DatasheetCardPage from '../modules/datasheet/pages/card';
 import DatasheetListPage from '../modules/datasheet/pages/list';
 import CreateDatasheetPage from '../modules/datasheet/pages/create';
@@ -109,6 +110,7 @@ export default function Router() {
         },
         { element: <PricingAssistantPage />, path: "/harvey"},
         { element: <PricingAssistantPage playground />, path: "/harvey-play"},
+        { element: <ApiAssistantPage />, path: "/harvey4api"},
         {
           element: <PrivateRoute />,
           children: [

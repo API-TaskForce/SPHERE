@@ -7,6 +7,7 @@ import { useQueryParams } from '../../../core/hooks/useQueryParams';
 import customAlert from '../../../core/utils/custom-alert';
 import DatasheetRenderer from '../../components/datasheet-renderer';
 import { DatasheetModel } from '../../types/datasheetTypes';
+import DatasheetBot from '../../../harvey4api/components/DatasheetBot';
 
 interface DatasheetResponse {
   name: string;
@@ -62,6 +63,7 @@ export default function DatasheetCardPage() {
   const [datasheetData, setDatasheetData] = useState<AnalyticsDataEntry[] | null>(null);
   const [currentDatasheet, setCurrentDatasheet] = useState<AnalyticsDataEntry | null>(null);
   const [datasheet, setDatasheet] = useState<DatasheetModel | null>(null);
+  const [rawDatasheetYaml, setRawDatasheetYaml] = useState<string | null>(null);
   const [datasheetError, setDatasheetError] = useState<string | null>(null);
   const [oldestDatasheetDate, setOldestDatasheetDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -161,12 +163,14 @@ export default function DatasheetCardPage() {
     if (!currentDatasheet) return;
     const fetchYaml = async () => {
       setDatasheet(null);
+      setRawDatasheetYaml(null);
       setDatasheetError(null);
       try {
         const yamlUrl = resolveDatasheetYamlUrl(currentDatasheet.yaml);
         const response = await fetch(yamlUrl);
         if (!response.ok) throw new Error('Could not fetch datasheet YAML');
         const rawYaml = await response.text();
+        setRawDatasheetYaml(rawYaml);
         try {
           const YAMLModule = await import('yaml');
           const parseYaml = (YAMLModule.parse as ((text: string) => Record<string, unknown>) | undefined) ||
@@ -298,6 +302,7 @@ export default function DatasheetCardPage() {
           )}
         </div>
       </div>
+      <DatasheetBot datasheetName={datasheetNameDisplay} datasheetYaml={rawDatasheetYaml} />
     </>
   );
 }
